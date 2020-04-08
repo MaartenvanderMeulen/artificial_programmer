@@ -7,7 +7,7 @@ def _tokenize(line):
     line = line.lower()
     for sep in ["(", ")", "-", "+", "*", "/", "#"]:
         line = line.replace(sep, " " + sep + " ")
-    for sep in [",", ]:
+    for sep in [",", "'", ""]:
         line = line.replace(sep, "")
     return [token for token in line.split(" ") if token != '']
 
@@ -79,7 +79,7 @@ class Parser:
         return program
 
     def _parse_deap_element(self):
-        print("_parse_deap_element start", self.token)
+        # print("_parse_deap_element start", self.token)
         if self.token.isnumeric(): # positive integral number
             result = int(self.token)
             self._next_token()
@@ -87,7 +87,12 @@ class Parser:
             self._next_token()
             result = -int(self.token)
             self._next_token()
-        elif self.token in ["for1", "setq", "_print", "mul"]:
+        elif self.token in ["_integer2integer", "_identifier2integer", "_identifier2identifier", "_empty_list", "_identifier2element", "_integer2element"]: # type-casts can be removed
+            self._next_token()
+            self._expect_token("(")
+            result = self._parse_deap_element() if self.token != ")" else []
+            self._expect_token(")")
+        elif self.token in ["for1", "setq", "_print", "mul", "cons"]:
             # formula(arg1, ...argn)
             result = [self.token]
             self._next_token()
@@ -100,17 +105,17 @@ class Parser:
             self._next_token()
         else:
             raise RuntimeError(f"number, function or identifyer expected instead of '{self._token_to_str(self.token)}'")
-        print("_parse_deap_element result", result, "next token", self.token)
+        # print("_parse_deap_element result", result, "next token", self.token)
         return result
 
     def compile_deap(self, program_str):
-        print("compile_deap: program_str", program_str)
+        # print("compile_deap: program_str", program_str)
         self.tokens = _tokenize(program_str)
         self._first_token()
-        print("compile_deap: tokens", self.tokens)
+        # print("compile_deap: tokens", self.tokens)
         program = self._parse_deap_element()
         self._expect_token(self.end_of_program)
-        print("compile_deap: result", program)
+        # print("compile_deap: result", program)
         return program
 
 _parser = Parser()
@@ -152,9 +157,11 @@ def _run(program):
                 return 0
             upper_bound = _run(program[2])
             if type(upper_bound) != type(5):
+                print(program[2], "-->", upper_bound)
                 print(f"for1: integer upper bound expected instead of '{upper_bound}'")
                 exit(1)
                 return 0
+            result = 0
             for i in range(1, upper_bound+1):
                 _memory[loop_variable] = i
                 result = _run(program[3])
@@ -176,11 +183,23 @@ def _run(program):
             value2 = _run(program[2])
             assert type(value1) == type(1) and type(value2) == type(1)
             return value1 * value2
+        if program[0] == "cons": # example(cons a b)
+            if len(program) != 3:
+                print(f"cons: 2 operands expected instead of {program[1:]}")
+                exit(1)
+                return 0
+            value1 = _run(program[1])
+            value2 = _run(program[2])
+            if type(value1) != type([]):
+                value1 = [value1]
+            if type(value2) != type([]):
+                value2 = [value2]
+            return value1 + value2
         print (f"apl: onbekende functie '{program[0]}'")
         return 0
     elif type(program) == type(""):
         variable_name = program[0]
-        return _memory[variable_name]
+        return _memory[variable_name] if variable_name in _memory else 0
     else:
         if type(program) != type(1):
             print(f"list, identifyer or int expected instead of '{program}'")
@@ -199,11 +218,13 @@ def compile(program_str):
 
 def compile_deap(program_str):
     '''Compiles DEAP program_str into an APL program'''
-    return _parser.compile_deap(program_str)
+    program = _parser.compile_deap(program_str)
+    return program
 
 
 def run(program, memory):
     '''runs compiled program in given input and return the output'''
+    # print("run", str(program), "memory", memory)
     global _output, _memory
     _output = []
     _memory = dict(memory) # makes a copy
@@ -211,18 +232,23 @@ def run(program, memory):
     return _output
 
 
-def evaluate_output(model_output, expected_output):
+def evaluate_output(model_output, expected_output, debug=False):
     '''compute and return error on this output'''
-    print("evaluate_output")
-    print("model_output", model_output)
-    print("expected_output", expected_output)
+    if debug:
+        print("evaluate_output")
+        print("model_output", model_output)
+        print("expected_output", expected_output)
     k = len(expected_output)
     if k > 0:
         error = 0.33 * min(1.0, abs(len(model_output) - len(expected_output))/5.0)
         for i in range(len(expected_output)):
             if i >= len(model_output) or (model_output[i] != expected_output[i]):
                 error += 0.33 / k
-        model_output = set(model_output)
+        # print("model_output", model_output)
+        try:
+            model_output = set(model_output)
+        except:
+            model_output = set()
         expected_output = set(expected_output)
         k = len(expected_output)
         for output in expected_output:
@@ -242,13 +268,14 @@ def get_examples(example_file):
     '''Examples are in a tab delimited file, with the columns '''
     examples = []
     with open(example_file, "r") as f:
+        solution = f.readline().rstrip()
         hdr = f.readline().rstrip().lower().split("\t")
         input_labels = [label for label in hdr if label not in ["", "output",]]
         input_dimension = len(input_labels)
         for line in f:
-            values = [float(s) for s in line.rstrip().lower().split("\t")]
+            values = [int(s) for s in line.rstrip().lower().split("\t")]
             examples.append((values[:input_dimension], values[input_dimension:]))
-    return examples, input_labels
+    return examples, input_labels, len(solution)
 
 
 def bind_example(labels, values):
