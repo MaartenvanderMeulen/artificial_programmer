@@ -1,101 +1,79 @@
 # Inspired by https://deap.readthedocs.io/en/master/examples/gp_symbreg.html
-# That example has extensive explanations.
 import sys
 import operator
-import math
-import random
+# import math
+# import random
 import numpy
 from deap import algorithms
 from deap import base
 from deap import creator
 from deap import tools
 from deap import gp
-import prefix2infix
+import apl
 
-def protected_div(left, right):
-    '''division operator that has a normal result when dividing by zero'''
-    try:
-        return float(left / right)
-    except:
-        return 0 
-        
-        
-def protected_sqrt(x):
-    '''sqrt operator that has a normal result when sqrt negative numbers'''
-    try:
-        return float(math.sqrt(x)) if x >= 0 else 0.0
-    except:
-        return 1e17
-    
-        
-def protected_power(left, right):
-    '''power operator that has a normal result when left is a negative numbers'''
-    try:
-        return float(left ** right) if left > 0 else 0.0
-    except:
-        return 1e17
-    
-        
-def protected_sqr(x):
-    '''sqr operator that has a normal result when overflowing'''
-    try:
-        return float(x ** 2)
-    except:
-        return 1e17
-    
-        
-def rmse(toolbox, individual):
-    # Transform the tree expression in a callable function
-    model = toolbox.compile(expr=individual)
-    # Evaluate with the root of mean squared error (RMSE)
-    se = []
-    for x, y in toolbox.examples:
-        try:
-            se.append(protected_sqr(model(x[0], x[1], x[2]) - y))
-        except:
-            se.append(1e17)
-    rmse = math.sqrt(sum(se) / len(toolbox.examples))
-    return rmse
-
-
-evaluate_count = 0
 
 def evaluate(toolbox, individual):    
-    global evaluate_count
-    evaluate_count += 1
-    penalty = len(str(individual)) / 1000 # Penalty for solutions that are longer than needed
-    return rmse(toolbox, individual) + penalty,
+    program_str = str(individual)
+    program = apl.compile_deap(program_str)
+    accumulated_evaluation = []
+    for example in toolbox.examples:
+        input, expected_output = example
+        memory = apl.bind_example(toolbox.input_labels, example)
+        model_output = apl.run(program, memory)
+        print("    ", memory, model_output)
+        accumulated_evaluation.append(apl.evaluate_output(model_output, expected_output))
+    error = apl.convert_accumulated_evaluation_into_error(accumulated_evaluation)
+    penalty = len(program_str) / 1000 # Penalty for solutions that are longer than needed
+    return error + penalty,
 
 
-def get_examples():
-    examples = []
-    hdr = sys.stdin.readline()
-    for line in sys.stdin:
-        x0, x1, x2, y = (float(s) for s in line.split("\t"))
-        examples.append(((x0, x1, x2), y))
-    # print(f"{len(examples)} examples, the last is", examples[-1])
-    return examples
+def for1(i, n, statement):
+    '''dummy for DEAP'''
+    return 0
 
 
-def initialize_genetic_programming_toolbox(examples):
-    pset = gp.PrimitiveSet("MAIN", 3)
-    pset.addPrimitive(operator.add, 2)
-    pset.addPrimitive(operator.mul, 2)
-    pset.addPrimitive(operator.sub, 2)
-    pset.addPrimitive(protected_div, 2)
-    pset.addPrimitive(protected_sqrt, 1)
-    pset.addPrimitive(protected_power, 2)
-    # pset.addPrimitive(operator.neg, 1)
-    # pset.addPrimitive(math.cos, 1)
-    # pset.addPrimitive(math.sin, 1)
-    pset.addEphemeralConstant("randdigit", lambda: random.randint(2,9))
-    pset.addTerminal(0.0, name="zero")
-    pset.addTerminal(1.0, name="one")
-    pset.addTerminal(10.0, name="ten")
-    
-    pset.renameArguments(ARG0='A')
-    pset.renameArguments(ARG1='B')
-    pset.renameArguments(ARG2='C')
+def setq(x, value):
+    '''dummy for DEAP'''
+    return 0
+
+
+def _print(value):
+    '''dummy for DEAP'''
+    return 0
+
+
+class Identifyer:
+    def __init__(self, v):
+        self.v = v
+ 
+
+class Integer:
+    def __init__(self, v):
+        self.v = v
+ 
+
+class Statement:
+    def __init__(self, v):
+        self.v = v
+ 
+
+class List:
+    def __init__(self, v):
+        self.v = v
+ 
+
+def initialize_genetic_programming_toolbox(examples, input_labels):
+    pset = gp.PrimitiveSet("MAIN", 1) # DEAP's main dimension doesn't matter because the programs are not evaluated by DEAP
+    pset.addPrimitive(for1, 3, name="for1" )
+    pset.addPrimitive(setq, 2, name="setq" )
+    pset.addPrimitive(_print, 1, name="_print" )
+    predefined_variables = ["i", "j", "x", "n", ]
+    for variable in predefined_variables:
+        pset.addTerminal(variable)
+    for label in input_labels:
+        if label not in predefined_variables:
+            pset.addTerminal(label)
+        
     creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
     creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMin)
     toolbox = base.Toolbox()
@@ -104,6 +82,7 @@ def initialize_genetic_programming_toolbox(examples):
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register("compile", gp.compile, pset=pset)
     toolbox.examples = examples
+    toolbox.input_labels = input_labels
     toolbox.register("evaluate", evaluate, toolbox)
     toolbox.register("select", tools.selTournament, tournsize=3)
     toolbox.register("mate", gp.cxOnePoint)
@@ -121,30 +100,27 @@ def calc_ai(toolbox, pop_size, generations):
     stats_size = tools.Statistics(len)
     mstats = tools.MultiStatistics(fitness=stats_fit, size=stats_size)
     mstats.register("min", numpy.min)
-    _, _ = algorithms.eaSimple(pop, toolbox, 0.5, 0.1, generations, stats=mstats,
+    pop, log = algorithms.eaSimple(pop, toolbox, 0.5, 0.1, generations, stats=mstats,
                                    halloffame=hof, verbose=False)
-    return hof[0]
+    # print("pop[0]", pop[0], "log[0]", log[[0])
+    return str(hof[0]), hof[0].fitness.values
 
 
-def main():
-    # random.seed(318)
-    examples = get_examples()
-    toolbox = initialize_genetic_programming_toolbox(examples)
-    prefix_parser = prefix2infix.PrefixParser()
+def main(examples_file):
+    examples, input_labels = apl.get_examples(examples_file)
+    toolbox = initialize_genetic_programming_toolbox(examples, input_labels)
     hops, pop_size, generations = 1000, 600, 200
     print(f"hops={hops}, pop_size={pop_size}, generations={generations}, units={hops*pop_size*generations}")
-    best_error = 1e19
+    best_error = None
     for hop in range(hops):
-        solution = calc_ai(toolbox, pop_size, generations)
-        formula = prefix_parser.parse_line(str(solution))
-        solution_str = prefix2infix.prefix_to_infix(formula)
-        error = rmse(toolbox, solution)
-        error2 = prefix2infix.compute_rmse(formula, examples)
-        assert math.isclose(error, error2)
-        if best_error > error:
+        solution_str, error = calc_ai(toolbox, pop_size, generations)
+        if best_error is None or best_error > error:
             best_error = error
             print(f"hop {hop+1}, error {error:.3f}: {solution_str}")
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2:
+        print(f"at least one argument, the file with the examples, expected")
+        exit(2)
+    main(sys.argv[1])
