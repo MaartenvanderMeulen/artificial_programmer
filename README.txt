@@ -8,3 +8,7 @@ Run: python calcai.py hard.txt
 The solution to the easy problem is: "for1 i n (_print i))"
 The solution to the medium problem is: "((setq x 1) (for1 i n (setq x (mul x i))) (_print x))"
 The solution to the hard problem is: "(for1 i n ((setq x 1) (for1 j i (setq x (mul x j))) (_print x)))"
+====================
+
+TODO : solve medium problem
+    * maak dynamic weight adjustrment inclusief de hints

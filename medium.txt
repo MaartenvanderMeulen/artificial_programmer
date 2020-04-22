@@ -1,3 +1,5 @@
+[['setq', 'x', 1], ['for1', 'i', 'n', ['setq', 'x', ['mul', 'x', 'i']]], ['_print', 'x']]
+for1	mul	setq	_print
 n	Output
 1	1
 2	2

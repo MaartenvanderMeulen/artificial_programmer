@@ -12,36 +12,51 @@ from deap import gp
 import apl
 
 
-best_error = 1e9
+best_error = None
 
-def evaluate(toolbox, individual):    
+def evaluate(toolbox, individual):
     program_str = str(individual)
-    program = apl.compile_deap(program_str)    
-    accumulated_evaluation = []
-    for example in toolbox.examples:
-        input, expected_output = example
-        memory = apl.bind_example(toolbox.input_labels, input)
-        model_output = apl.run(program, memory)        
-        accumulated_evaluation.append(apl.evaluate_output(model_output, expected_output))
-        # print("    ", accumulated_evaluation[-1], model_output)
-    error = apl.convert_accumulated_evaluation_into_error(accumulated_evaluation)
-    if False:
-        global best_error 
-        if best_error > error:
-            best_error = error
-            print(error, str(program))
+    program = apl.compile_deap(program_str)
+    if True: # normal operation
+        weighted_error = apl.evaluate_program(program_str, toolbox.hints)
+        for example in toolbox.examples:
+            input, expected_output = example
+            memory = apl.bind_example(toolbox.input_labels, input)
+            model_output = apl.run(program, memory)        
+            weighted_error += apl.evaluate_output(model_output, expected_output)
             if False:
+                print("    ", accumulated_evaluation[-1], model_output)
+        # apl.dynamic_error_weight_adjustment()
+        if weighted_error == 0:
+            # we have the solution! Try to get the shortest solutioh
+            penalty = (len(str(program)) - toolbox.len_solution) / 1000 # Penalty for solutions that are longer than needed
+            if penalty < 0:
+                penalty = 0 
+            if penalty > 0.9:
+                penalty = 0.9
+            weighted_error += penalty
+        else:
+            weighted_error += 1.0 # so that this weighted_error is always higher than above's penalty for long but correct solutions
+    else: # Test if the solution is derivable
+        expected = "cons(setq('x', 1), cons(for1('i', 'n', setq('x', mul(_identifier2integer('x'), _identifier2integer('i')))), _print(_identifier2integer('x'))))"
+        len_equal = 0
+        for i in range(min(len(program_str), len(expected))):
+            if program_str[i] != expected[i]:
+                break
+            len_equal += 1
+        weighted_error = (len(expected) - len_equal) ** 1
+    global best_error 
+    if best_error is None or best_error > weighted_error:
+        best_error = weighted_error
+        if True:
+            print("evaluate, program_str", program_str, "weighted_error", weighted_error)
+            if True:
                 for example in toolbox.examples:
                     input, expected_output = example
                     memory = apl.bind_example(toolbox.input_labels, input)
                     model_output = apl.run(program, memory)        
-                    e = apl.evaluate_output(model_output, expected_output, True)
-                    print("    ", e, model_output)
-    penalty = (len(str(program)) - toolbox.len_solution) / 1000 # Penalty for solutions that are longer than needed
-    if penalty < 0:
-        penalty = 0 
-    error += penalty
-    return error,
+                    print(f"          expected output {expected_output}, model_output {model_output}, {len(model_output)}")
+    return weighted_error,
 
 
 '''dummy for DEAP to get typed trees working'''
@@ -95,32 +110,34 @@ def _integer2element(integer):
     return Element(integer)
     
     
-def initialize_genetic_programming_toolbox(examples, input_labels, len_solution):
-    pset = gp.PrimitiveSetTyped("MAIN", [], Element) # DEAP's main dimension doesn't matter because the programs are not evaluated by DEAP
+def mul(a, b):
+    return a * b
     
-    # Element
-    pset.addPrimitive(for1, [str, int, Element], Element, name="for1")
-    pset.addPrimitive(setq, [str, Element], Element, name="setq")
-    pset.addPrimitive(_print, [Element], Element, name="_print" )
-    pset.addPrimitive(cons, [Element, Element], Element, name="cons" )
-    pset.addPrimitive(_identifier2element, [str], Element, name="_identifier2element" )
-    pset.addPrimitive(_integer2element, [int], Element, name="_integer2element" )
-    pset.addTerminal(_empty_list, Element, name="_empty_list()" )
-
+    
+def initialize_genetic_programming_toolbox(examples, input_labels, len_solution, hints):
+    pset = gp.PrimitiveSetTyped("MAIN", [int], int) # DEAP's main dimension doesn't matter because the programs are not evaluated by DEAP
+    pset.renameArguments(ARG0='n') # NOTE: make sure arity of MAIN is matched here
+    
     # str
     pset.addPrimitive(_identifier2identifier, [str], str, name="_identifier2identifier" ) # dummy operator having a Identifier as result
-    predefined_variables = ["i", "j", "x", "n", ]
+    predefined_variables = ["i", "j", "x", "n"]
     for variable in predefined_variables:
         pset.addTerminal(variable, str)
     for label in input_labels:
         if label not in predefined_variables:
             pset.addTerminal(label, str)
+            assert label.isidentifier()
 
     # int
     pset.addTerminal(1, int)
-    pset.addPrimitive(_integer2integer, [int], int, name="_integer2integer" )    
     pset.addPrimitive(_identifier2integer, [str], int, name="_identifier2integer" )    
+    pset.addPrimitive(mul, [int, int], int, name="mul" )
+    pset.addPrimitive(_print, [int], int, name="_print" )
+    pset.addPrimitive(for1, [str, str, int], int, name="for1")
+    pset.addPrimitive(setq, [str, int], int, name="setq")
+    pset.addPrimitive(cons, [int, int], int, name="cons" )
         
+    
     creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
     creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMin)
     toolbox = base.Toolbox()
@@ -131,6 +148,7 @@ def initialize_genetic_programming_toolbox(examples, input_labels, len_solution)
     toolbox.examples = examples
     toolbox.input_labels = input_labels
     toolbox.len_solution = len_solution
+    toolbox.hints = hints
     toolbox.register("evaluate", evaluate, toolbox)
     toolbox.register("select", tools.selTournament, tournsize=3)
     toolbox.register("mate", gp.cxOnePoint)
@@ -156,16 +174,17 @@ def calc_ai(toolbox, pop_size, generations):
 
 
 def main(examples_file):
-    examples, input_labels, len_solution = apl.get_examples(examples_file)
-    toolbox = initialize_genetic_programming_toolbox(examples, input_labels, len_solution)
+    examples, input_labels, len_solution, hints = apl.get_examples(examples_file)
+    toolbox = initialize_genetic_programming_toolbox(examples, input_labels, len_solution, hints)
     hops, pop_size, generations = 20, 600, 200
     print(f"hops={hops}, pop_size={pop_size}, generations={generations}, units={hops*pop_size*generations}")
+    global best_error
     best_error = None
     for hop in range(hops):
         solution_str, error = calc_ai(toolbox, pop_size, generations)
         if best_error is None or best_error > error:
             best_error = error
-            print(f"hop {hop+1}, error {error:.3f}: {solution_str}")
+        print(f"hop {hop+1}, error {error:.3f}: {solution_str}")
         if best_error == 0:
             return
 
