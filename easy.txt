@@ -1,4 +1,5 @@
 ['for1', 'i', 'n', ['_print', 'i']]
+
 n	Output
 1	1
 2	1	2

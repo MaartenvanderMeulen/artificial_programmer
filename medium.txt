@@ -1,5 +1,5 @@
-[['setq', 'x', 1], ['for1', 'i', 'n', ['setq', 'x', ['mul', 'x', 'i']]], ['_print', 'x']]
-for1	mul	setq	_print
+['apply', 'mul', ['for1', 'i', 'n', 'i']]
+for1
 n	Output
 1	1
 2	2

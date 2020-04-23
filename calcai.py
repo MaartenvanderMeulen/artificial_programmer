@@ -19,11 +19,15 @@ def evaluate(toolbox, individual):
     program = apl.compile_deap(program_str)
     if True: # normal operation
         weighted_error = apl.evaluate_program(program_str, toolbox.hints)
+        prev_model_output = None
         for example in toolbox.examples:
             input, expected_output = example
             memory = apl.bind_example(toolbox.input_labels, input)
             model_output = apl.run(program, memory)        
             weighted_error += apl.evaluate_output(model_output, expected_output)
+            if False: # for n-faculty problem tests
+                weighted_error += apl.evaluate_postcondition(model_output, prev_model_output, input)
+            prev_model_output = model_output
             if False:
                 print("    ", accumulated_evaluation[-1], model_output)
         # apl.dynamic_error_weight_adjustment()
@@ -37,19 +41,22 @@ def evaluate(toolbox, individual):
             weighted_error += penalty
         else:
             weighted_error += 1.0 # so that this weighted_error is always higher than above's penalty for long but correct solutions
-    else: # Test if the solution is derivable
-        expected = "cons(setq('x', 1), cons(for1('i', 'n', setq('x', mul(_identifier2integer('x'), _identifier2integer('i')))), _print(_identifier2integer('x'))))"
+    else: # Test if the solution is derivable        
+        easy = "for1('i', 'n', _print(_str2element('i')))"
+        medium = "apply('mul', for1('i', 'n', _str2element('i')))"
+        hard = "for1('i', 'n', _print(apply('mul', for1('j', 'i', _str2element('j')))))"
+        expected = hard
         len_equal = 0
         for i in range(min(len(program_str), len(expected))):
             if program_str[i] != expected[i]:
                 break
             len_equal += 1
-        weighted_error = (len(expected) - len_equal) ** 1
+        weighted_error = abs(len(expected) - len_equal) ** 1
     global best_error 
     if best_error is None or best_error > weighted_error:
         best_error = weighted_error
         if True:
-            print("evaluate, program_str", program_str, "weighted_error", weighted_error)
+            print(program_str, weighted_error)
             if True:
                 for example in toolbox.examples:
                     input, expected_output = example
@@ -70,6 +77,11 @@ class Element:
         self.v = v
  
 
+class Function:
+    def __init__(self, v):
+        self.v = v
+ 
+
 def for1(i, n, statement):
     return 0
 
@@ -86,27 +98,43 @@ def cons(list1, list2):
     return List(list1.v + list2.v)
     
 
-def _empty_list():
-    return List([])
+def apply(f1, list1):
+    return f1(list1.v)
     
 
-def _identifier2identifier(identifier):
+def _int2element(i):
+    return [i]
+    
+
+def _empty_list():
+    return Element([])
+    
+
+def _function2function(f):
+    return f
+    
+    
+def _str2str(identifier):
     return identifier
     
     
-def _integer2integer(integer):
+def _str2element(identifier):
+    return identifier
+    
+    
+def _int2int(integer):
     return integer
     
     
-def _identifier2integer(identifier):
+def _str2int(identifier):
     return int(0)
     
     
-def _identifier2element(identifier):
+def _str2element(identifier):
     return int(0)
     
     
-def _integer2element(integer):
+def _int2element(integer):
     return Element(integer)
     
     
@@ -115,11 +143,11 @@ def mul(a, b):
     
     
 def initialize_genetic_programming_toolbox(examples, input_labels, len_solution, hints):
-    pset = gp.PrimitiveSetTyped("MAIN", [int], int) # DEAP's main dimension doesn't matter because the programs are not evaluated by DEAP
+    pset = gp.PrimitiveSetTyped("MAIN", [Element], Element) # DEAP's main dimension doesn't matter because the programs are not evaluated by DEAP
     pset.renameArguments(ARG0='n') # NOTE: make sure arity of MAIN is matched here
     
     # str
-    pset.addPrimitive(_identifier2identifier, [str], str, name="_identifier2identifier" ) # dummy operator having a Identifier as result
+    pset.addPrimitive(_str2str, [str], str, name="_str2str" ) # dummy operator having a Identifier as result
     predefined_variables = ["i", "j", "x", "n"]
     for variable in predefined_variables:
         pset.addTerminal(variable, str)
@@ -129,14 +157,26 @@ def initialize_genetic_programming_toolbox(examples, input_labels, len_solution,
             assert label.isidentifier()
 
     # int
-    pset.addTerminal(1, int)
-    pset.addPrimitive(_identifier2integer, [str], int, name="_identifier2integer" )    
-    pset.addPrimitive(mul, [int, int], int, name="mul" )
-    pset.addPrimitive(_print, [int], int, name="_print" )
-    pset.addPrimitive(for1, [str, str, int], int, name="for1")
-    pset.addPrimitive(setq, [str, int], int, name="setq")
-    pset.addPrimitive(cons, [int, int], int, name="cons" )
-        
+    # pset.addTerminal(1, int)
+    # pset.addPrimitive(_int2int, [str], int, name="_int2int" )    
+    # pset.addPrimitive(_str2int, [str], int, name="_str2int" )    
+    
+    # function
+    pset.addTerminal("mul", Function)
+    pset.addPrimitive(_function2function, [Function], Function, name="_function2function" )        
+    
+    # Element
+    pset.addTerminal(1, Element)
+    pset.addTerminal("_empty_list", Element)
+    pset.addPrimitive("_element2element", [Element], Element, name="_element2element" )        
+    pset.addPrimitive("_str2element", [str], Element, name="_str2element" )        
+    # pset.addPrimitive("_int2element", [int], Element, name="_int2element" )        
+    pset.addPrimitive(for1, [str, str, Element], Element, name="for1")
+    pset.addPrimitive(mul, [Element, Element], Element, name="mul" )
+    pset.addPrimitive(_print, [Element], Element, name="_print" )
+    pset.addPrimitive(setq, [str, Element], Element, name="setq")
+    pset.addPrimitive(cons, [Element, Element], Element, name="cons" )
+    pset.addPrimitive(apply, [Function, Element], Element, name="apply" )        
     
     creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
     creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMin)
