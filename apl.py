@@ -124,7 +124,7 @@ class Parser:
             args_list = self._parse_deap_element()
             self._expect_token(")")
             result = ["apply", function_name, args_list]
-        elif self.token in ["for1", "setq", "_print", "mul", "cons"]:
+        elif self.token in ["for1", "setq", "_print", "mul", "cons", "sub", "add", "div"]:
             # formula(arg1, ...argn)
             result = [self.token]
             self._next_token()
@@ -215,6 +215,32 @@ def _run(program, debug, indent):
                     result *= value
                 else:
                     result = 0
+        elif program[0] == "sub": # example (sub 3 2)
+            result = _run(program[1], debug, indent+" ") if len(program) > 1 else 0
+            if type(result) != type(1):
+                result = 0
+            for i in range(2, len(program)):
+                value = _run(program[i], debug, indent+" ")
+                if type(value) == type(1):
+                    result -= value
+                else:
+                    result = 0
+        elif program[0] == "add": # example (add 3 2)
+            result = 0
+            for p in program[1:]:
+                value = _run(p, debug, indent+" ")
+                if type(value) == type(1):
+                    result += value
+                else:
+                    result = 0
+        elif program[0] == "div": # example (div 3 2)
+            a = _run(program[1], debug, indent+" ") if len(program) > 1 else 0
+            if type(a) != type(1):
+                a = 0
+            b = _run(program[2], debug, indent+" ") if len(program) > 2 else 0
+            if type(b) != type(1):
+                b = 0
+            result = a // b if b != 0 else 0
         elif program[0] == "cons": # example (cons a b)
             result = 0
             for p in program[1:]:
@@ -225,7 +251,7 @@ def _run(program, debug, indent):
                     print(f"apply: function list expected instead of {program[1:]}")
                 return 0
             function_name = _run(program[1], debug, indent+" ")
-            if function_name not in ["mul", "apply", "for1", "_print", "cons", "setq"]:
+            if function_name not in ["mul", "apply", "for1", "_print", "cons", "setq", "sub", "add", "div"]:
                 if debug:
                     print(f"apply: function expected instead of {program[1:]}")
                 return 0
@@ -242,7 +268,7 @@ def _run(program, debug, indent):
         identifyer = program
         if identifyer == "_empty_list":
             result = []
-        elif identifyer in ["mul", "apply", "for1", "_print", "cons", "setq"]:
+        elif identifyer in ["mul", "apply", "for1", "_print", "cons", "setq", "sub", "add", "div"]:
             result = identifyer
         else:
             result = _memory[identifyer] if identifyer in _memory else 0
@@ -446,9 +472,11 @@ if __name__ == "__main__":
             print("apl.__main__: output of run", output)
     if True:
         easy = "for1('i', 'n', _print(_str2element('i')))"
+        easy_driehoek = "div(mul(_str2element('n'), add(_str2element('n'), 1)), 2)"
+        easy = "for1('i', 'n', _print(_str2element('i')))"
         medium = "apply('mul', for1('i', 'n', _str2element('i')))"
         hard = "for1('i', 'n', _print(apply('mul', for1('j', 'i', _str2element('j')))))"
-        for program_str in [ easy, medium, hard ]:
+        for program_str in [ easy_driehoek, ]:
             program = compile_deap(program_str)
             print("apl.__main__: program deap", program)
             memory = {"n": 5}

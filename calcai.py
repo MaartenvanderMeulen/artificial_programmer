@@ -142,6 +142,18 @@ def mul(a, b):
     return a * b
     
     
+def sub(a, b):
+    return a - b
+    
+    
+def add(a, b):
+    return a + b
+    
+    
+def div(a, b):
+    return a // b
+    
+    
 def initialize_genetic_programming_toolbox(examples, input_labels, len_solution, hints):
     pset = gp.PrimitiveSetTyped("MAIN", [Element], Element) # DEAP's main dimension doesn't matter because the programs are not evaluated by DEAP
     pset.renameArguments(ARG0='n') # NOTE: make sure arity of MAIN is matched here
@@ -167,12 +179,16 @@ def initialize_genetic_programming_toolbox(examples, input_labels, len_solution,
     
     # Element
     pset.addTerminal(1, Element)
+    pset.addTerminal(2, Element)
     pset.addTerminal("_empty_list", Element)
     pset.addPrimitive("_element2element", [Element], Element, name="_element2element" )        
     pset.addPrimitive("_str2element", [str], Element, name="_str2element" )        
     # pset.addPrimitive("_int2element", [int], Element, name="_int2element" )        
     pset.addPrimitive(for1, [str, str, Element], Element, name="for1")
     pset.addPrimitive(mul, [Element, Element], Element, name="mul" )
+    # pset.addPrimitive(sub, [Element, Element], Element, name="sub" )
+    pset.addPrimitive(add, [Element, Element], Element, name="add" )
+    pset.addPrimitive(div, [Element, Element], Element, name="div" )
     pset.addPrimitive(_print, [Element], Element, name="_print" )
     pset.addPrimitive(setq, [str, Element], Element, name="setq")
     pset.addPrimitive(cons, [Element, Element], Element, name="cons" )
