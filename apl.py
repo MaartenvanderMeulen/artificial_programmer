@@ -301,7 +301,8 @@ def run(program, memory):
 
 dynamic_weight_iteration = 1
 sum_weighted_errors = np.zeros((6))
-weights = np.array([4.99324622e-01, 3.72453567e-05, 3.72453567e-05, 3.72453567e-05, 5.00487193e-01, 7.64482815e-05])
+# weights = np.array([4.99324622e-01, 3.72453567e-05, 3.72453567e-05, 3.72453567e-05, 5.00487193e-01, 7.64482815e-05])
+weights = np.array([3.75871763e-02, 3.51454465e-04, 1.78800674e-08, 3.02494615e-08, 7.69075095e-01, 1.92986226e-01])
 
 def distance_with_closest_values(x, values):
     '''distance of x with nearest'''
