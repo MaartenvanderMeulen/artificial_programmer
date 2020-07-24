@@ -30,3 +30,15 @@ Lisp style
 (apply mul (range1 n))
 (setq x 1) (for1 i n (setq x (mul x i))) (print x)
 (for1 i n (print
+=====================
+f(n) : the number of zero's at the end of n!
+f(n) : the number of different squares in a nxn grid
+f(n) : the number of rectanles one can form with n squares
+f(n) : the next palindrome
+f(n) : the n-th number whose cube ends in 888
+f(n) : is n a beeheeve number?
+f(n) : is n a happy number?
+f(n) : sum of factors of n
+=====================
+Het gaat dus om postcondities die niet vertellen HOE je de berekening doet.
+easy : isprime
