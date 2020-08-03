@@ -1,8 +1,0 @@
-['for1', 'i', 'n', ['_print', ['apply', 'mul', ['for1', 'i', 'n', 'i']]]]
-for1	mul	apply	_print
-n	Output
-1	1
-2	1	2
-3	1	2	6
-4	1	2	6	24
-5	1	2	6	24	120
