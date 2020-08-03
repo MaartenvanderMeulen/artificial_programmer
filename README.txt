@@ -1,3 +1,1 @@
-Experiments with code synthesis.
-
-Under development
+Experiments with code synthesis
