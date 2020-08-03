@@ -85,84 +85,104 @@ class Parser:
 # ====================== interpreter ======================================
 
 
-def _run(program, memory, debug=False, indent=""):
+def _call_function(function_call, variables, functions, debug, indent):
+    function_name = function_call[0]
+    formal_params, code = functions[function_name]
+    actual_params = [_run(param, variables, functions, debug, indent+" ") for param in function_call[1:]]
+    while len(actual_params) < len(formal_params):
+        actual_params.append(0)
+    actual_params = actual_params[:len(formal_params)]
+    new_scope = dict()
+    for name, value in zip(formal_params, actual_params):
+        new_scope[name] = value
+    result = _run(code, new_scope, functions, debug, indent+" ")
+    return result
+
+
+def _run(program, variables, functions, debug, indent):
     if debug:
-        print(indent, "_run start", "program", program, "memory", memory)
+        print(indent, "_run start", "program", program, "variables", variables, "functions", functions)
     if type(program) == type([]):
         result = None
         if len(program) == 0:
             result = []
         elif program[0] == "add": # example (add 3 2)
             result = 0
-            for p in program[1:]:
-                value = _run(p, memory, debug, indent+" ")
-                if type(value) == type(1):
-                    result += value
+            for i in range(1, len(program)):
+                value = _run(program[i], variables, functions, debug, indent+" ")
+                if i == 1:
+                    result = value
                 else:
-                    result = 0
+                    if type(result) == type(value):
+                        result += value
+                    else:
+                        result = 0
         elif program[0] == "sub": # example (sub 3 2)
             result = 0
             for i in range(1, len(program)):
-                value = _run(program[i], memory, debug, indent+" ")
-                if type(value) == type(1):
-                    if i == 1:
-                        result = value
-                    else:
+                value = _run(program[i], variables, functions, debug, indent+" ")
+                if i == 1:
+                    result = value
+                else:
+                    if type(result) == type(1):
                         result -= value
-                else:
-                    result = 0
+                    else:
+                        result = 0
         elif program[0] == "mul": # example (mul 1 2 3)
-            result = 1
-            for p in program[1:]:
-                value = _run(p, memory, debug, indent+" ")
-                if type(value) == type(1):
-                    result *= value
+            result = 0
+            for i in range(1, len(program)):
+                value = _run(program[i], variables, functions, debug, indent+" ")
+                if i == 1:
+                    result = value
                 else:
-                    result = 0
+                    if type(result) == type(1):
+                        result *= value
+                    else:
+                        result = 0
         elif program[0] == "div": # example (div 3 2)
-            a = _run(program[1], memory, debug, indent+" ") if len(program) > 1 else 0
+            a = _run(program[1], variables, functions, debug, indent+" ") if len(program) > 1 else 0
             if type(a) != type(1):
                 a = 0
-            b = _run(program[2], memory, debug, indent+" ") if len(program) > 2 else 0
+            b = _run(program[2], variables, functions, debug, indent+" ") if len(program) > 2 else 0
             if type(b) != type(1):
                 b = 0
             result = a // b if b != 0 else 0
         elif program[0] in ["lt", "le", "eq", "ne", "ge", "gt", "and", "or"]:
-            a = _run(program[1], memory, debug, indent+" ") if len(program) > 1 else 0
-            b = _run(program[2], memory, debug, indent+" ") if len(program) > 2 else 0
+            a = _run(program[1], variables, functions, debug, indent+" ") if len(program) > 1 else 0
+            b = _run(program[2], variables, functions, debug, indent+" ") if len(program) > 2 else 0
             if type(a) != type(b):
                 result = 0
             elif program[0] == "lt": # example (le 3 2)
-                result = int(a < b)
+                result = 1 if a < b else 0
             elif program[0] == "le": # example (le 3 2)
-                result = int(a <= b)
+                result = 1 if a <= b else 0
             elif program[0] == "eq": # example (eq 3 2)
-                result = int(a == b)
+                result = 1 if a == b else 0
             elif program[0] == "ne": # example (ne 3 2)
-                result = int(a != b)
+                result = 1 if a != b else 0
             elif program[0] == "ge": # example (ge 3 2)
-                result = int(a >= b)
+                result = 1 if a >= b else 0
             elif program[0] == "gt": # example (gt 3 2)
-                result = int(a > b)
+                result = 1 if a > b else 0
             elif program[0] == "and": # example (and 1 1)
-                result = int(a and b)
+                result = 1 if a and b else 0
             elif program[0] == "or": # example (or 1 1)
-                result = int(a or b)
+                result = 1 if a or b else 0
             else:
                 raise RuntimeError("internal error at line 156 of the APL interpreter")
         elif program[0] == "len": # example (len x)
             result = 0
             if len(program) > 1:
-                x = _run(program[1], memory, debug, indent+" ")
+                x = _run(program[1], variables, functions, debug, indent+" ")
                 if type(x) == type([]):
                     result = len(x)
         elif program[0] == "at": # example (at x i j)
             result = 0
             if len(program) > 2:
-                x = _run(program[1], memory, debug, indent+" ")
+                x = _run(program[1], variables, functions, debug, indent+" ")
                 if type(x) == type([]):
                     for dim in range(len(program) - 2):
-                        index = _run(program[2 + dim], memory, debug, indent+" ")
+                        index = _run(program[2 + dim], variables, functions, debug, indent+" ")
                         if type(x) != type([]) or index > len(x):
                             result = 0
                             break
@@ -171,34 +191,15 @@ def _run(program, memory, debug=False, indent=""):
         elif program[0] == "last": # example (last (assign n 3) (for0 i n i)) --> (0 1 2)
             result = 0
             for p in program[1:]:
-                result = _run(p, memory, debug, indent+" ")
-        elif program[0] == "if": # example (if cond x y))
-            print("if : not implemented yet")
-            result = 0
-        elif program[0] == "call": # example (call get_row ((1 2 3) (4 5 6) (7 8 9)) 1)
-            result = 0
-            if len(program) > 1:
-                function_name = program[1]
-                if function_name in memory:
-                    formal_params, code = memory[function_name]
-                    actual_params = [_run(param, memory, debug, indent+" ") for param in program[2:]]
-                    while len(actual_params) < len(formal_params):
-                        actual_params.append(0)
-                    actual_params = actual_params[:len(formal_params)]
-                    old_values = [(name, memory[name]) for name in formal_params if name in memory]
-                    for name, value in zip(formal_params, actual_params):
-                        memory[name] = value
-                    result = _run(code, memory, debug, indent+" ")
-                    for name, value in old_values:
-                        memory[name] = value
+                result = _run(p, variables, functions, debug, indent+" ")
         elif program[0] == "assign": # example (assign x 5)
             if len(program) < 2:
                 return 0
             variable_name = program[1]
             if type(variable_name) != type(""):
                 return 0
-            result = _run(program[2], memory, debug, indent+" ") if len(program) >= 3 else 0
-            memory[variable_name] = result
+            result = _run(program[2], variables, functions, debug, indent+" ") if len(program) >= 3 else 0
+            variables[variable_name] = result
         elif program[0] == "function":
             # example (function fac n (last (assign result 1) (for1 i n (assign result (mul n i)))))
             result = 0
@@ -208,60 +209,74 @@ def _run(program, memory, debug=False, indent=""):
                     params = program[2]
                     code = program[3]
                     result = (params, code)
-                    memory[function_name] = result
+                    functions[function_name] = result
+        elif type(program[0]) == type("") and program[0] in functions:
+            result = _call_function(program, variables, functions, debug, indent)
+        elif program[0] == "if": # example (if cond x y))
+            result = 0
+            if len(program) >= 2:
+                result = _run(program[1], variables, functions, debug, indent+" ")
+                if len(program) >= 3:
+                    condition = result
+                    if condition:
+                        result = _run(program[2], variables, functions, debug, indent+" ")
+                    elif len(program) >= 4:
+                        result = _run(program[3], variables, functions, debug, indent+" ")
         elif program[0] == "for1": # example (for1 i n i))
             if len(program) < 4:
                 return []
             loop_variable = program[1]
             if type(loop_variable) != type(""):
                 return []
-            upper_bound = _run(program[2], memory, debug, indent+" ")
+            upper_bound = _run(program[2], variables, functions, debug, indent+" ")
             if type(upper_bound) != type(1):
                 return []
             result = []
             for i in range(1, upper_bound+1):
-                memory[loop_variable] = i
-                result.append(_run(program[3], memory, debug, indent+" "))
+                variables[loop_variable] = i
+                result.append(_run(program[3], variables, functions, debug, indent+" "))
         elif program[0] == "for0": # example (for0 i n i))
             if len(program) < 4:
                 return []
             loop_variable = program[1]
             if type(loop_variable) != type(""):
                 return []
-            upper_bound = _run(program[2], memory, debug, indent+" ")
+            upper_bound = _run(program[2], variables, functions, debug, indent+" ")
             if type(upper_bound) != type(1):
                 return []
             result = []
             for i in range(0, upper_bound):
-                memory[loop_variable] = i
-                result.append(_run(program[3], memory, debug, indent+" "))
-        elif program[0] == "assert": # example (assert i))
+                variables[loop_variable] = i
+                result.append(_run(program[3], variables, functions, debug, indent+" "))
+        elif program[0] == "print":
+            result = 0
+            for p in program[1:]:
+                result = _run(p, variables, functions, debug, indent+" ")
+                print(str(p), "=", str(result))
+        elif program[0] == "assert": # example (assert 1))
             result = 0
             if len(program) > 1:
-                value = _run(program[1], memory, debug, indent+" ")
+                value = _run(program[1], variables, functions, debug, indent+" ")
                 if not value:
                     raise RuntimeError(f"assertion failed : {str(program)}")
                 result = 1
         else:
             result = []
             for p in program:
-                value = _run(p, memory, debug, indent+" ")
-                result.append(_run(p, memory, debug, indent+" "))
+                result.append(_run(p, variables, functions, debug, indent+" "))
+        if result is None:
+            print("program", program)
+            print("result", result)
         assert result is not None
     elif type(program) == type(""):
         identifyer = program
-        if identifyer == "_empty_list":
-            result = []
-        elif identifyer in ["mul", "apply", "for1", "_print", "cons", "setq", "sub", "add", "div"]:
-            result = identifyer
-        else:
-            result = memory[identifyer] if identifyer in memory else 0
+        result = variables[identifyer] if identifyer in variables else 0
     elif type(program) == type(1):
         result = program
     else:
         raise RuntimeError(f"list, identifyer or int expected instead of '{program}'")
     if debug:
-        print(indent, "_run   end", "program", program, "memory", memory, "result", result)
+        print(indent, "_run   end", "program", program, "variables", variables, "functions", functions, "result", result)
     return result
 
 
@@ -284,42 +299,11 @@ def compile(program_str):
     return Parser.compile(program_str)
 
 
-def run(program, memory, debug=False):
+def run(program, variables, functions, debug=False):
     '''Runs compiled program'''
-    return _run(program, memory, debug, "")
+    return _run(program, variables, functions, debug, "")
 
 
 if __name__ == "__main__":
     file_name = sys.argv[1] if len(sys.argv) >= 2 else "test_apl.txt" 
-    print(run(compile(load(file_name)), {}))
-    
-    if False:
-        for program_str, memory, expected in [ \
-                #("(add n 1)", {"n": 5}, 6), \
-                #("(sub n 1)", {"n": 5}, 4), \
-                #("(mul n 2)", {"n": 5}, 10), \
-                #("(div n 2)", {"n": 12}, 6), \
-                #("(for1 i n i)", {"n": 5}, [1, 2, 3, 4, 5]), \
-                #("(for1 i n (i))", {"n": 5}, [1, 2, 3, 4, 5]), \
-                #("(1 2 3 4 5 6 7 8 9 0)", {}, [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]), \
-                #("(assign x (1 2 3 4 5 6 7 8 9 0))", {}, [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]), \
-                #("((assign x (1 2 3 4 5 6 7 8 9 0)) x)", {}, [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]), \
-                # get_row:
-                ("((1 2 3) (4 5 6) (7 8 9))", {}, [[1, 2, 3], [4, 5, 6], [7, 8, 9]]), \
-                ("(assign board ((1 2 3) (4 5 6) (7 8 9)))", {}, [[1, 2, 3], [4, 5, 6], [7, 8, 9]]), \
-                ("(at ((1 2 3) (4 5 6) (7 8 9)) 1 0)", {}, 4), \
-                ("((assign board ((1 2 3) (4 5 6) (7 8 9))) (at board 1 0))", {}, [[[1, 2, 3], [4, 5, 6], [7, 8, 9]], 4]), \
-                ("(last (assign board ((1 2 3) (4 5 6) (7 8 9))) (at board 1 0))", {}, 4), \
-                ("(last (assign board ((1 2 3) (4 5 6) (7 8 9))) (assign n (len board)) (for0 col n (at board row col)))", {"row":1}, [4, 5, 6]), \
-                ("(call get_row ((1 2 3) (4 5 6) (7 8 9)) 1)", {
-                    "get_row":[["board", "row"],
-                        ["last",
-                            ["assign", "n",  ["len", "board"]],
-                            ["for0", "col", "n", ["at", "board", "row", "col"]]]]}, [4, 5, 6]), \
-                ]:
-            actual = run(compile(program_str), memory, False)
-            if actual != expected:
-                print("apl.__main__: program_str", program_str)
-                print("apl.__main__: final memory", memory)
-                print("apl.__main__: actual output of run", actual)
-                print("apl.__main__: expected output of run", expected)
+    print(run(compile(load(file_name)), {}, {}, False))
