@@ -1,3 +1,1 @@
-Experiments with code synthesis.
-
-Under development
+Experimenten met het genereren van code
