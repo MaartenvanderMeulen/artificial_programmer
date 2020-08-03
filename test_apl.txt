@@ -1,0 +1,28 @@
+(last
+    (assert (assign n 5) 5)
+    (assert (eq (add n 1) 6))
+    (assert (eq (sub n 1) 4))
+    (assert (eq (mul n 2) 10))
+    (assert (eq (div n 2) 2))
+    (assert (eq (for1 i n i) (1 2 3 4 5)))
+    (assert (eq (for1 i n (i)) ((1) (2) (3) (4) (5))))
+    (assert (eq (assign x (1 2 3 4 5 6 7 8 9 0)) x))
+    (assert
+        (eq
+            (last
+                (assign board ((1 2 3) (4 5 6) (7 8 9)))
+                (assign row 1)
+                (assign n (len board))
+                (for0 col n (at board row col))
+            )
+            (4 5 6)
+        )
+    )
+    (function get_row (board row)
+        (for0 col (len board)
+            (at board row col)
+        )
+    )
+    (assign result (call get_row ((1 2 3) (4 5 6) (7 8 9)) 1))
+    (assert (eq result (4 5 6)))
+)
