@@ -1,0 +1,6 @@
+(
+    # list functions here
+    (function fac (n) (if (gt n 1) (mul n (fac (sub n 1))) 1))
+    (function range1 (n) (for1 i n i))
+    (function range0 (n) (for0 i n i))
+)
