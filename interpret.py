@@ -1,4 +1,4 @@
-'''APL : the Artificial Programmer Language'''
+'''Interpreter for LISP like programming language'''
 import sys
 
 
@@ -12,10 +12,8 @@ class Parser:
 
     def _tokenize(line):
         line = line.lower()
-        for sep in ["(", ")", "-", "+", "*", "/", "#"]:
+        for sep in ["(", ")", ]:
             line = line.replace(sep, " " + sep + " ")
-        for sep in [",", "'", '"']:
-            line = line.replace(sep, "")
         return [token for token in line.split(" ") if token != '']
 
     def _first_token():
@@ -83,20 +81,6 @@ class Parser:
 
 
 # ====================== interpreter ======================================
-
-
-def _call_function(function_call, variables, functions, debug, indent):
-    function_name = function_call[0]
-    formal_params, code = functions[function_name]
-    actual_params = [_run(param, variables, functions, debug, indent+" ") for param in function_call[1:]]
-    while len(actual_params) < len(formal_params):
-        actual_params.append(0)
-    actual_params = actual_params[:len(formal_params)]
-    new_scope = dict()
-    for name, value in zip(formal_params, actual_params):
-        new_scope[name] = value
-    result = _run(code, new_scope, functions, debug, indent+" ")
-    return result
 
 
 def _run(program, variables, functions, debug, indent):
@@ -211,7 +195,7 @@ def _run(program, variables, functions, debug, indent):
                     result = (params, code)
                     functions[function_name] = result
         elif type(program[0]) == type("") and program[0] in functions:
-            result = _call_function(program, variables, functions, debug, indent)
+            result = call_function(program, variables, functions, debug, indent)
         elif program[0] == "if": # example (if cond x y))
             result = 0
             if len(program) >= 2:
@@ -302,6 +286,26 @@ def compile(program_str):
 def run(program, variables, functions, debug=False):
     '''Runs compiled program'''
     return _run(program, variables, functions, debug, "")
+
+
+def get_functions(file_name):
+    functions = dict()
+    run(compile(load(file_name)), dict(), functions)
+    return functions
+
+
+def call_function(function_call, variables, functions, debug, indent):
+    function_name = function_call[0]
+    formal_params, code = functions[function_name]
+    actual_params = [_run(param, variables, functions, debug, indent+" ") for param in function_call[1:]]
+    while len(actual_params) < len(formal_params):
+        actual_params.append(0)
+    actual_params = actual_params[:len(formal_params)]
+    new_scope = dict()
+    for name, value in zip(formal_params, actual_params):
+        new_scope[name] = value
+    result = _run(code, new_scope, functions, debug, indent+" ")
+    return result
 
 
 if __name__ == "__main__":
