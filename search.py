@@ -90,7 +90,9 @@ def create_random_function(functions):
     fname = create_random_function_name(functions)
     params, locals = set(), set()
     code = create_random_code(["n", "m", "k", "p", "s", "t", "v", "w", "i", "j"], 0, 2, 5, params, locals)
-    return ["function", fname, list(params), code]
+    params = list(params)
+    params.sort() # to get it in a reproducable order
+    return ["function", fname, params, code]
 
 
 def compute_error(function, problem, functions, debug):
@@ -129,13 +131,16 @@ def local_search(function, problem, functions, initial_error, debug, hop):
 
 def solve_by_new_function(problem, functions):
     best_error = 1e9
-    for hop in range(10000):
+    for hop in range(100000):
         function = create_random_function(functions)
-        # print("DEBUG 144:", interpret.convert_code_to_str(function))
-        debug = False # hop in [1065, 2251, 2289]
+        debug = False # hop in [7]
+        if debug:
+            print("DEBUG 136:", interpret.convert_code_to_str(function))
         hop_error = [compute_error(function, problem, functions, debug)]
         while room_for_improvement(hop_error):
             hop_error.append(local_search(function, problem, functions, hop_error[-1], debug, hop))
+        if debug:
+            print(problem[0], "hop", hop, "error", hop_error[-1])        
         if best_error > hop_error[-1]:
             best_error = hop_error[-1]
             print(problem[0], "hop", hop, "best_error", best_error)
