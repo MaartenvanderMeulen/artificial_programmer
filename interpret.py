@@ -294,19 +294,47 @@ def get_functions(file_name):
     return functions
 
 
+def bind_params(formal_params, actual_params, variables=dict()):
+    while len(actual_params) < len(formal_params):
+        actual_params.append(0)
+    actual_params = actual_params[:len(formal_params)]
+    for name, value in zip(formal_params, actual_params):
+        variables[name] = value
+    return variables
+    
+    
 def call_function(function_call, variables, functions, debug, indent):
     function_name = function_call[0]
     formal_params, code = functions[function_name]
     actual_params = [_run(param, variables, functions, debug, indent+" ") for param in function_call[1:]]
-    while len(actual_params) < len(formal_params):
-        actual_params.append(0)
-    actual_params = actual_params[:len(formal_params)]
-    new_scope = dict()
-    for name, value in zip(formal_params, actual_params):
-        new_scope[name] = value
+    new_scope = bind_params(formal_params, actual_params)
     result = _run(code, new_scope, functions, debug, indent+" ")
     return result
 
+
+def get_build_in_functions():
+    return ["add", "sub", "mul", "div", 
+        "lt", "le", "eq", "ne", "ge", "gt", "and", "or",
+        "len", "at", "last",
+        "assign", "function", 
+        "if", "for1", "for0"]
+
+
+def convert_code_to_str(code):
+    if type(code) == type([]):
+        result = "(" + " ".join([convert_code_to_str(item) for item in code]) + ")"
+    else:
+        result = str(code)
+    return result
+
+    
+def add_function(function, functions, functions_file_name):
+    fname, params, code = function
+    functions[fname] = [params, code]
+    with open(functions_file_name, "a") as f:
+        params = convert_code_to_str(params)
+        code = convert_code_to_str(code)
+        f.write(f"#    (function {fname} {params} {code})\n")
 
 if __name__ == "__main__":
     file_name = sys.argv[1] if len(sys.argv) >= 2 else "test_apl.txt" 

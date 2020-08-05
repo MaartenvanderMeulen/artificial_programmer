@@ -6,8 +6,8 @@ import interpret
 
 # used in dynamic weight adjustment
 global sum_weighted_errors, weights
-sum_weighted_errors = np.zeros((4))
-weights = np.ones((4)) / 4
+sum_weighted_errors = np.zeros((5))
+weights = np.ones((len(sum_weighted_errors))) / len(sum_weighted_errors)
 
 
 def _distance_with_closest_values(x, values):
@@ -35,14 +35,17 @@ def _distance_with_closest_values(x, values):
 def evaluate(actual, expect, debug=False):
     '''compute and return error on this output'''
     global sum_weighted_errors, weights
-    if debug:
-        print("evaluate")
-        print("actual", actual)
-        print("expect", expect)
+    errors = np.zeros_like(weights)
+    # error 4: type difference
+    if type(actual) != type(expect):
+        error[4] += 1
+    if type(actual) != type([]):
+        actual = [actual]
+    if type(expect) != type([]):
+        expect = [expect]
     k = len(expect)
     if k == 0:
         raise RuntimeError("TODO: handle case were expect output is empty")
-    errors = np.zeros_like(weights)
     # error 0: aantal outputs
     n = 2 if len(actual) < len(expect) else 1.2
     errors[0] = (len(actual) - len(expect)) ** n
@@ -61,6 +64,11 @@ def evaluate(actual, expect, debug=False):
             errors[3] += abs(expect[i]) ** 1.5
     weighted_errors = errors * weights
     sum_weighted_errors += weighted_errors
+    if debug:
+        print("evaluate")
+        print("    actual", actual)
+        print("    expect", expect)
+        print("    error", np.sum(weighted_errors))
     return np.sum(weighted_errors)
 
 
