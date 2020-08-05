@@ -10,13 +10,26 @@ sum_weighted_errors = np.zeros((5))
 weights = np.ones((len(sum_weighted_errors))) / len(sum_weighted_errors)
 
 
-def _distance_with_closest_values(x, values):
+def _extract_numbers(values):
+    result = set()
+    if type(values) == type([]):
+        for item in values:
+            result.update(_extract_numbers(item))
+    else:
+        assert type(values) == type(1)
+        result.add(values)
+    return result
+
+    
+def _distance_with_closest_numbers(x, values):
     '''distance of x with nearest'''
+    assert type(x) == type(1)
     if x > 1000000:
         x = 1000000
     if len(values) > 0:
         result = 1000000
         for value in values:
+            assert type(value) == type(1)
             if value > 1000000:
                 value = 1000000
             if result > abs(x - value):
@@ -38,7 +51,7 @@ def evaluate(actual, expect, debug=False):
     errors = np.zeros_like(weights)
     # error 4: type difference
     if type(actual) != type(expect):
-        error[4] += 1
+        errors[4] += 1
     if type(actual) != type([]):
         actual = [actual]
     if type(expect) != type([]):
@@ -50,15 +63,18 @@ def evaluate(actual, expect, debug=False):
     n = 2 if len(actual) < len(expect) else 1.2
     errors[0] = (len(actual) - len(expect)) ** n
     # error 1: hoever zitten de expect getallen van de model getallen af
-    for output in expect:
-        errors[1] += _distance_with_closest_values(output, actual) ** 1.5
+    actual_numbers = _extract_numbers(actual)
+    expected_numbers = _extract_numbers(expect)
+    for expected_number in expected_numbers:
+        errors[1] += _distance_with_closest_numbers(expected_number, actual_numbers) ** 1.5
     # hoever zitten de model getallen van de expect getallen af
-    for output in actual:
-        errors[2] += _distance_with_closest_values(output, expect) ** 1.5
+    for actual_number in actual_numbers:
+        errors[2] += _distance_with_closest_numbers(actual_number, expected_numbers) ** 1.5
     # absolute verschil van de outputs met de gewenste output
     for i in range(len(expect)):
-        if i < len(actual):
-            # print(actual[i], expect[i])
+        assert type(expect[i]) == type(1)
+        if i < len(actual) and type(actual[i]) == type(1):
+            # print(actual[i], expect[i])            
             errors[3] += abs(actual[i] - expect[i]) ** 1.5
         else:
             errors[3] += abs(expect[i]) ** 1.5
@@ -68,7 +84,8 @@ def evaluate(actual, expect, debug=False):
         print("evaluate")
         print("    actual", actual)
         print("    expect", expect)
-        print("    error", np.sum(weighted_errors))
+        print("    error", errors)
+        print("    sum weighted error", np.sum(weighted_errors))
     return np.sum(weighted_errors)
 
 

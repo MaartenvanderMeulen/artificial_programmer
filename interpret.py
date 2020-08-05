@@ -1,5 +1,6 @@
 '''Interpreter for LISP like programming language'''
 import sys
+import copy
 
 
 class Parser:
@@ -109,7 +110,9 @@ def _run(program, variables, functions, debug, indent):
                     result = value
                 else:
                     if type(result) == type(1):
-                        result -= value
+                        if type(value) == type(1):
+                            result -= value
+                        # else ignore this value
                     else:
                         result = 0
         elif program[0] == "mul": # example (mul 1 2 3)
@@ -131,29 +134,34 @@ def _run(program, variables, functions, debug, indent):
             if type(b) != type(1):
                 b = 0
             result = a // b if b != 0 else 0
-        elif program[0] in ["lt", "le", "eq", "ne", "ge", "gt", "and", "or"]:
+        elif program[0] in ["eq", "ne", "lt", "le", "ge", "gt", "and", "or"]:
             a = _run(program[1], variables, functions, debug, indent+" ") if len(program) > 1 else 0
             b = _run(program[2], variables, functions, debug, indent+" ") if len(program) > 2 else 0
             if type(a) != type(b):
                 result = 0
-            elif program[0] == "lt": # example (le 3 2)
-                result = 1 if a < b else 0
-            elif program[0] == "le": # example (le 3 2)
-                result = 1 if a <= b else 0
             elif program[0] == "eq": # example (eq 3 2)
                 result = 1 if a == b else 0
             elif program[0] == "ne": # example (ne 3 2)
                 result = 1 if a != b else 0
-            elif program[0] == "ge": # example (ge 3 2)
-                result = 1 if a >= b else 0
-            elif program[0] == "gt": # example (gt 3 2)
-                result = 1 if a > b else 0
-            elif program[0] == "and": # example (and 1 1)
-                result = 1 if a and b else 0
-            elif program[0] == "or": # example (or 1 1)
-                result = 1 if a or b else 0
+            elif type(a) != type(1):
+                assert type(b) != type(1)
+                result = 0
             else:
-                raise RuntimeError("internal error at line 156 of the APL interpreter")
+                assert type(b) == type(1)
+                if program[0] == "lt": # example (le 3 2)
+                    result = 1 if a < b else 0
+                elif program[0] == "le": # example (le 3 2)
+                    result = 1 if a <= b else 0
+                elif program[0] == "ge": # example (ge 3 2)
+                    result = 1 if a >= b else 0
+                elif program[0] == "gt": # example (gt 3 2)
+                    result = 1 if a > b else 0
+                elif program[0] == "and": # example (and 1 1)
+                    result = 1 if a and b else 0
+                elif program[0] == "or": # example (or 1 1)
+                    result = 1 if a or b else 0
+                else:
+                    raise RuntimeError("internal error at line 156 of the APL interpreter")
         elif program[0] == "len": # example (len x)
             result = 0
             if len(program) > 1:
@@ -167,9 +175,12 @@ def _run(program, variables, functions, debug, indent):
                 if type(x) == type([]):
                     for dim in range(len(program) - 2):
                         index = _run(program[2 + dim], variables, functions, debug, indent+" ")
-                        if type(x) != type([]) or index > len(x):
+                        if type(index) != type(1):
+                            index = 0
+                        if type(x) != type([]) or index >= len(x) or index < 0:
                             result = 0
                             break
+                        assert index < len(x)
                         x = x[index]
                         result = x
         elif program[0] == "last": # example (last (assign n 3) (for0 i n i)) --> (0 1 2)
@@ -216,6 +227,9 @@ def _run(program, variables, functions, debug, indent):
             if type(upper_bound) != type(1):
                 return []
             result = []
+            if upper_bound > 1000000:                
+                print("DEBUG 229:", upper_bound, "set to 0")
+                upper_bound = 0
             for i in range(1, upper_bound+1):
                 variables[loop_variable] = i
                 result.append(_run(program[3], variables, functions, debug, indent+" "))
@@ -229,6 +243,9 @@ def _run(program, variables, functions, debug, indent):
             if type(upper_bound) != type(1):
                 return []
             result = []
+            if upper_bound > 1000000:
+                print("DEBUG 243:", upper_bound, "set to 0")
+                upper_bound = 0
             for i in range(0, upper_bound):
                 variables[loop_variable] = i
                 result.append(_run(program[3], variables, functions, debug, indent+" "))
@@ -289,18 +306,17 @@ def run(program, variables, functions, debug=False):
 
 
 def get_functions(file_name):
+    variables = dict()
     functions = dict()
-    run(compile(load(file_name)), dict(), functions)
+    run(compile(load(file_name)), variables, functions)
     return functions
 
 
-def bind_params(formal_params, actual_params, variables=dict()):
+def bind_params(formal_params, actual_params):
     while len(actual_params) < len(formal_params):
-        actual_params.append(0)
+        actual_params = actual_params + [0] # don't use actual_params.append(0) : that may cause an error?
     actual_params = actual_params[:len(formal_params)]
-    for name, value in zip(formal_params, actual_params):
-        variables[name] = value
-    return variables
+    return {name:value for name, value in zip(formal_params, actual_params)}
     
     
 def call_function(function_call, variables, functions, debug, indent):
@@ -313,11 +329,32 @@ def call_function(function_call, variables, functions, debug, indent):
 
 
 def get_build_in_functions():
-    return ["add", "sub", "mul", "div", 
-        "lt", "le", "eq", "ne", "ge", "gt", "and", "or",
-        "len", "at", "last",
-        "assign", "function", 
-        "if", "for1", "for0"]
+    return [        
+        "len", # arity 1
+        "last", # arity 1+
+        "div", "lt", "le", "eq", "ne", "ge", "gt", # arity 2
+        "assign", # artity 2, but 1st operand must be a variable name
+        "add", "sub", "mul", "and", "or", # arity 2+
+        "at", # arity 2*
+        "if", # arity 2 or 3
+        "for1", "for0", # artity 3, but 1st operand must be a variable name
+        ]
+
+
+def get_build_in_function_param_types(fname):
+    # return a list with type-indication of the params of the build-in function.
+    # type-indications : 1=numeric; "*"=zero or more numeric; "?"=0 or 1 numeric; "v"=variable
+    arity_dict = {        
+        "len":(1,), # arity 1
+        "last":(1,"*"), # arity 1*
+        "div":(1,1), "lt":(1,1), "le":(1,1), "eq":(1,1), "ne":(1,1), "ge":(1,1), "gt":(1,1), # arity 2
+        "assign":("v",1), # artity 2, but 1st operand must be a variable name
+        "add":(1,1,"*"), "sub":(1,1,"*"), "mul":(1,1,"*"), "and":(1,1,"*"), "or":(1,1,"*"), # arity 2*
+        "at":(1,1,"*"), # arity 2*
+        "if":(1,1,"?"), # arity 2 or 3
+        "for1":("v",1,1), "for0":("v",1,1), # artity 3, but 1st operand must be a variable name
+        }
+    return arity_dict[fname]
 
 
 def convert_code_to_str(code):
@@ -329,7 +366,7 @@ def convert_code_to_str(code):
 
     
 def add_function(function, functions, functions_file_name):
-    fname, params, code = function
+    _, fname, params, code = function
     functions[fname] = [params, code]
     with open(functions_file_name, "a") as f:
         params = convert_code_to_str(params)
