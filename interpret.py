@@ -13,7 +13,9 @@ class Parser:
 
     def _tokenize(line):
         line = line.lower()
-        for sep in ["(", ")", ]:
+        for deap_stuff in [",", '"', "'"]:
+            line = line.replace(deap_stuff, " ")
+        for sep in ["(", ")", ","]:
             line = line.replace(sep, " " + sep + " ")
         return [token for token in line.split(" ") if token != '']
 
@@ -79,6 +81,40 @@ class Parser:
         program = Parser._parse_element()
         Parser._expect_token(Parser._end_of_program)
         return program
+       
+    def _parse_deap_element(functions):
+        # print("DEBUG 84 : _parse_deap_element start", Parser._token)
+        if Parser._token.isnumeric(): # positive integral number
+            result = int(Parser._token)
+            Parser._next_token()
+        elif Parser._token == "-" and Parser._peek_token.isnumeric(): # negative integral number
+            Parser._next_token()
+            result = -int(Parser._token)
+            Parser._next_token()
+        elif Parser._token in get_build_in_functions() or Parser._token in functions:
+            # print("DEBU 95: buildin", Parser._token)
+            # formula(arg1, ...argn)
+            result = [Parser._token]
+            Parser._next_token()
+            Parser._expect_token("(")
+            while Parser._token != ")":
+                result.append(Parser._parse_deap_element(functions))
+            Parser._next_token()
+        elif Parser._token.isidentifier(): # identifier
+            # print("DEBU 104: identifier", Parser._token)
+            result = Parser._token
+            Parser._next_token()
+        else:
+            Parser._raise_error(f"number, function or identifyer expected")
+        return result
+
+    def compile_deap(program_str, functions):
+        Parser._tokens = Parser._tokenize(program_str)
+        Parser._first_token()
+        program = Parser._parse_deap_element(functions)
+        Parser._expect_token(Parser._end_of_program)
+        return program
+    
 
 
 # ====================== interpreter ======================================
@@ -221,33 +257,31 @@ def _run(program, variables, functions, debug, indent):
             if len(program) < 4:
                 return []
             loop_variable = program[1]
-            if type(loop_variable) != type(""):
-                return []
             upper_bound = _run(program[2], variables, functions, debug, indent+" ")
             if type(upper_bound) != type(1):
                 return []
             result = []
             if upper_bound > 1000000:                
-                print("DEBUG 229:", upper_bound, "set to 0")
+                print("DEBUG 229:", upper_bound, "set to 0", program)
                 upper_bound = 0
             for i in range(1, upper_bound+1):
-                variables[loop_variable] = i
+                if type(loop_variable) == type(""):
+                    variables[loop_variable] = i
                 result.append(_run(program[3], variables, functions, debug, indent+" "))
         elif program[0] == "for0": # example (for0 i n i))
             if len(program) < 4:
                 return []
             loop_variable = program[1]
-            if type(loop_variable) != type(""):
-                return []
             upper_bound = _run(program[2], variables, functions, debug, indent+" ")
             if type(upper_bound) != type(1):
                 return []
             result = []
             if upper_bound > 1000000:
-                print("DEBUG 243:", upper_bound, "set to 0")
+                print("DEBUG 243:", upper_bound, "set to 0", program)
                 upper_bound = 0
             for i in range(0, upper_bound):
-                variables[loop_variable] = i
+                if type(loop_variable) == type(""):
+                    variables[loop_variable] = i
                 result.append(_run(program[3], variables, functions, debug, indent+" "))
         elif program[0] == "print":
             result = 0
@@ -314,7 +348,7 @@ def get_functions(file_name):
 
 def bind_params(formal_params, actual_params):
     while len(actual_params) < len(formal_params):
-        actual_params = actual_params + [0] # don't use actual_params.append(0) : that may cause an error?
+        actual_params = actual_params + [0] # don't use actual_params.append(0) : that alters actual_params
     actual_params = actual_params[:len(formal_params)]
     return {name:value for name, value in zip(formal_params, actual_params)}
     
@@ -366,12 +400,22 @@ def convert_code_to_str(code):
 
     
 def add_function(function, functions, functions_file_name):
-    _, fname, params, code = function
+    # print("DEBUG 405", function)
+    keyword, fname, params, code = function
+    assert type(code) == type([])
+    assert keyword == "function" # keyword of the function statement
     functions[fname] = [params, code]
     with open(functions_file_name, "a") as f:
         params = convert_code_to_str(params)
         code = convert_code_to_str(code)
         f.write(f"#    (function {fname} {params} {code})\n")
+
+
+def compile_deap(program_str, functions):
+    '''Compiles DEAP program_str into an LISP program'''
+    program = Parser.compile_deap(program_str, functions)
+    return program
+
 
 if __name__ == "__main__":
     file_name = sys.argv[1] if len(sys.argv) >= 2 else "test_apl.txt" 
