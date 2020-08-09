@@ -36,6 +36,7 @@ def find_new_functions(problems, functions, functions_file_name, iteration):
     count_new_functions = 0
     for problem in problems:
         problem_label = problem[0]
+        print(problem_label, "...")
         function = solve_by_existing_function(problem, functions)
         if function:
             print(problem_label, "is solved by", function)
@@ -57,6 +58,7 @@ if __name__ == "__main__":
     problems_file_name = sys.argv[2] if len(sys.argv) >= 3 else "problems.txt"
     functions = interpret.get_functions(functions_file_name)
     problems = interpret.compile(interpret.load(problems_file_name))
+    print("DEBUG SEARCH 61 : problems ", problems)
     iteration = 1
     while find_new_functions(problems, functions, functions_file_name, iteration):
         iteration += 1

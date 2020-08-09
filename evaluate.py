@@ -2,23 +2,44 @@
 import sys
 import numpy as np
 import interpret
+import time
 
 
 # used in dynamic weight adjustment
 global sum_weighted_errors, weights
 sum_weighted_errors = np.zeros((5))
-weights = np.ones((len(sum_weighted_errors))) / len(sum_weighted_errors)
+weights = [0.24, 0.04, 0.34, 0.04, 0.34]
+# np.ones((len(sum_weighted_errors))) / len(sum_weighted_errors)
 
 
-def _extract_numbers(values):
-    result = set()
+def _extract_numbers_impl(values, depth):
+    if depth > 100:
+        # skip rest
+        return set(), 0        
     if type(values) == type([]):
+        result, count = set(), 0
         for item in values:
-            result.update(_extract_numbers(item))
+            item_set, item_count = _extract_numbers_impl(item, depth+1)
+            result.update(item_set)
+            count += item_count
     else:
+        if not(type(values) == type(1)):
+            print(values, type(values))
         assert type(values) == type(1)
-        result.add(values)
-    return result
+        result, count = set([values]), 1
+    return result, count
+
+    
+global longest_values
+longest_values = 0
+    
+    
+def extract_numbers(values, label):
+    result, count = _extract_numbers_impl(values, 0)
+    global longest_values
+    if longest_values < count:
+        longest_values = count
+    return result, count
 
     
 def _distance_with_closest_numbers(x, values):
@@ -47,14 +68,15 @@ def _distance_with_closest_numbers(x, values):
 
 def evaluate(actual, expect, debug=False):
     '''compute and return error on this output'''
+    #print("evaluate start")
     global sum_weighted_errors, weights
     errors = np.zeros_like(weights)
     # error 4: type difference
     if type(actual) != type(expect):
         errors[4] += 1
-    if type(actual) != type([]):
+    if type(actual) == type(1):
         actual = [actual]
-    if type(expect) != type([]):
+    if type(expect) == type(1):
         expect = [expect]
     k = len(expect)
     if k == 0:
@@ -63,8 +85,8 @@ def evaluate(actual, expect, debug=False):
     n = 2 if len(actual) < len(expect) else 1.2
     errors[0] = (len(actual) - len(expect)) ** n
     # error 1: hoever zitten de expect getallen van de model getallen af
-    actual_numbers = _extract_numbers(actual)
-    expected_numbers = _extract_numbers(expect)
+    actual_numbers, _ = extract_numbers(actual, "evaluate actual")
+    expected_numbers, _ = extract_numbers(expect, "evaluate expected")
     for expected_number in expected_numbers:
         errors[1] += _distance_with_closest_numbers(expected_number, actual_numbers) ** 1.5
     # hoever zitten de model getallen van de expect getallen af
@@ -84,18 +106,20 @@ def evaluate(actual, expect, debug=False):
         print("evaluate")
         print("    actual", actual)
         print("    expect", expect)
-        print("    error", errors)
-        print("    sum weighted error", np.sum(weighted_errors))
+        print("    individual errors", errors)
+        print("    sum weighted error this sample", np.sum(weighted_errors))
+        print("    individual weighted sums errors all samples", sum_weighted_errors)
+    #print("evaluate end")
     return np.sum(weighted_errors)
 
 
 def dynamic_error_weight_adjustment(debug=True):
     global sum_weighted_errors, weights
     n = len(weights)
-    if debug:
+    if False: # debug:
         print("weights before", weights, sum_weighted_errors, n)
     average_weighted_error = np.sum(sum_weighted_errors) / n
-    for i in range(weights.shape(0)):
+    for i in range(n):
         if sum_weighted_errors[i] > 0:
             weights[i] *= average_weighted_error / sum_weighted_errors[i]
         else:
