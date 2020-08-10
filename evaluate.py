@@ -6,40 +6,21 @@ import time
 
 
 # used in dynamic weight adjustment
-global sum_weighted_errors, weights
-sum_weighted_errors = np.zeros((5))
-weights = [0.24, 0.04, 0.34, 0.04, 0.34]
-# np.ones((len(sum_weighted_errors))) / len(sum_weighted_errors)
+global sum_errors, weights
+weights = np.array([0.2, 0.2, 0.2, 0.2, 0.2]) # [0.80, 0.17, 0.01, 0.01, 0.01])
+sum_errors = np.zeros_like(weights)
 
 
-def _extract_numbers_impl(values, depth):
-    if depth > 100:
-        # skip rest
-        return set(), 0        
+def extract_numbers(values):
     if type(values) == type([]):
-        result, count = set(), 0
+        result = set()
         for item in values:
-            item_set, item_count = _extract_numbers_impl(item, depth+1)
+            item_set = extract_numbers(item)
             result.update(item_set)
-            count += item_count
     else:
-        if not(type(values) == type(1)):
-            print(values, type(values))
         assert type(values) == type(1)
-        result, count = set([values]), 1
-    return result, count
-
-    
-global longest_values
-longest_values = 0
-    
-    
-def extract_numbers(values, label):
-    result, count = _extract_numbers_impl(values, 0)
-    global longest_values
-    if longest_values < count:
-        longest_values = count
-    return result, count
+        result = set([values])
+    return result
 
     
 def _distance_with_closest_numbers(x, values):
@@ -63,71 +44,177 @@ def _distance_with_closest_numbers(x, values):
     return result
     
     
-# ============================================== INTERFACE ====================
-
-
-def evaluate(actual, expect, debug=False):
+def evaluate_list_of_ints(actual, expect, debug=False):
     '''compute and return error on this output'''
-    #print("evaluate start")
-    global sum_weighted_errors, weights
-    errors = np.zeros_like(weights)
-    # error 4: type difference
-    if type(actual) != type(expect):
-        errors[4] += 1
+    errors = []
+    assert type(expect) == type([])
+    for item in expect:
+        assert type(item) == type(1)
+    
+    # error : type difference
+    error = 0.0
+    if type(actual) != type([]):
+        error = 1.0
+    errors.append(error)
     if type(actual) == type(1):
         actual = [actual]
-    if type(expect) == type(1):
-        expect = [expect]
     k = len(expect)
     if k == 0:
         raise RuntimeError("TODO: handle case were expect output is empty")
-    # error 0: aantal outputs
+    # error : aantal outputs
     n = 2 if len(actual) < len(expect) else 1.2
-    errors[0] = (len(actual) - len(expect)) ** n
-    # error 1: hoever zitten de expect getallen van de model getallen af
-    actual_numbers, _ = extract_numbers(actual, "evaluate actual")
-    expected_numbers, _ = extract_numbers(expect, "evaluate expected")
+    errors.append(abs(len(actual) - len(expect)) ** n)
+    # error : hoever zitten de expect getallen van de model getallen af
+    actual_numbers = extract_numbers(actual)
+    expected_numbers = extract_numbers(expect)
+    error = 0.0
     for expected_number in expected_numbers:
-        errors[1] += _distance_with_closest_numbers(expected_number, actual_numbers) ** 1.5
-    # hoever zitten de model getallen van de expect getallen af
+        error += _distance_with_closest_numbers(expected_number, actual_numbers) ** 1.5
+    errors.append(error)
+    # error : hoever zitten de model getallen van de expect getallen af
+    error = 0.0
     for actual_number in actual_numbers:
-        errors[2] += _distance_with_closest_numbers(actual_number, expected_numbers) ** 1.5
-    # absolute verschil van de outputs met de gewenste output
+        error += _distance_with_closest_numbers(actual_number, expected_numbers) ** 1.5
+    errors.append(error)
+    # error : absolute verschil van de outputs met de gewenste output
+    error = 0.0
     for i in range(len(expect)):
         assert type(expect[i]) == type(1)
         if i < len(actual) and type(actual[i]) == type(1):
             # print(actual[i], expect[i])            
-            errors[3] += abs(actual[i] - expect[i]) ** 1.5
+            error += abs(actual[i] - expect[i]) ** 1.5
         else:
-            errors[3] += abs(expect[i]) ** 1.5
+            error += abs(expect[i]) ** 1.5
+    errors.append(error)
+    return errors
+
+
+def eval_board_col_diag_common(input, actual, extra_function_params, expect):
+    board = input[0]
+    n = len(board)
+    
+    # error : type difference
+    if type(actual) != type(expect):
+        error_type = 1.0
+    else:
+        error_type = 0.0
+    if type(actual) == type(1):
+        actual = [actual]
+
+    # error : aantal outputs
+    error_len = 0.0
+    if len(actual) < len(expect):
+        error_len = (len(expect) - len(actual)) ** 2.0
+    elif len(actual) > len(expect):
+        error_len = 0.1 * (len(actual) - len(expect)) ** 1.2
+    else:
+        error_len = 0.0
+
+    # error : zit er uit elke rij wat in
+    error_fromrows = 0.0
+    actual_set = set([elem for elem in actual if type(elem) == type(1)])
+    for row in range(n):
+        row_set = set(board[row])
+        if len(actual_set.intersection(row_set)) == 0:
+            error_fromrows += 1
+    error_fromrows = error_fromrows ** 2
+    
+    # error : is actual[row] een element van board[row]
+    error_fromrows_ordered = 0.0
+    for row in range(n):
+        if row >= len(actual):
+            error_fromrows_ordered += 3.0
+        elif actual[row] not in board[row]:
+            error_fromrows_ordered += 1.0
+    error_fromrows_ordered = error_fromrows_ordered ** 2
+    
+    # error :zijn het de juiste elementen uit de rows
+    error_correct_elements_ordered = 0.0
+    for row in range(n):
+        if row >= len(actual):
+            error_correct_elements_ordered += 3.0
+        elif actual[row] != expect[row]:
+            error_correct_elements_ordered += 1.0
+    error_correct_elements_ordered = error_correct_elements_ordered ** 2
+            
+    return [error_type, error_len, error_fromrows, error_fromrows_ordered, error_correct_elements_ordered]
+    
+    
+def eval_board_col(input, actual, extra_function_params):
+    board, col = input
+    n = len(board)
+    expect = [row[col] for row in board]    
+    return eval_board_col_diag_common(input, actual, extra_function_params, expect)
+    
+    
+def eval_board_diag1(input, actual, extra_function_params):
+    board = input[0]
+    n = len(board)
+    expect = [row[i] for i, row in enumerate(board)]
+    return eval_board_col_diag_common(input, actual, extra_function_params, expect)
+    
+    
+def eval_board_diag2(input, actual, extra_function_params):
+    board = input[0]
+    n = len(board)
+    expect = [row[n-1 - i] for i, row in enumerate(board)]    
+    return eval_board_col_diag_common(input, actual, extra_function_params, expect)
+
+
+def eval_sums_rows_cols_diags(input, actual, extra_function_params):
+    board = input[0]
+    n = len(board)
+    expect = [sum(row) for row in board]    
+    expect += [sum([row[col] for row in board]) for col in range(n)]    
+    expect.append(sum([board[i][i] for i in range(n)]))
+    expect.append(sum([board[i][(n-1) - i] for i in range(n)]))
+    return evaluate_list_of_ints(actual, expect, False)
+    
+    
+# ============================================== INTERFACE ====================
+
+
+def evaluate(input, actual_output, evaluation_functions, debug):
+    errors = []
+    for function_name, extra_function_params in evaluation_functions:
+        f = eval(function_name)
+        errors.extend(f(input, actual_output, extra_function_params))
+    errors = np.array(errors)
+    global sum_errors, weights
+    if len(weights) != len(errors):
+        weights = np.ones((len(errors))) / len(errors)
+        print("DEBUG 121 : initializing weights")
     weighted_errors = errors * weights
-    sum_weighted_errors += weighted_errors
+    if len(sum_errors) != len(errors):
+        sum_errors = np.zeros_like(errors)
+        print("DEBUG 125 : initializing sum weights")
+    sum_errors += errors
     if debug:
         print("evaluate")
-        print("    actual", actual)
-        print("    expect", expect)
+        print("    input", input)
+        print("    actual_output", actual_output)
         print("    individual errors", errors)
         print("    sum weighted error this sample", np.sum(weighted_errors))
-        print("    individual weighted sums errors all samples", sum_weighted_errors)
-    #print("evaluate end")
-    return np.sum(weighted_errors)
-
+        print("    sums errors this hop", sum_errors)
+        print("    sums weighted errors this hop", sum_errors * weights)
+    return np.sum(weighted_errors)    
+    
 
 def dynamic_error_weight_adjustment(debug=True):
-    global sum_weighted_errors, weights
+    global sum_errors, weights
     n = len(weights)
-    if False: # debug:
-        print("weights before", weights, sum_weighted_errors, n)
-    average_weighted_error = np.sum(sum_weighted_errors) / n
+    if debug:
+        print("weights before", weights, sum_errors * weights)
+    average_weighted_error = np.sum(sum_errors) / n
     for i in range(n):
-        if sum_weighted_errors[i] > 0:
-            weights[i] *= average_weighted_error / sum_weighted_errors[i]
+        if sum_errors[i] > 0:
+            weights[i] = average_weighted_error / sum_errors[i]
         else:
             weights[i] = 1.0 / n
     weights /= np.sum(weights)
-    sum_weighted_errors.fill(0)
     if debug:
-        print("weights after", weights)
+        print("weights after", weights, sum_errors * weights)
+    sum_errors.fill(0)
 
 
 if __name__ == "__main__":
@@ -135,4 +222,4 @@ if __name__ == "__main__":
     tests = interpret.compile(interpret.load(file_name))
     for actual, expect in tests:
         print(evaluate(actual, expect, debug=True))
-    print(sum_weighted_errors)
+    print(sum_errors)

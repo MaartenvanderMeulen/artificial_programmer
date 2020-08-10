@@ -1,32 +1,32 @@
 '''Search for new functions'''
 import sys
-import copy
 import interpret
 import evaluate
 import random
 import numpy as np
 import ga_search_deap
+import evaluate
 
 
-def is_solved_by_function(examples, fname, functions):
-    for actual_params, expected_output in examples:
-        code = [fname] + actual_params
+def is_solved_by_function(example_inputs, evaluation_functions, fname, functions):
+    for input in example_inputs:
+        code = [fname] + input
         variables = dict()
         actual_output = interpret.run(code, variables, functions)
-        if actual_output != expected_output:
+        if evaluate.evaluate(input, actual_output, evaluation_functions, False) > 0.0:
             return False
     return True
 
 
 def solve_by_existing_function(problem, functions):
-    problem_label, examples = problem
+    problem_label, params, example_inputs, evaluation_functions, hints = problem
     build_in_functions = interpret.get_build_in_functions()
     for fname in build_in_functions:
         layer0_no_functions = dict()
-        if is_solved_by_function(examples, fname, layer0_no_functions):
+        if is_solved_by_function(example_inputs, evaluation_functions, fname, layer0_no_functions):
             return fname
     for fname, (params, code) in functions.items():
-        if is_solved_by_function(examples, fname, functions):
+        if is_solved_by_function(example_inputs, evaluation_functions, fname, functions):
             return fname
     return None
 

@@ -1,2 +1,8 @@
 (
 )
+#    (function p6_col (board col) (for board board (at board col)))
+#    (function p6_col (board col) (for board board (add (at board 0) col)))
+#    (function p6_col (board col) (for board board (add (at board 0) col)))
+#    (function p6_col (board col) (for board board (add (at board 0) col)))
+#    (function p6_col (board col) (for board board (at board col)))
+#    (function p6_col (board col) (for board board (at board col)))

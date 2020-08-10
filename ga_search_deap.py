@@ -2,7 +2,6 @@
 import sys
 import operator
 import numpy
-import copy
 from deap import algorithms
 from deap import base
 from deap import creator
@@ -18,28 +17,24 @@ one_time_initialisation = True
 best_error = 1e9
 
 
+
 def evaluate_individual(toolbox, individual):
     program_str = str(individual)
     program = interpret.compile_deap(program_str, toolbox.functions)
     weighted_error = 0.0
-    for example in toolbox.examples:
-        input, expected_output = example
-        variables = interpret.bind_params(toolbox.input_labels, copy.deepcopy(input))
+    for input in toolbox.example_inputs:
+        variables = interpret.bind_params(toolbox.formal_params, input)
         model_output = interpret.run(program, variables, toolbox.functions)
-        weighted_error += evaluate.evaluate(model_output, expected_output)
+        weighted_error += evaluate.evaluate(input, model_output, toolbox.evaluation_functions, False)
     global best_error
-    if False: # best_error > weighted_error:
+    if best_error > weighted_error:
         best_error = weighted_error
         print("DEBUG GA_SEARCH_DEAP 34 : best error", best_error, interpret.convert_code_to_str(program))
         if False:
-            for example in toolbox.examples:
-                input, expected_output = example
-                variables = interpret.bind_params(toolbox.input_labels, copy.deepcopy(input))
+            for input in toolbox.example_inputs:
+                variables = interpret.bind_params(toolbox.formal_params, input)
                 model_output = interpret.run(program, variables, toolbox.functions)
-                error = evaluate.evaluate(model_output, expected_output, False)
-                print("    DEBUG GA_SEARCH_DEAP 40 : error ", error, model_output, expected_output)
-                #evaluate.dynamic_error_weight_adjustment(True)
-            
+                error = evaluate.evaluate(input, model_output, toolbox.evaluation_functions, False)
     return weighted_error,
 
 
@@ -48,22 +43,27 @@ def f():
     return None
 
 
-def initialize_genetic_programming_toolbox(examples, input_labels, functions):
-    pset = gp.PrimitiveSet("MAIN", len(input_labels))
-
+def initialize_genetic_programming_toolbox(problem, functions):
+    problem_name, formal_params, example_inputs, evaluation_functions, hints = problem
+    pset = gp.PrimitiveSet("MAIN", len(formal_params))
+    for i, param in enumerate(formal_params):
+        rename_cmd = f'pset.renameArguments(ARG{i}="{param}")'
+        eval(rename_cmd)
     pset.addTerminal(0)
     pset.addTerminal(1)
     predefined_variables = ["n", "m", "v", "w", "k", "i", "j", "x"]
     for variable in predefined_variables:
-        assert variable not in input_labels
-        pset.addTerminal(variable)
+        if variable not in formal_params:
+            pset.addTerminal(variable)
     for function in interpret.get_build_in_functions():
-        param_types = interpret.get_build_in_function_param_types(function)
-        arity = sum([1 for t in param_types if t in [1, "v"]])
-        pset.addPrimitive(f, arity, name=function)
+        if function in hints:
+            param_types = interpret.get_build_in_function_param_types(function)
+            arity = sum([1 for t in param_types if t in [1, "v"]])
+            pset.addPrimitive(f, arity, name=function)
     for function, (params, code) in functions.items():
-        arity = len(params)
-        pset.addPrimitive(f, arity, name=function)
+        if function in hints:
+            arity = len(params)
+            pset.addPrimitive(f, arity, name=function)
     global one_time_initialisation
     if one_time_initialisation:
         creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
@@ -74,8 +74,9 @@ def initialize_genetic_programming_toolbox(examples, input_labels, functions):
     toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.expr)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register("compile", gp.compile, pset=pset)
-    toolbox.examples = copy.deepcopy(examples)
-    toolbox.input_labels = input_labels
+    toolbox.formal_params = formal_params
+    toolbox.example_inputs = example_inputs
+    toolbox.evaluation_functions = evaluation_functions
     toolbox.functions = functions
     toolbox.register("evaluate", evaluate_individual, toolbox)
     toolbox.register("select", tools.selTournament, tournsize=3)
@@ -87,7 +88,7 @@ def initialize_genetic_programming_toolbox(examples, input_labels, functions):
     return toolbox
 
 
-def calc_ai(toolbox, pop_size, generations):
+def ga_search(toolbox, pop_size, generations):
     pop = toolbox.population(n=pop_size)
     stats_fit = tools.Statistics(lambda ind: ind.fitness.values)
     stats_size = tools.Statistics(len)
@@ -103,49 +104,58 @@ def calc_ai(toolbox, pop_size, generations):
     return code_str, code, error
 
 
-def get_examples(example_file):
-    '''Examples are in a tab delimited file, with the columns '''
-    examples = []
-    with open(example_file, "r") as f:
-        solution = f.readline().rstrip()
-        hints = f.readline().rstrip().lower().split("\t")
-        hdr = f.readline().rstrip().lower().split("\t")
-        input_labels = [label for label in hdr if label not in ["", "output",]]
-        input_dimension = len(input_labels)
-        for line in f:
-            values = [int(s) for s in line.rstrip().lower().split("\t")]
-            examples.append((values[:input_dimension], values[input_dimension:]))
-    return examples, input_labels
-
-
 def solve_by_new_function(problem, functions):
-    problem_name, examples = problem
-    nparams = max([len(example[0]) for example in examples])
-    input_labels = [f"arg{i}" for i in range(nparams)]
-    code = main(examples, input_labels, functions)
-    if not code:
-        return None
-    return ["function", problem_name, input_labels, code]
-
-
-def main(examples, input_labels, functions):
-    result = None
-    toolbox = initialize_genetic_programming_toolbox(examples, input_labels, functions)
+    problem_name, params, example_inputs, evaluation_functions, hints = problem
+    toolbox = initialize_genetic_programming_toolbox(problem, functions)
     hops, pop_size, generations = 20, 500, 100
-    print(f"DEBUG GA_SEARCH 131 : hops={hops}, pop_size={pop_size}, generations={generations}, units={hops*pop_size*generations}")
+    print(f"DEBUG GA_SEARCH 131 : hops={hops}, pop_size={pop_size}, generations={generations}")
+    global best_error
+    best_error = 1e9
     for hop in range(hops):
-        global best_error
-        best_error = 1e9
-        code_str, code, error = calc_ai(toolbox, pop_size, generations)        
+        code_str, code, error = ga_search(toolbox, pop_size, generations)        
         print(f"DEBUG GA_SEARCH 134 : hop {hop+1}, error {error:.3f}: {code_str}")
         if error == 0:
-            result = code
-            break
-        evaluate.dynamic_error_weight_adjustment(True)
-    return result
+            return ["function", problem_name, params, code]
+        evaluate.dynamic_error_weight_adjustment(False)
+    return None
+
+
+def test_evaluation():
+    functions = interpret.get_functions("functions.txt")
+    evaluation_functions = [["eval_sums_rows_cols_diags", []]]
+    params = ["board", ]
+    example_inputs = [
+        [[[1, 2, 3], [4, 5, 6], [7, 8, 9]]],
+        [[[9, 8, 7], [6, 5, 4], [3, 2, 1]]],
+        [[[2, 9, 4], [7, 5, 3], [6, 1, 8]]],
+        ]
+    print("params", params)
+    for program_str in [
+            #"(at board col)", 
+            #"(for row board (at row 0))",
+            #"(for row board (at row col))",
+            #"(at board 0)", 
+            #"((at board 0 2) (at board 1 1) 2)", 
+            #"(for i (len board) (at board i i))",
+            #"(for i (len board) (at board i (sub (len board) 1 i)))",
+            "(add (for row board (sum row)) (for col (len board) (sum (get_col board col))) ((sum (get_diag1 board))) ((sum (get_diag2 board))))",
+            ]:
+        print(program_str)
+        program = interpret.compile(program_str)
+        print(program)
+        sum_error = 0
+        for input in example_inputs:
+            print("    params", params)
+            print("    input", input)
+            variables = interpret.bind_params(params, input)
+            print("    variables", variables)
+            model_output = interpret.run(program, variables, functions)
+            print("    model_output", model_output)
+            error = evaluate.evaluate(input, model_output, evaluation_functions, False)
+            print("    error", error)
+            sum_error += error
+        print("    ", sum_error)
 
 
 if __name__ == "__main__":
-    examples_file = sys.argv[1] if len(sys.argv) > 1 else "easy.txt"
-    examples, input_labels = get_examples(examples_file)
-    main(examples, input_labels, dict())
+    test_evaluation()
