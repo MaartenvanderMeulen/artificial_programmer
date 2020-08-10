@@ -1,8 +1,17 @@
 (
     # list functions here
-    (function fac (n) (if (gt n 1) (mul n (fac (sub n 1))) 1))
-    (function range1 (n) (for1 i n i))
-    (function range0 (n) (for0 i n i))
-    (function row0 (board) (at board 0))
+    #(function fac (n) (if (gt n 1) (mul n (fac (sub n 1))) 1))
+    #(function range (n) (for i n i))
+    (function sum (list) (last (assign result 0) (for elem list (assign result (add result elem))) result))
+    (function get_col (board col) (for row board (at row col)))
+    (function get_diag1 (board) (for i (len board) (at board i i)))
+    (function get_diag2 (board) (for i (len board) (at board i (sub (len board) 1 i))))
+    #(function compute_sums_magic_square (board)
+    #    (add
+    #        (for row board (sum row))
+    #        (for col (len board) (sum (get_col board col)))
+    #        ((sum (get_diag1 board)))
+    #        ((sum (get_diag2 board)))
+    #    )
+    #)
 )
-#    (function p5_add_ab1 (n m v) (add (add m n) 1))

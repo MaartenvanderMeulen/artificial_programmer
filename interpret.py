@@ -1,7 +1,7 @@
 '''Interpreter for LISP like programming language'''
 '''Interpreter for LISP like programming language'''
 import sys
-import copy
+import copy # mandatory
 import time
 
 
@@ -133,7 +133,7 @@ def _run(program, variables, functions, debug, depth):
         raise RuntimeError("code depth exceeded")
     global count_runs_calls
     count_runs_calls += 1
-    if count_runs_calls > 1000:
+    if count_runs_calls > 10000:
         print("code run calls exceeded")
         raise RuntimeError("code run calls exceeded")    
     if debug:
@@ -234,7 +234,7 @@ def _run(program, variables, functions, debug, depth):
                         assert index < len(x)
                         x = x[index]
                         result = x
-        elif program[0] == "last": # example (last (assign n 3) (for0 i n i)) --> (0 1 2)
+        elif program[0] == "last": # example (last (assign n 3) (for i n i)) --> (0 1 2)
             result = 0
             for p in program[1:]:
                 result = _run(p, variables, functions, debug, depth+1)
@@ -268,27 +268,15 @@ def _run(program, variables, functions, debug, depth):
                         result = _run(program[2], variables, functions, debug, depth+1)
                     elif len(program) >= 4:
                         result = _run(program[3], variables, functions, debug, depth+1)
-        elif program[0] == "for1": # example (for1 i n i))
+        elif program[0] == "for": # example (for i n i))
             if len(program) < 4:
                 return []
             loop_variable = program[1]
-            upper_bound = _run(program[2], variables, functions, debug, depth+1)
-            if type(upper_bound) != type(1):
-                return []
+            steps = _run(program[2], variables, functions, debug, depth+1)
+            if type(steps) == type(1):
+                steps = [i for i in range(steps)]
             result = []
-            for i in range(1, upper_bound+1):
-                if type(loop_variable) == type(""):
-                    variables[loop_variable] = i
-                result.append(_run(program[3], variables, functions, debug, depth+1))
-        elif program[0] == "for0": # example (for0 i n i))
-            if len(program) < 4:
-                return []
-            loop_variable = program[1]
-            upper_bound = _run(program[2], variables, functions, debug, depth+1)
-            if type(upper_bound) != type(1):
-                return []
-            result = []
-            for i in range(0, upper_bound):
+            for i in steps:
                 if type(loop_variable) == type(""):
                     variables[loop_variable] = i
                 result.append(_run(program[3], variables, functions, debug, depth+1))
@@ -362,7 +350,7 @@ def run(program, variables, functions, debug=False):
             #print(longest_run, "seconds")
     except RuntimeError as e:
         print(convert_code_to_str(program))
-        print(e.what)
+        print(str(e))
         return 0
     #print("run end") 
     return result
@@ -400,7 +388,7 @@ def get_build_in_functions():
         "add", "sub", "mul", "and", "or", # arity 2+
         "at", # arity 2*
         "if", # arity 2 or 3
-        "for1", "for0", # artity 3, but 1st operand must be a variable name
+        "for", # artity 3, but 1st operand must be a variable name
         ]
 
 
@@ -415,7 +403,7 @@ def get_build_in_function_param_types(fname):
         "add":(1,1,"*"), "sub":(1,1,"*"), "mul":(1,1,"*"), "and":(1,1,"*"), "or":(1,1,"*"), # arity 2*
         "at":(1,1,"*"), # arity 2*
         "if":(1,1,"?"), # arity 2 or 3
-        "for1":("v",1,1), "for0":("v",1,1), # artity 3, but 1st operand must be a variable name
+        "for":("v",1,1), # artity 3, but 1st operand must be a variable name
         }
     return arity_dict[fname]
 
