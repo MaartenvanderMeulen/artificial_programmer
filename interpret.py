@@ -129,12 +129,12 @@ longest_run = 0
     
 def _run(program, variables, functions, debug, depth):
     if depth > 100:
-        print("code depth exceeded")
+        #print("code depth exceeded")
         raise RuntimeError("code depth exceeded")
     global count_runs_calls
     count_runs_calls += 1
     if count_runs_calls > 10000:
-        print("code run calls exceeded")
+        #print("code run calls exceeded")
         raise RuntimeError("code run calls exceeded")    
     if debug:
         print("    "*depth, "_run start", "program", program, "variables", variables, "functions", functions)
@@ -219,7 +219,7 @@ def _run(program, variables, functions, debug, depth):
                 x = _run(program[1], variables, functions, debug, depth+1)
                 if type(x) == type([]):
                     result = len(x)
-        elif program[0] == "at": # example (at x i j)
+        elif program[0] in ["at", "at1", "at2", "at3"]: # example (at x i j)
             result = 0
             if len(program) > 2:
                 x = _run(program[1], variables, functions, debug, depth+1)
@@ -234,7 +234,11 @@ def _run(program, variables, functions, debug, depth):
                         assert index < len(x)
                         x = x[index]
                         result = x
-        elif program[0] == "last": # example (last (assign n 3) (for i n i)) --> (0 1 2)
+        elif program[0] in ["list", "list1", "list2", "list3"]: # example (list (at board 0 0) (at board 1 1)) --> (x y)
+            result = []
+            for p in program[1:]:
+                result.append(_run(p, variables, functions, debug, depth+1))
+        elif program[0] in ["last", "last1", "last2", "last3"]: # example (last (assign n 3) (for i n i)) --> (0 1 2)
             result = 0
             for p in program[1:]:
                 result = _run(p, variables, functions, debug, depth+1)
@@ -349,8 +353,9 @@ def run(program, variables, functions, debug=False):
             #print(convert_code_to_str(program))
             #print(longest_run, "seconds")
     except RuntimeError as e:
-        print(convert_code_to_str(program))
-        print(str(e))
+        if str(e) != "code run calls exceeded":
+            print(convert_code_to_str(program))
+            print(str(e))
         return 0
     #print("run end") 
     return result
@@ -381,14 +386,16 @@ def call_function(function_call, variables, functions, debug, depth):
 
 def get_build_in_functions():
     return [        
-        "len", # arity 1
-        "last", # arity 1+
+        "len",  # arity 1
         "div", "lt", "le", "eq", "ne", "ge", "gt", # arity 2
+        "add", "sub", "mul", "and", "or", # arity 2
         "assign", # artity 2, but 1st operand must be a variable name
-        "add", "sub", "mul", "and", "or", # arity 2+
-        "at", # arity 2*
         "if", # arity 2 or 3
         "for", # artity 3, but 1st operand must be a variable name
+        
+        "list1", # arity 1
+        "list2", "last2", "at2", # arity 2
+        "list3", "last3", "at3", # arity 3
         ]
 
 
@@ -397,13 +404,15 @@ def get_build_in_function_param_types(fname):
     # type-indications : 1=numeric; "*"=zero or more numeric; "?"=0 or 1 numeric; "v"=variable
     arity_dict = {        
         "len":(1,), # arity 1
-        "last":(1,"*"), # arity 1*
         "div":(1,1), "lt":(1,1), "le":(1,1), "eq":(1,1), "ne":(1,1), "ge":(1,1), "gt":(1,1), # arity 2
+        "add":(1,1), "sub":(1,1), "mul":(1,1), "and":(1,1), "or":(1,1), # arity 2
         "assign":("v",1), # artity 2, but 1st operand must be a variable name
-        "add":(1,1,"*"), "sub":(1,1,"*"), "mul":(1,1,"*"), "and":(1,1,"*"), "or":(1,1,"*"), # arity 2*
-        "at":(1,1,"*"), # arity 2*
-        "if":(1,1,"?"), # arity 2 or 3
+        "if":(1,1), # arity 2
         "for":("v",1,1), # artity 3, but 1st operand must be a variable name
+
+        "list1":(1,), # arity 1
+        "list2":(1,1,), "last2":(1,1,), "at2":(1,1,), # arity 2
+        "list3":(1,1,1,), "last3":(1,1,1,), "at3":(1,1,1,), # arity 3
         }
     return arity_dict[fname]
 
@@ -411,8 +420,14 @@ def get_build_in_function_param_types(fname):
 def convert_code_to_str(code):
     if type(code) == type([]):
         result = "(" + " ".join([convert_code_to_str(item) for item in code]) + ")"
-    else:
+    else:        
         result = str(code)
+        if result in ["list1", "list2", "list3"]:
+            result = "list"
+        if result in ["last1", "last2", "last3"]:
+            result = "last"
+        if result in ["at2", "at3"]:
+            result = "at"
     return result
 
     

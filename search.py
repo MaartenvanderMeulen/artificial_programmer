@@ -1,5 +1,6 @@
 '''Search for new functions'''
 import sys
+import time
 import interpret
 import evaluate
 import random
@@ -19,7 +20,7 @@ def is_solved_by_function(example_inputs, evaluation_functions, fname, functions
 
 
 def solve_by_existing_function(problem, functions):
-    problem_label, params, example_inputs, evaluation_functions, hints = problem
+    problem_label, params, example_inputs, evaluation_functions, hints, layer = problem
     build_in_functions = interpret.get_build_in_functions()
     for fname in build_in_functions:
         layer0_no_functions = dict()
@@ -31,24 +32,32 @@ def solve_by_existing_function(problem, functions):
     return None
 
 
-def find_new_functions(problems, functions, functions_file_name, iteration):
-    print("Find new functions, iteration", iteration, "...")
-    count_new_functions = 0
+def find_new_functions(problems, functions, functions_file_name, layer):
+    print("Solving problems, layer", layer, "...")
+    new_functions = []
     for problem in problems:
         problem_label = problem[0]
-        print(problem_label, "...")
-        function = solve_by_existing_function(problem, functions)
-        if function:
-            print(problem_label, "is solved by", function)
-        else:
-            function = ga_search_deap.solve_by_new_function(problem, functions)
-            if function:
-                print(problem_label, "can be solved by new function", function)
-                interpret.add_function(function, functions, functions_file_name)
-                count_new_functions += 1
+        problem_layer = problem[-1]
+        if problem_layer <= layer:
+            function_str = solve_by_existing_function(problem, functions)
+            if function_str:
+                pass
+                # print("problem", problem_label, "is solved by existing function", function_str)
             else:
-                print(problem_label, "cannot be solved")
-    return count_new_functions > 0
+                print("problem", problem_label, "...")
+                function_code = ga_search_deap.solve_by_new_function(problem, functions)
+                if function_code:
+                    function_str = interpret.convert_code_to_str(function_code)
+                    #print("problem", problem_label, "is be solved by new function", function_str)
+                    new_functions.append(function_code)
+                else:
+                    print("problem", problem_label, "cannot be solved in this layer")
+        else:
+            pass
+            # print("problem", problem_label, "will be tried at layer", problem_layer)        
+    for function_code in new_functions:
+        interpret.add_function(function_code, functions, functions_file_name)
+    return len(new_functions) > 0
 
 
 if __name__ == "__main__":
@@ -58,7 +67,10 @@ if __name__ == "__main__":
     problems_file_name = sys.argv[2] if len(sys.argv) >= 3 else "problems.txt"
     functions = interpret.get_functions(functions_file_name)
     problems = interpret.compile(interpret.load(problems_file_name))
-    print("DEBUG SEARCH 61 : problems ", problems)
-    iteration = 1
-    while find_new_functions(problems, functions, functions_file_name, iteration):
-        iteration += 1
+    #print("DEBUG SEARCH 61 : problems ", problems)
+    t0 = time.time()
+    max_layer = max([problem[-1] for problem in problems])
+    for layer in range(1, max_layer+1):
+        find_new_functions(problems, functions, functions_file_name, layer)
+    t1 = time.time()
+    print("total execution time", int(t1 - t0), "seconds")
