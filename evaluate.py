@@ -7,7 +7,7 @@ import time
 
 # used in dynamic weight adjustment
 global sum_errors, weights
-weights = np.array([0.2, 0.2, 0.2, 0.2, 0.2]) # [0.80, 0.17, 0.01, 0.01, 0.01])
+weights = np.ones((6)) / 6
 sum_errors = np.zeros_like(weights)
 
 
@@ -44,6 +44,32 @@ def _distance_with_closest_numbers(x, values):
     return result
     
     
+def evaluate_int(actual, expect, debug=False):
+    '''compute and return error on this output'''
+    errors = []
+    assert type(expect) == type(1)
+    
+    # error : type difference
+    error = 0.0
+    if type(actual) != type(1):
+        error = 1.0
+    errors.append(error)
+    # error : length
+    error = 0.0
+    if type(actual) != type(1):
+        actual_numbers = extract_numbers(actual)  
+        if len(actual_numbers) == 0:
+            error += 1.0
+            actual = expect + 1000
+        else:
+            actual = list(actual_numbers)[0]
+    errors.append(error)
+    # error : hoever zitten de expect getallen van de model getallen af
+    error = (actual - expect) ** 2
+    errors.append(error)
+    return errors
+
+
 def evaluate_list_of_ints(actual, expect, debug=False):
     '''compute and return error on this output'''
     errors = []
@@ -89,7 +115,15 @@ def evaluate_list_of_ints(actual, expect, debug=False):
     return errors
 
 
-def eval_board_col_diag_common(input, actual, extra_function_params, expect):
+def find_col(board, v):
+    for row in board:
+        for col, v_col in enumerate(row):
+            if v_col == v:
+                return col
+    return None
+    
+    
+def eval_board_col_diag_common(input, actual, extra_function_params, expect, expect_cols):
     board = input[0]
     n = len(board)
     
@@ -128,6 +162,15 @@ def eval_board_col_diag_common(input, actual, extra_function_params, expect):
             error_fromrows_ordered += 1.0
     error_fromrows_ordered = error_fromrows_ordered ** 2
     
+    # error : aantal kolommen
+    col_values = np.zeros((n), dtype="int")
+    for actual_value in actual:
+        col = find_col(board, actual_value)
+        if col is not None:
+            col_values[col] = 1
+    actual_cols = np.sum(col_values)
+    error_columns = (actual_cols - expect_cols) ** 2
+    
     # error :zijn het de juiste elementen uit de rows
     error_correct_elements_ordered = 0.0
     for row in range(n):
@@ -137,41 +180,122 @@ def eval_board_col_diag_common(input, actual, extra_function_params, expect):
             error_correct_elements_ordered += 1.0
     error_correct_elements_ordered = error_correct_elements_ordered ** 2
             
-    return [error_type, error_len, error_fromrows, error_fromrows_ordered, error_correct_elements_ordered]
+    return [error_type, error_len, error_fromrows, error_fromrows_ordered, error_columns,
+            error_correct_elements_ordered]
     
     
 def eval_board_col(input, actual, extra_function_params):
     board, col = input
     n = len(board)
     expect = [row[col] for row in board]    
-    return eval_board_col_diag_common(input, actual, extra_function_params, expect)
+    return eval_board_col_diag_common(input, actual, extra_function_params, expect, 1)
     
     
 def eval_board_diag1(input, actual, extra_function_params):
     board = input[0]
     n = len(board)
     expect = [row[i] for i, row in enumerate(board)]
-    return eval_board_col_diag_common(input, actual, extra_function_params, expect)
+    return eval_board_col_diag_common(input, actual, extra_function_params, expect, n)
     
     
 def eval_board_diag2(input, actual, extra_function_params):
     board = input[0]
     n = len(board)
     expect = [row[n-1 - i] for i, row in enumerate(board)]    
-    return eval_board_col_diag_common(input, actual, extra_function_params, expect)
+    return eval_board_col_diag_common(input, actual, extra_function_params, expect, n)
 
 
-def eval_sums_rows_cols_diags(input, actual, extra_function_params):
+def eval_magic_square_sums(input, actual, extra_function_params):
     board = input[0]
     n = len(board)
-    expect = [sum(row) for row in board]    
+    expect = []
+    expect += [sum(row) for row in board]    
     expect += [sum([row[col] for row in board]) for col in range(n)]    
     expect.append(sum([board[i][i] for i in range(n)]))
     expect.append(sum([board[i][(n-1) - i] for i in range(n)]))
     return evaluate_list_of_ints(actual, expect, False)
     
     
+def eval_get_row_sums(input, actual, extra_function_params):
+    board = input[0]
+    n = len(board)
+    expect = []
+    expect += [sum(row) for row in board]    
+    return evaluate_list_of_ints(actual, expect, False)
+    
+    
+def eval_get_col_sums(input, actual, extra_function_params):
+    board = input[0]
+    n = len(board)
+    expect = []
+    expect += [sum([row[col] for row in board]) for col in range(n)]    
+    return evaluate_list_of_ints(actual, expect, False)
+    
+    
+def eval_get_diag_sums(input, actual, extra_function_params):
+    board = input[0]
+    n = len(board)
+    expect = []
+    expect.append(sum([board[i][i] for i in range(n)]))
+    expect.append(sum([board[i][(n-1) - i] for i in range(n)]))
+    return evaluate_list_of_ints(actual, expect, False)
+    
+    
+def eval_get_magic_number_n(input, actual, extra_function_params):
+    n = input[0]
+    assert type(n) == type(1)
+    expect = (n * (n * n + 1)) // 2
+    if 0 <= n <= 5:
+        assert expect == [0, 1, 5, 15, 34, 65][n]
+    return evaluate_int(actual, expect, False)
+    
+    
+def eval_get_magic_number(input, actual, extra_function_params):
+    board = input[0]
+    assert type(board) == type([])
+    n = len(board)
+    expect = (n * (n * n + 1)) // 2
+    if 0 <= n <= 5:
+        assert expect == [0, 1, 5, 15, 34, 65][n]
+    return evaluate_int(actual, expect, False)
+    
+    
+def eval_are_all_equal_to(input, actual, extra_function_params):
+    values = input[0]
+    x = input[1]
+    expect = sum([1 if value == x else 0 for value in values]) == len(values)
+    return evaluate_int(actual, int(expect), False)
+
+    
+def eval_is_magic_square(input, actual, extra_function_params):
+    board = input[0]
+    n = len(board)
+    magic_number = (n * (n * n + 1)) // 2
+    sums = []
+    for row in board:
+        sums.append(sum(row))
+    for i in range(n):
+        sums.append(sum([row[i] for row in board]))
+    sums.append(sum([board[i][i] for i in range(len(board))]))
+    sums.append(sum([board[i][(n-1) - i] for i in range(len(board))]))
+    expect = sum([1 if value == magic_number else 0 for value in sums]) == len(sums)
+    return evaluate_int(actual, int(expect), False)
+
+    
 # ============================================== INTERFACE ====================
+
+
+def evaluate_code(actual_code_str, expected_code_str):
+    n_eq = 0.0
+    for i in range(min(len(actual_code_str), len(expected_code_str))):
+        if actual_code_str[i] != expected_code_str[i]:
+            break
+        n_eq += 1.0
+    error = len(expected_code_str) - n_eq
+    if error == 0 and (len(actual_code_str) > len(expected_code_str)):
+        error += (len(actual_code_str) - len(expected_code_str)) / 10000.0
+    # print("evaluate_code", actual_code_str, expected_code_str, error)
+    return error
 
 
 def evaluate(input, actual_output, evaluation_functions, debug):
@@ -183,24 +307,31 @@ def evaluate(input, actual_output, evaluation_functions, debug):
     global sum_errors, weights
     if len(weights) != len(errors):
         weights = np.ones((len(errors))) / len(errors)
-        print("DEBUG 121 : initializing weights")
     weighted_errors = errors * weights
     if len(sum_errors) != len(errors):
         sum_errors = np.zeros_like(errors)
-        print("DEBUG 125 : initializing sum weights")
     sum_errors += errors
     if debug:
-        print("evaluate")
-        print("    input", input)
-        print("    actual_output", actual_output)
-        print("    individual errors", errors)
-        print("    sum weighted error this sample", np.sum(weighted_errors))
-        print("    sums errors this hop", sum_errors)
-        print("    sums weighted errors this hop", sum_errors * weights)
+        print("    evaluate")
+        print("      input", input)
+        print("      actual_output", actual_output)
+        print("      individual errors", errors)
+        print("      sum weighted error this sample", np.sum(weighted_errors))
+        #print("      sums errors this hop", sum_errors)
+        #print("      sums weighted errors this hop", sum_errors * weights)
     return np.sum(weighted_errors)    
     
+    
+def init_dynamic_error_weight_adjustment():
+    global sum_errors, weights
+    n = 6
+    sum_errors = np.zeros((n))
+    weights = np.ones((n)) / n
+
 
 def dynamic_error_weight_adjustment(debug=True):
+    return
+
     global sum_errors, weights
     n = len(weights)
     if debug:
