@@ -1,5 +1,10 @@
 Experimenten met het genereren van code
 
+======================== zondag 23 Auustus 2020 =================================
+    mutp = 0.15, cxp = 0.4
+    ngen = 70
+    select = selTournament, k=3
+
 Solving problems, layer 1 ...
 problem get_col solved after 87853 evaluations by
     (function get_col (board col) (for row board (at row col)))
@@ -31,4 +36,42 @@ problem is_magic_square solved after 46 evaluations by
     (function is_magic_square (board) (are_all_equal_to (get_sums_magic_square board) (get_magic_number board)))
 
 total execution time 1651 seconds
+
+================================= dinsdag 25 Augustus 2020 ===============================
+    mutp = 1 - cxp, cxp = 0.5 (leaving it at mutp = 0.15, cxp = 0.4, dus 0.45% is kopie van oude pop, laat alles 5x langer duren!)
+    ngen = 30 (leaving it at 70 takes 2x as much time)
+    select = selBest (leaving it at selTournament, k=3, maakt niet veel uit)
+    dynamic_weights = False (setting it to True simply doubles the # evaluations)
+
+    
+Solving problems, layer 1 ...
+problem get_col solved after 3464 evaluations by
+    (function get_col (board col) (for board board (at (for board board board) col)))
+problem get_diag1 solved after 2186 evaluations by
+    (function get_diag1 (board) (for i (len board) (at board i i)))
+problem get_diag2 solved after 64137 evaluations by
+    (function get_diag2 (board) (for i 3 (sub (at board i (sub (at i board i) (sub i 2))) (for 3 2 (for (for 2 board 2) (for i board board) (for 3 3 2))))))
+problem get_magic_number_n solved after 52645 evaluations by
+    (function get_magic_number_n (n) (div (mul (mul 1 (add (div 2 2) (mul n n))) n) 2))
+problem are_all_equal_to solved after 530 evaluations by
+    (function are_all_equal_to (values x) (eq values (for values values x)))
+
+Solving problems, layer 2 ...
+problem get_row_sums solved after 527 evaluations by
+    (function get_row_sums (board) (for board (for row board (sum row)) board))
+problem get_col_sums solved after 6902 evaluations by
+    (function get_col_sums (board) (get_col (for i 3 (for (for board board i) board (sum (get_col board i)))) (for (sum i) (for board i board) (get_col board i))))
+problem get_diag_sums solved after 4604 evaluations by
+    (function get_diag_sums (board) (list (sum (get_diag1 board)) (sum (get_diag2 board))))
+problem get_magic_number solved after 32 evaluations by
+    (function get_magic_number (board) (get_magic_number_n (len board)))
+
+Solving problems, layer 3 ...
+problem get_sums_magic_square ...
+problem get_sums_magic_square solved after 2131 evaluations by (function get_sums_magic_square (board) (add (add (get_row_sums board) (get_col_sums board)) (get_diag_sums board)))
+Solving problems, layer 4 ...
+problem is_magic_square ...
+problem is_magic_square solved after 151 evaluations by (function is_magic_square (board) (are_all_equal_to (get_sums_magic_square board) (get_magic_number board)))
+total execution time 116 seconds
+
 

@@ -3,6 +3,7 @@
 import sys
 import operator
 import numpy
+import random
 from deap import algorithms
 from deap import base
 from deap import creator
@@ -87,7 +88,10 @@ def initialize_genetic_programming_toolbox(problem, functions):
     toolbox.functions = functions
     toolbox.solution_code_str = interpret.convert_code_to_str(solution_hints)
     toolbox.register("evaluate", evaluate_individual, toolbox)
-    toolbox.register("select", tools.selTournament, tournsize=3)
+    if False:
+        toolbox.register("select", tools.selTournament, tournsize=3)
+    else:
+        toolbox.register("select", tools.selBest)
     toolbox.register("mate", gp.cxOnePoint)
     toolbox.register("expr_mut", gp.genFull, min_=0, max_=2)
     toolbox.register("mutate", gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
@@ -96,8 +100,27 @@ def initialize_genetic_programming_toolbox(problem, functions):
     return toolbox
 
 
+def varOr(population, toolbox, lambda_, cxpb, mutpb):
+    offspring = []
+    while len(offspring) < lambda_:
+        op_choice = random.random()
+        if op_choice < cxpb: # Apply crossover
+            ind1, ind2 = list(map(toolbox.clone, random.sample(population, 2)))
+            ind1, ind2 = toolbox.mate(ind1, ind2)
+            del ind1.fitness.values
+            offspring.append(ind1)
+        else: # Apply mutation
+            ind = toolbox.clone(random.choice(population))
+            ind, = toolbox.mutate(ind)
+            del ind.fitness.values
+            offspring.append(ind)
+    return offspring
+
+
 def eaMuPlusLambda(toolbox, mu, lambda_, cxpb, mutpb, ngen):
     '''adapted from DEAP'''
+    debug = False
+    
     # Generate initial population
     population = toolbox.population(n=mu)
 
@@ -106,6 +129,11 @@ def eaMuPlusLambda(toolbox, mu, lambda_, cxpb, mutpb, ngen):
     fitnesses = toolbox.map(toolbox.evaluate, population)
     for ind, fit in zip(population, fitnesses):
         ind.fitness.values = fit
+        if debug:
+            deap_str = str(ind)
+            code = interpret.compile_deap(deap_str, toolbox.functions)
+            code_str = interpret.convert_code_to_str(code)
+            print("initial", code_str, fit[0])
         if ind.fitness.values[0] == 0.0:
             return ind, 0
     if toolbox.dynamic_weights:
@@ -117,12 +145,17 @@ def eaMuPlusLambda(toolbox, mu, lambda_, cxpb, mutpb, ngen):
     # Generational process
     for gen in range(ngen):
         # Generate offspring
-        offspring = algorithms.varOr(population, toolbox, lambda_, cxpb, mutpb)
+        offspring = varOr(population, toolbox, lambda_, cxpb, mutpb)
 
         # Evaluate offspring
         fitnesses = toolbox.map(toolbox.evaluate, offspring)
         for ind, fit in zip(offspring, fitnesses):
             ind.fitness.values = fit
+            if debug:
+                deap_str = str(ind)
+                code = interpret.compile_deap(deap_str, toolbox.functions)
+                code_str = interpret.convert_code_to_str(code)
+                print("offspring gen", gen, code_str, fit[0])
             if ind.fitness.values[0] == 0.0:
                 return ind, gen+1
 
@@ -140,6 +173,7 @@ def eaMuPlusLambda(toolbox, mu, lambda_, cxpb, mutpb, ngen):
         #best = min(population, key=lambda item: item.fitness.values[0])
         #print(gen, best.fitness.values[0])
         
+    #exit()
     best = min(population, key=lambda item: item.fitness.values[0])
     return best, ngen+1
     
@@ -156,86 +190,37 @@ def solve_by_new_function(problem, functions):
     problem_name, params, example_inputs, evaluation_functions, hints, layer = problem
     toolbox = initialize_genetic_programming_toolbox(problem, functions)
     toolbox.monkey_mode = False
-    toolbox.dynamic_weights = not toolbox.monkey_mode
+    toolbox.dynamic_weights = False # not toolbox.monkey_mode
     hops = 100
-    pop_size, nchildren, cxpb, mutpb, generations = 300, 300, 0.4, 0.15, 70
-    # for pop_size in [200, 300, 400, 500, 600, 700]:
+    pop_size, cxpb, generations = 300, 0.5, 30
     # for nchildren in [int(pop_size * 0.25), int(pop_size * 0.5), int(pop_size * 0.75), int(pop_size * 1.0)]:
-    # for mutpb in [0.05, 0.1, 0.15, 0.2]:
-    # for cxpb in [0.4, 0.5, 0.6]:
-    # for generations in [100, 30, 60]: # [5, 10, 15, 20, 25, 30, 35]:
-    #counts = []
-    #for tries in range(1):
-    global best_error
-    best_error = 1e9
-    global eval_count
-    eval_count = 0
-    result = None
-    for hop in range(hops):
-        code, code_str, error, gen = ga_search(toolbox, pop_size, nchildren, cxpb, mutpb, generations)        
-        if error == 0:
-            result = ["function", problem_name, params, code]
-            result_str = interpret.convert_code_to_str(result)
-            print("problem", problem_name, f"solved after {eval_count} evaluations by", result_str)
-            #print("gen", gen)
-            break
-        if False:
-            print(f"hop {hop+1}, error {error:.3f}: {code_str}")
-            if toolbox.monkey_mode:
-                print(f"    {code_str}")
-                print(f"    {toolbox.solution_code_str}")
-    print("hop", hop+1)
-    #counts.append(eval_count)
-    #print(f"hops={hops}, pop_size={pop_size}, nchildren={nchildren}, cx={cxpb}, mut={mutpb}, generations={generations}, counts", counts, "sum", sum(counts))
-    #exit()
+    # for generations in [20, 30, 40, 50, 60, 70, 80, 90, 100]:
+    # for cxpb in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
+    # for pop_size in [300, 400, 500, 600, 700, 800, 900, 1000]:
+    if True:
+        nchildren, mutpb = pop_size, 1.0 - cxpb
+        global eval_count
+        eval_count = 0
+        #count_found = 0
+        #for tries in range(20):
+        if True:
+            global best_error
+            best_error = 1e9
+            result = None
+            for hop in range(hops):
+                code, code_str, error, gen = ga_search(toolbox, pop_size, nchildren, cxpb, mutpb, generations)        
+                if error == 0:
+                    result = ["function", problem_name, params, code]
+                    result_str = interpret.convert_code_to_str(result)
+                    print("problem", problem_name, f"solved after {eval_count} evaluations by", result_str)
+                    #print("gen", gen)
+                    #count_found += 1
+                    break
+                if False:
+                    print(f"hop {hop+1}, error {error:.3f}: {code_str}")
+                    if toolbox.monkey_mode:
+                        print(f"    {code_str}")
+                        print(f"    {toolbox.solution_code_str}")
+        #eff = count_found / eval_count
+        #print(f"hops={hops}, pop_size={pop_size}, nchildren={nchildren}, cx={cxpb:.2f}, mut={mutpb:.2f}, generations={generations}, eff {count_found} / {eval_count} = {eff}")
     return result
-
-
-def test_evaluation():
-    functions = interpret.get_functions("functions.txt")
-    evaluation_functions = [["eval_magic_square_sums", []]]
-    params = ["board", ]
-    example_inputs = [
-        [[[1, 2, 3], [4, 5, 6], [7, 8, 9]]],
-        [[[9, 8, 7], [6, 5, 4], [3, 2, 1]]],
-        [[[9, 7, 3], [4, 8, 1], [2, 6, 5]]],
-        [[[2, 9, 4], [7, 5, 3], [6, 1, 8]]],
-        [[[1886, 8263, 8723], [4827, 9962, 1377], [1238, 8173, 5328]]],
-        ]
-    print("params", params)
-    for program_str in [
-            #"(at board col)", 
-            #"(for row board (at row 0))",
-            #"(for row board (at row col))",
-            #"(at board 0)", 
-            #"(list3 (at board 0 0) (at board 1 1) 2)", 
-            #"(list3 (at3 board 0 0) (at3 board 1 1) (at3 board 2 2))", 
-            #"(for i (len board) (at3 board i i))",
-            #"(for i (len board) (at3 board i (sub 1 (sub i 1))))",
-            #"(for i (len board) (at3 board i (sub (sub (len board) 1) i)))",
-            #"((at board 0 2) (at board 1 1) 2)", 
-            #"(for i (len board) (at board i (sub (len board) 1 i)))",
-            #"(add (for row board (sum row)) (for col (len board) (sum (get_col board col))) ((sum (get_diag1 board))) ((sum (get_diag2 board))))",
-            #"(add (for i board (sum i)) (for i (len board) (sum (get_col board i))))",
-            "(for board (add board (add (for i (len board) (get_col board i)) (for (len board) (for (list2 i i) (for i i board) (get_diag2 board)) (get_col board i)))) (sum board))"
-            ]:
-        evaluate.init_dynamic_error_weight_adjustment()
-        print(program_str)
-        program = interpret.compile(program_str)
-        print(program)
-        sum_error = 0
-        print("    params", params)
-        for input in example_inputs:
-            #print("    input", input)
-            variables = interpret.bind_params(params, input)
-            #print("    variables", variables)
-            model_output = interpret.run(program, variables, functions, False)
-            #print("    model_output", model_output)
-            error = evaluate.evaluate(input, model_output, evaluation_functions, True)
-            #print("    error", error)
-            sum_error += error
-        print("    ", sum_error)
-
-
-if __name__ == "__main__":
-    test_evaluation()
