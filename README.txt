@@ -38,11 +38,10 @@ problem is_magic_square solved after 46 evaluations by
 total execution time 1651 seconds
 
 ================================= dinsdag 25 Augustus 2020 ===============================
-    mutp = 1 - cxp, cxp = 0.5 (leaving it at mutp = 0.15, cxp = 0.4, dus 0.45% is kopie van oude pop, laat alles 5x langer duren!)
+    mutp = 1 - cxp, cxp = 0.5 (leaving it at mutp = 0.15, cxp = 0.4, dus 0.45% is kopie van oude pop, laat alles 4x langer duren!)
     ngen = 30 (leaving it at 70 takes 2x as much time)
-    select = selBest (leaving it at selTournament, k=3, maakt niet veel uit)
+    select = selBest (leaving it at selTournament, k=3, maakt niet veel uit, maar selBest is intuitiever)
     dynamic_weights = False (setting it to True simply doubles the # evaluations)
-
     
 Solving problems, layer 1 ...
 problem get_col solved after 3464 evaluations by
@@ -74,4 +73,7 @@ problem is_magic_square ...
 problem is_magic_square solved after 151 evaluations by (function is_magic_square (board) (are_all_equal_to (get_sums_magic_square board) (get_magic_number board)))
 total execution time 116 seconds
 
+==================================== wo 26 Aug 2020 ==================================
+
+Idee-en: dubbelen eruit; local search
 
