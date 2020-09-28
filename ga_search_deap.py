@@ -12,6 +12,7 @@ from deap import gp
 import interpret
 import evaluate
 import numpy as np
+import local_search
 
 
 global one_time_initialisation, eval_count
@@ -118,6 +119,7 @@ def generate_initial_population(toolbox):
     population = []
     while len(population) < toolbox.pop_size:
         ind = toolbox.population(n=1)[0]
+        ind = local_search.local_search(toolbox, ind)
         if add_if_unique(toolbox, ind, population) and ind.fitness.values[0] == 0.0:
             return None, ind
     return population, None
@@ -133,6 +135,7 @@ def generate_offspring(toolbox, population):
         else: # Apply mutation
             ind = toolbox.clone(random.choice(population))
             ind, = toolbox.mutate(ind)
+        ind = local_search.local_search(toolbox, ind)
         if add_if_unique(toolbox, ind, offspring) and ind.fitness.values[0] == 0.0:
             return None, ind
     return offspring, None
