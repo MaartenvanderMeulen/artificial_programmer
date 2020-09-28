@@ -1,4 +1,6 @@
-'''Search for new functions'''
+'''Search for new functions.  Usage:
+python search.py [functions.txt [problems.txt]]
+'''
 import sys
 import time
 import interpret
@@ -67,7 +69,6 @@ if __name__ == "__main__":
     problems_file_name = sys.argv[2] if len(sys.argv) >= 3 else "problems.txt"
     functions = interpret.get_functions(functions_file_name)
     problems = interpret.compile(interpret.load(problems_file_name))
-    #print("DEBUG SEARCH 61 : problems ", problems)
     t0 = time.time()
     max_layer = max([problem[-1] for problem in problems])
     for layer in range(1, max_layer+1):

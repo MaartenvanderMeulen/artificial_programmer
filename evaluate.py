@@ -316,7 +316,7 @@ def evaluate(input, actual_output, evaluation_functions, debug):
         print("      input", input)
         print("      actual_output", actual_output)
         print("      individual errors", errors)
-        print("      sum weighted error this sample", np.sum(weighted_errors))
+        print("      evaluation", np.sum(weighted_errors))
         #print("      sums errors this hop", sum_errors)
         #print("      sums weighted errors this hop", sum_errors * weights)
     return np.sum(weighted_errors)    
@@ -351,6 +351,5 @@ def dynamic_error_weight_adjustment(debug=True):
 if __name__ == "__main__":
     file_name = sys.argv[1] if len(sys.argv) >= 2 else "test_evaluate.txt"
     tests = interpret.compile(interpret.load(file_name))
-    for actual, expect in tests:
-        print(evaluate(actual, expect, debug=True))
-    print(sum_errors)
+    for input, actual_output, evaluation_function, debug in tests:
+        evaluate(input, actual_output, evaluation_function, debug)

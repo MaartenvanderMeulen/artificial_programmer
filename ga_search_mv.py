@@ -1,4 +1,4 @@
-'''Search for new functions, like deap, but coded by Maarten'''
+'''Search for new functions, like deap, but coded by Maarten.  Cuurently not used.'''
 import interpret
 import evaluate
 import random

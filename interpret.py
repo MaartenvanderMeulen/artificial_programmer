@@ -1,5 +1,4 @@
 '''Interpreter for LISP like programming language'''
-'''Interpreter for LISP like programming language'''
 import sys
 import copy # mandatory
 import time
@@ -194,11 +193,9 @@ def _run(program, variables, functions, debug, depth):
                 result = 1 if a == b else 0
             elif program[0] == "ne": # example (ne 3 2)
                 result = 1 if a != b else 0
-            elif type(a) != type(1):
-                assert type(b) != type(1)
+            elif type(a) != type(1) or type(b) != type(1):
                 result = 0
             else:
-                assert type(b) == type(1)
                 if program[0] == "lt": # example (le 3 2)
                     result = 1 if a < b else 0
                 elif program[0] == "le": # example (le 3 2)
@@ -231,7 +228,6 @@ def _run(program, variables, functions, debug, depth):
                         if type(x) != type([]) or index >= len(x) or index < 0:
                             result = 0
                             break
-                        assert index < len(x)
                         x = x[index]
                         result = x
         elif program[0] in ["list", "list1", "list2", "list3"]: # example (list (at board 0 0) (at board 1 1)) --> (x y)
@@ -298,14 +294,23 @@ def _run(program, variables, functions, debug, depth):
                 result = 1
         elif program[0] == "exit":
             exit()
+        elif program[0] in ["sum"]: # example (sum (1 2 3)) --> 6
+            result = 0
+            if len(program) > 1:
+                values = _run(program[1], variables, functions, debug, depth+1)
+                if type(values) == type([]):                   
+                    for v in values:
+                        if type(v) != type(1):                   
+                            result = 0
+                            break
+                        result += v
         else:
             result = []
             for p in program:
                 result.append(_run(p, variables, functions, debug, depth+1))
         if result is None:
-            print("program", program)
-            print("result", result)
-        assert result is not None
+            print("WARNING: program", program, "has result None, which is unexpected")
+            result = 0
     elif type(program) == type(""):
         identifyer = program
         # NOTE : the copy.deepcopy is mandatory here to prevent self-referential loops with
@@ -386,7 +391,7 @@ def call_function(function_call, variables, functions, debug, depth):
 
 def get_build_in_functions():
     return [        
-        "len",  # arity 1
+        "len", "sum", # arity 1
         "div", "lt", "le", "eq", "ne", "ge", "gt", # arity 2
         "add", "sub", "mul", "and", "or", # arity 2
         "assign", # artity 2, but 1st operand must be a variable name
@@ -401,9 +406,9 @@ def get_build_in_functions():
 
 def get_build_in_function_param_types(fname):
     # return a list with type-indication of the params of the build-in function.
-    # type-indications : 1=numeric; "*"=zero or more numeric; "?"=0 or 1 numeric; "v"=variable
+    # type-indications : 1=numeric; "*"=zero or more numeric; "?"=0 or 1 numeric; "v"=variable; []=list
     arity_dict = {        
-        "len":(1,), # arity 1
+        "len":(1,), "sum":([],), # arity 1
         "div":(1,1), "lt":(1,1), "le":(1,1), "eq":(1,1), "ne":(1,1), "ge":(1,1), "gt":(1,1), # arity 2
         "add":(1,1), "sub":(1,1), "mul":(1,1), "and":(1,1), "or":(1,1), # arity 2
         "assign":("v",1), # artity 2, but 1st operand must be a variable name
@@ -434,8 +439,12 @@ def convert_code_to_str(code):
 def add_function(function, functions, functions_file_name):
     # print("DEBUG 405", function)
     keyword, fname, params, code = function
-    assert type(code) == type([])
-    assert keyword == "function" # keyword of the function statement
+    if keyword != "function":
+        raise RuntimeError(f"interpret.add_function : keyword 'function' expected")
+    if type(fname) != type(""):
+        raise RuntimeError(f"interpret.add_function : fname expected")
+    if type(code) != type([]):
+        raise RuntimeError(f"interpret.add_function : code of type list expected")
     functions[fname] = [params, code]
     with open(functions_file_name, "a") as f:
         params = convert_code_to_str(params)

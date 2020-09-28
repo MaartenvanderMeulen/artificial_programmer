@@ -39,7 +39,7 @@
     (function test_scope2 ()(assign m 0))
     (assert (eq (test_scope2) 0))
     (assert (eq m 5))
-    (print (at ((1 2 3) (4 5 6) (7 8 9)) 1))
+    (assert (eq (at ((1 2 3) (4 5 6) (7 8 9)) 1) (4 5 6)))
 
     # Test functions and function calls with 3x3 magix square code
     (function get_row (board row)
@@ -65,13 +65,8 @@
             )
         )
     )
-    (function sum (list)
-        (last
-            (assign result 0)
-            (for i (len list) (assign result (add result (at list i))))
-            result
-        )
-    )
+    (assert (eq (sum (1 2 3)) 6))
+    (assert (eq (sum (1 2 3 4)) 10))
     (function compute_sums_magic_square (board)
         (add
             (for row (len board) (sum (get_row board row)))
@@ -99,14 +94,14 @@
     (assert (eq (is_magic_square ((1 2 3) (4 5 6) (7 8 9))) 0))
     (assert (eq (is_magic_square ((4 9 2) (3 5 7) (8 1 6))) 1))
     
-    (add (1 2 3) (4 5 6))
+    (assert (eq (add (1 2 3) (4 5 6)) (1 2 3 4 5 6)))
     (assign board ((4 9 2) (3 5 7) (8 1 6)))
-    (assert (add
+    (assert (eq (add
             (for row board (sum row))
             (for col (len board) (sum (get_col board col)))
             ((sum (get_diag1 board)))
             ((sum (get_diag2 board)))
         )
-        (15 15 15 15 15 15 15 15)
+        (15 15 15 15 15 15 15 15))
     )
 )
