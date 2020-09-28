@@ -2,13 +2,13 @@
     # list functions here
     #(function fac (n) (if (gt n 1) (mul n (fac (sub n 1))) 1))
     #(function range (n) (for i n i))
-    (function sum (list)
-            (last
-                (assign result 0)
-                (for elem list (assign result (add result elem)))
-                result
-            )
-    )
+    #(function sum (list)
+    #        (last
+    #            (assign result 0)
+    #            (for elem list (assign result (add result elem)))
+    #            result
+    #        )
+    #)
     # layer 1
     #(function get_col (board col) (for row board (at row col)))
     #(function get_diag1 (board) (for i (len board) (at board i i)))
@@ -29,3 +29,19 @@
     #    (are_all_equal_to (get_sums_magic_square board) (get_magic_number board))
     #)
 )
+#    (function get_col (board col) (for board board (at board col)))
+#    (function get_diag1 (board) (for i (len board) (at board i i)))
+#    (function get_diag2 (board) (for i (sub 3 board) (at board i (sub 2 i))))
+#    (function get_magic_number_n (n) (add (div (mul n (mul n n)) 2) (mul 1 (div (add 1 n) (mul 2 1)))))
+#    (function are_all_equal_to (values x) (eq values (for value values x)))
+#    (function get_col (board col) (for board board (at board col)))
+#    (function get_diag1 (board) (for i (len board) (at board i i)))
+#    (function get_diag2 (board) (for i (sub 3 board) (at board i (sub 2 i))))
+#    (function get_magic_number_n (n) (add (div (mul n (mul n n)) 2) (mul 1 (div (add 1 n) (mul 2 1)))))
+#    (function are_all_equal_to (values x) (eq (for (eq values values) (for value values values) value) values))
+#    (function get_row_sums (board) (for board board (sum board)))
+#    (function get_col_sums (board) (for i 3 (sum (get_col board i))))
+#    (function get_diag_sums (board) (list (sum (get_diag1 board)) (sum (get_diag2 board))))
+#    (function get_magic_number (board) (get_magic_number_n (len board)))
+#    (function get_sums_magic_square (board) (add (get_row_sums board) (add (get_col_sums board) (get_diag_sums board))))
+#    (function is_magic_square (board) (are_all_equal_to (get_sums_magic_square board) (get_magic_number board)))

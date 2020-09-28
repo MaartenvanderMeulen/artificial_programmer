@@ -1,6 +1,6 @@
 (
-    # actual model
-    ((1) (1))
-    ((1 2) (1))
-    ((1) (1 2))
+    # input actual_output (evaluation_function extra_params) debug
+    ((1) (1) ((evaluate_list_of_ints ())) 1)
+    ((1 2) (1) ((evaluate_list_of_ints ())) 1)
+    ((1) (1 2) ((evaluate_list_of_ints ())) 1)
 )

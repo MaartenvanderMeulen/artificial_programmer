@@ -1,5 +1,5 @@
 # Inspired by https://deap.readthedocs.io/en/master/examples/gp_symbreg.html
-# python search.py functions.txt problem_col.txt
+# it is used by search.py
 import sys
 import operator
 import numpy
@@ -14,39 +14,36 @@ import evaluate
 import numpy as np
 
 
-global one_time_initialisation, best_error, eval_count
+global one_time_initialisation, eval_count
 one_time_initialisation = True
-best_error = 1e9
 eval_count = 0
 
 
 def evaluate_individual(toolbox, individual):
     global eval_count
     eval_count += 1
-    #print("type(individual)", type(individual))
     deap_str = str(individual)
-    #print("deap_str", deap_str)
     code = interpret.compile_deap(deap_str, toolbox.functions)
-    #print("code", code)
     code_str = interpret.convert_code_to_str(code)
-    #print("code_str", code_str)
-    if toolbox.monkey_mode:
+    if False: # debug
+        print("type(individual)", type(individual))
+        print("deap_str", deap_str)
+        print("code", code)
+        print("code_str", code_str)
+    if toolbox.monkey_mode: # if the solution can be found in monkey mode, the real search could in theory find it also
         weighted_error = evaluate.evaluate_code(code_str, toolbox.solution_code_str)
+        if weighted_error == 0.0:
+            print("check the evaluation of the solution (should be error 0)")
+            for input in toolbox.example_inputs:
+                variables = interpret.bind_params(toolbox.formal_params, input)
+                model_output = interpret.run(code, variables, toolbox.functions)
+                _ = evaluate.evaluate(input, model_output, toolbox.evaluation_functions, True)
     else:
         weighted_error = 0.0
         for input in toolbox.example_inputs:
             variables = interpret.bind_params(toolbox.formal_params, input)
             model_output = interpret.run(code, variables, toolbox.functions)
             weighted_error += evaluate.evaluate(input, model_output, toolbox.evaluation_functions, False)
-    global best_error
-    if best_error > weighted_error:
-        best_error = weighted_error
-        #print("DEBUG GA_SEARCH_DEAP 34 : best error", best_error, code_str)
-        if toolbox.monkey_mode and best_error == 0.0:
-            for input in toolbox.example_inputs:
-                variables = interpret.bind_params(toolbox.formal_params, input)
-                model_output = interpret.run(code, variables, toolbox.functions)
-                error = evaluate.evaluate(input, model_output, toolbox.evaluation_functions, True)
     return weighted_error,
 
 
@@ -70,7 +67,7 @@ def initialize_genetic_programming_toolbox(problem, functions):
     for function in interpret.get_build_in_functions():
         if function in func_hints:
             param_types = interpret.get_build_in_function_param_types(function)
-            arity = sum([1 for t in param_types if t in [1, "v"]])
+            arity = sum([1 for t in param_types if t in [1, "v", []]])
             pset.addPrimitive(f, arity, name=function)
     for function, (params, code) in functions.items():
         if function in func_hints:
@@ -85,7 +82,6 @@ def initialize_genetic_programming_toolbox(problem, functions):
     toolbox.register("expr", gp.genHalfAndHalf, pset=pset, min_=1, max_=3)
     toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.expr)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-    # toolbox.register("compile", gp.compile, pset=pset)
     
     toolbox.formal_params = formal_params
     toolbox.example_inputs = example_inputs
@@ -94,7 +90,6 @@ def initialize_genetic_programming_toolbox(problem, functions):
     toolbox.pset = pset
     toolbox.solution_code_str = interpret.convert_code_to_str(solution_hints)
     
-    # toolbox.register("evaluate", evaluate_individual, toolbox)
     if False:
         toolbox.register("select", tools.selTournament, tournsize=3)
     else:
@@ -109,13 +104,12 @@ def initialize_genetic_programming_toolbox(problem, functions):
 
 def add_if_unique(toolbox, ind, individuals):
     deap_str = str(ind)
-    if len(toolbox.ind_str_set) < toolbox.pop_size + toolbox.nchildren or deap_str not in toolbox.ind_str_set:
-        toolbox.ind_str_set.add(deap_str)
-        individuals.append(ind)
-        ind.fitness.values = evaluate_individual(toolbox, ind)
-        if ind.fitness.values[0] == 0.0:
-            return ind
-    return None
+    if len(toolbox.ind_str_set) >= toolbox.pop_size + toolbox.nchildren and deap_str in toolbox.ind_str_set:
+        return False
+    toolbox.ind_str_set.add(deap_str)
+    individuals.append(ind)
+    ind.fitness.values = evaluate_individual(toolbox, ind)
+    return True
 
 
 def generate_initial_population(toolbox):
@@ -124,9 +118,8 @@ def generate_initial_population(toolbox):
     population = []
     while len(population) < toolbox.pop_size:
         ind = toolbox.population(n=1)[0]
-        solution = add_if_unique(toolbox, ind, population)
-        if solution:
-            return None, solution
+        if add_if_unique(toolbox, ind, population) and ind.fitness.values[0] == 0.0:
+            return None, ind
     return population, None
 
 
@@ -140,9 +133,8 @@ def generate_offspring(toolbox, population):
         else: # Apply mutation
             ind = toolbox.clone(random.choice(population))
             ind, = toolbox.mutate(ind)
-        solution = add_if_unique(toolbox, ind, offspring)
-        if solution:
-            return None, solution
+        if add_if_unique(toolbox, ind, offspring) and ind.fitness.values[0] == 0.0:
+            return None, ind
     return offspring, None
 
 
@@ -192,25 +184,16 @@ def solve_by_new_function(problem, functions):
         toolbox.nchildren, toolbox.pmutations = toolbox.pop_size, 1.0 - toolbox.pcrossover
         global eval_count
         eval_count = 0
-        #count_found = 0
-        #for tries in range(20):
-        if True:
-            global best_error
-            best_error = 1e9
-            for hop in range(hops):
-                code, code_str, error, gen = ga_search(toolbox)        
-                if error == 0:
-                    result = ["function", problem_name, params, code]
-                    result_str = interpret.convert_code_to_str(result)
-                    print("problem", problem_name, f"solved after {eval_count} evaluations by", result_str)
-                    #print("gen", gen)
-                    #count_found += 1
-                    break
-                if False:
-                    print(f"hop {hop+1}, error {error:.3f}: {code_str}")
-                    if toolbox.monkey_mode:
-                        print(f"    {code_str}")
-                        print(f"    {toolbox.solution_code_str}")
-        #eff = count_found / eval_count
-        #print(f"hops={hops}, pop_size={pop_size}, nchildren={nchildren}, cx={cxpb:.2f}, mut={mutpb:.2f}, ngen={ngen}, eff {count_found} / {eval_count} = {eff}")
+        for hop in range(hops):
+            code, code_str, error, gen = ga_search(toolbox)        
+            if error == 0:
+                result = ["function", problem_name, params, code]
+                result_str = interpret.convert_code_to_str(result)
+                print("problem", problem_name, f"solved after {eval_count} evaluations by", result_str)
+                break
+            if False:
+                print(f"hop {hop+1}, error {error:.3f}: {code_str}")
+                if toolbox.monkey_mode:
+                    print(f"    {code_str}")
+                    print(f"    {toolbox.solution_code_str}")
     return result
