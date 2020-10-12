@@ -59,11 +59,13 @@ def initialize_genetic_programming_toolbox(problem, functions):
     pset = gp.PrimitiveSet("MAIN", len(formal_params))
     for i, param in enumerate(formal_params):
         rename_cmd = f'pset.renameArguments(ARG{i}="{param}")'
+        # print("DEBUG 62 rename_cmd", rename_cmd)
         eval(rename_cmd)
     for c in int_hints:
         pset.addTerminal(c)
     for variable in var_hints:
         if variable not in formal_params:
+            # print("DEBUG 68 variable", variable)
             pset.addTerminal(variable)
     for function in interpret.get_build_in_functions():
         if function in func_hints:
@@ -119,9 +121,13 @@ def generate_initial_population(toolbox):
     population = []
     while len(population) < toolbox.pop_size:
         ind = toolbox.population(n=1)[0]
-        ind = local_search.local_search(toolbox, ind)
-        if add_if_unique(toolbox, ind, population) and ind.fitness.values[0] == 0.0:
-            return None, ind
+        if False:
+            if add_if_unique(toolbox, ind, population) and ind.fitness.values[0] == 0.0:
+                return None, ind
+        if True:
+            ind = local_search.local_search(toolbox, ind)
+            if add_if_unique(toolbox, ind, population) and ind.fitness.values[0] == 0.0:
+                return None, ind
     return population, None
 
 
@@ -135,9 +141,13 @@ def generate_offspring(toolbox, population):
         else: # Apply mutation
             ind = toolbox.clone(random.choice(population))
             ind, = toolbox.mutate(ind)
-        ind = local_search.local_search(toolbox, ind)
-        if add_if_unique(toolbox, ind, offspring) and ind.fitness.values[0] == 0.0:
-            return None, ind
+        if False:
+            if add_if_unique(toolbox, ind, offspring) and ind.fitness.values[0] == 0.0:
+                return None, ind
+        if True:
+            ind = local_search.local_search(toolbox, ind)
+            if add_if_unique(toolbox, ind, offspring) and ind.fitness.values[0] == 0.0:
+                return None, ind
     return offspring, None
 
 
