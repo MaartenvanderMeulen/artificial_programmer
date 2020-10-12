@@ -436,6 +436,14 @@ def convert_code_to_str(code):
     return result
 
     
+def convert_code_to_deap_str(code, toolbox):
+    if type(code) == type([]):
+        result = convert_code_to_deap_str(code[0], toolbox) + "(" + ", ".join([convert_code_to_deap_str(item, toolbox) for item in code[1:]]) + ")"
+    else:        
+        result = str(code)
+    return result
+
+    
 def add_function(function, functions, functions_file_name):
     # print("DEBUG 405", function)
     keyword, fname, params, code = function
