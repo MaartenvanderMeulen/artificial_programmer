@@ -4,7 +4,6 @@ import random
 import copy
 import interpret
 import evaluate
-import local_search
 from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull
 
 
@@ -50,6 +49,8 @@ class Toolbox(object):
             rename_cmd = f'pset.renameArguments(ARG{i}="{param}")'
             # print("DEBUG 62 rename_cmd", rename_cmd)
             eval(rename_cmd)
+        if 0 not in int_hints:
+            int_hints.append(0)
         for c in int_hints:
             pset.addTerminal(c)
         for variable in var_hints:
@@ -72,6 +73,12 @@ class Toolbox(object):
         self.functions = functions
         self.pset = pset
         self.solution_code_str = interpret.convert_code_to_str(solution_hints)
+        print("Finding zero ...")
+        self.expr_zero = gp.genHalfAndHalf(pset=self.pset, min_=0, max_=0)
+        while self.expr_zero[0].name != '0':
+            self.expr_zero = gp.genHalfAndHalf(pset=self.pset, min_=0, max_=0)
+        assert self.expr_zero[0].name == '0'
+        print("Found zero")
 
 
 def best_of_n(population, n):
@@ -89,13 +96,15 @@ def update_dynamic_weighted_evaluation(toolbox, individuals):
 def write_population(toolbox, population, label):
     if toolbox.f:
         toolbox.f.write("write_population " + label + "\n")
-        write_path(toolbox.f, population[0], toolbox)
         for i, ind in enumerate(population[:3]):
-            deap_str = str(ind)
-            code = interpret.compile_deap(deap_str, toolbox.functions)
-            code_str = interpret.convert_code_to_str(code)
-            toolbox.f.write(f"    ind {i} {ind.evaluation} {code_str}\n")
-        toolbox.f.write("write_population done\n")
+            toolbox.f.write(f"individual {i}\n")
+            write_path(toolbox.f, ind, toolbox)
+            if False:
+                deap_str = str(ind)
+                code = interpret.compile_deap(deap_str, toolbox.functions)
+                code_str = interpret.convert_code_to_str(code)
+                toolbox.f.write(f"    ind {i} {ind.evaluation} {code_str}\n")
+        toolbox.f.write("\n")
         toolbox.f.flush()
 
 
@@ -124,20 +133,32 @@ def add_if_unique(toolbox, ind, individuals):
 def create_individual(toolbox):
     expr = gp.genHalfAndHalf(pset=toolbox.pset, min_=1, max_=3)
     individual = gp.PrimitiveTree(expr)
-    individual.evaluation = None
+    individual.evaluation = evaluate_individual(toolbox, individual)
+    if False:
+        # replace parts that make no difference by 0
+        index = 0
+        while index < len(individual):
+            ind_tmp = copy.deepcopy(individual)
+            slice_ = ind_tmp.searchSubtree(index)
+            ind_tmp[slice_] = toolbox.expr_zero
+            ind_tmp.evaluation = evaluate_individual(toolbox, ind_tmp)
+            if individual.evaluation == ind_tmp.evaluation and len(individual) > len(ind_tmp):
+                individual[slice_] = toolbox.expr_zero
+            index += 1    
     return individual
     
 
 def generate_initial_population(toolbox):
+    print("generate intial pop...")
     evaluate.init_dynamic_error_weight_adjustment()        
     toolbox.ind_str_set = set()
     population = []    
     for i in range(toolbox.pop_size[0]): 
         ind = create_individual(toolbox)
-        ind = local_search.local_search(toolbox, ind)
         ind.parents = []
         if add_if_unique(toolbox, ind, population) and ind.evaluation == 0.0:
             return None, ind
+    print("generate intial pop done")
     return population, None
 
 
@@ -159,6 +180,8 @@ def crossover_with_local_search(toolbox, ind1, ind2):
     if len(ind1) < 2 or len(ind2) < 2:
         # No crossover on single node tree
         return ind1
+    if ind1.evaluation > ind2.evaluation or (ind1.evaluation == ind2.evaluation and len(ind1) > len(ind2)):
+        ind1, ind2 = ind2, ind1
     index2 = random.randrange(0, len(ind2))
     slice2 = ind2.searchSubtree(index2)
     ind1 = replace_subtree_at_best_location(toolbox, ind1, ind2[slice2] )
@@ -175,7 +198,6 @@ def mutUniform(ind, expr, pset):
 
 
 def replace_subtree_at_best_location(toolbox, ind_orig, expr):
-    best_eval, best_index = None, None
     indexes = [i for i in range(len(ind_orig))]
     random.shuffle(indexes)
     for index in indexes[:40]: # very big trees can make the optimalisation very slow
@@ -183,12 +205,10 @@ def replace_subtree_at_best_location(toolbox, ind_orig, expr):
         slice_ = ind_tmp.searchSubtree(index)
         ind_tmp[slice_] = expr
         ind_tmp.evaluation = evaluate_individual(toolbox, ind_tmp)
-        if best_eval is None or best_eval > ind_tmp.evaluation:
-            best_eval = ind_tmp.evaluation
-            best_index = index
-    slice_ = ind_orig.searchSubtree(best_index)
-    ind_orig[slice_] = expr
-    ind_orig.evaluation = best_eval    
+        if ind_orig.evaluation > ind_tmp.evaluation or (ind_orig.evaluation == ind_tmp.evaluation and len(ind_orig) > len(ind_tmp)):
+            ind_orig[slice_] = expr
+            ind_orig.evaluation = ind_tmp.evaluation
+            break
     return ind_orig
 
 
@@ -212,7 +232,6 @@ def generate_offspring(toolbox, population, nchildren):
                 expr = gp.genFull(pset=toolbox.pset, min_=0, max_=2)
                 ind = replace_subtree_at_best_location(toolbox, copy.deepcopy(ind1), expr)
             ind.parents = [ind1,]
-        ind = local_search.local_search(toolbox, ind)
         if add_if_unique(toolbox, ind, offspring) and ind.evaluation == 0.0:
             return None, ind
     return offspring, None
@@ -249,11 +268,11 @@ def solve_by_new_function(problem, functions):
     toolbox.dynamic_weights = False # not toolbox.monkey_mode
     hops = 1
     result = None
-    with open("log.txt", "w") as f:
-        toolbox.f = None
+    with open("tmp_log.txt", "w") as f:
+        toolbox.f = f
         toolbox.pcrossover = 0.5
         toolbox.pmutations = 1.0 - toolbox.pcrossover
-        toolbox.pop_size, toolbox.ngen = [8000, 300], [0, 100]
+        toolbox.pop_size, toolbox.ngen = [8000, 600], [0, 100]
         toolbox.nchildren = toolbox.pop_size
         toolbox.eval_count = 0
         for hop in range(hops):
