@@ -74,4 +74,4 @@ if __name__ == "__main__":
     for layer in range(1, max_layer+1):
         find_new_functions(problems, functions, functions_file_name, layer)
     t1 = time.time()
-    print("total execution time", int(t1 - t0), "seconds")
+    print("total execution time", int(t1 - t0), "seconds", "total evaluations", ga_search_deap.total_eval_count)
