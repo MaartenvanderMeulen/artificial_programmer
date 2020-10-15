@@ -202,7 +202,8 @@ def eval_board_diag2(input, actual, extra_function_params):
     board = input[0]
     n = len(board)
     expect = [row[n-1 - i] for i, row in enumerate(board)]    
-    return eval_board_col_diag_common(input, actual, extra_function_params, expect, n)
+    result = eval_board_col_diag_common(input, actual, extra_function_params, expect, n)
+    return result
 
 
 def eval_magic_square_sums(input, actual, extra_function_params):
@@ -319,7 +320,8 @@ def evaluate(input, actual_output, evaluation_functions, debug):
         print("      evaluation", np.sum(weighted_errors))
         #print("      sums errors this hop", sum_errors)
         #print("      sums weighted errors this hop", sum_errors * weights)
-    return np.sum(weighted_errors)    
+    result = np.sum(weighted_errors)    
+    return result
     
     
 def init_dynamic_error_weight_adjustment():

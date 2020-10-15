@@ -1,37 +1,25 @@
 # Inspired by https://deap.readthedocs.io/en/master/examples/gp_symbreg.html
 # it is used by search.py
-import sys
-import operator
-import numpy
 import random
-from deap import algorithms
-from deap import base
-from deap import creator
-from deap import tools
-from deap import gp
+import copy
 import interpret
 import evaluate
-import numpy as np
 import local_search
+from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull
 
 
-global one_time_initialisation, eval_count
-one_time_initialisation = True
-eval_count = 0
+global total_eval_count
+total_eval_count = 0
 
 
-def evaluate_individual(toolbox, individual):
-    global eval_count
-    eval_count += 1
+def evaluate_individual(toolbox, individual, debug=False):
+    toolbox.eval_count += 1
+    global total_eval_count
+    total_eval_count += 1
     deap_str = str(individual)
     code = interpret.compile_deap(deap_str, toolbox.functions)
-    code_str = interpret.convert_code_to_str(code)
-    if False: # debug
-        print("type(individual)", type(individual))
-        print("deap_str", deap_str)
-        print("code", code)
-        print("code_str", code_str)
     if toolbox.monkey_mode: # if the solution can be found in monkey mode, the real search could in theory find it also
+        code_str = interpret.convert_code_to_str(code)
         weighted_error = evaluate.evaluate_code(code_str, toolbox.solution_code_str)
         if weighted_error == 0.0:
             print("check the evaluation of the solution (should be error 0)")
@@ -44,8 +32,8 @@ def evaluate_individual(toolbox, individual):
         for input in toolbox.example_inputs:
             variables = interpret.bind_params(toolbox.formal_params, input)
             model_output = interpret.run(code, variables, toolbox.functions)
-            weighted_error += evaluate.evaluate(input, model_output, toolbox.evaluation_functions, False)
-    return weighted_error,
+            weighted_error += evaluate.evaluate(input, model_output, toolbox.evaluation_functions, debug)
+    return weighted_error
 
 
 def f():
@@ -53,160 +41,231 @@ def f():
     return None
 
 
-def initialize_genetic_programming_toolbox(problem, functions):
-    problem_name, formal_params, example_inputs, evaluation_functions, hints, layer = problem
-    int_hints, var_hints, func_hints, solution_hints = hints
-    pset = gp.PrimitiveSet("MAIN", len(formal_params))
-    for i, param in enumerate(formal_params):
-        rename_cmd = f'pset.renameArguments(ARG{i}="{param}")'
-        # print("DEBUG 62 rename_cmd", rename_cmd)
-        eval(rename_cmd)
-    for c in int_hints:
-        pset.addTerminal(c)
-    for variable in var_hints:
-        if variable not in formal_params:
-            # print("DEBUG 68 variable", variable)
-            pset.addTerminal(variable)
-    for function in interpret.get_build_in_functions():
-        if function in func_hints:
-            param_types = interpret.get_build_in_function_param_types(function)
-            arity = sum([1 for t in param_types if t in [1, "v", []]])
-            pset.addPrimitive(f, arity, name=function)
-    for function, (params, code) in functions.items():
-        if function in func_hints:
-            arity = len(params)
-            pset.addPrimitive(f, arity, name=function)
-    global one_time_initialisation
-    if one_time_initialisation:
-        creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
-        creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMin)
-        one_time_initialisation = False
-    toolbox = base.Toolbox()
-    toolbox.register("expr", gp.genHalfAndHalf, pset=pset, min_=1, max_=3)
-    toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.expr)
-    toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-    
-    toolbox.formal_params = formal_params
-    toolbox.example_inputs = example_inputs
-    toolbox.evaluation_functions = evaluation_functions
-    toolbox.functions = functions
-    toolbox.pset = pset
-    toolbox.solution_code_str = interpret.convert_code_to_str(solution_hints)
-    
-    if False:
-        toolbox.register("select", tools.selTournament, tournsize=3)
-    else:
-        toolbox.register("select", tools.selBest)
-    toolbox.register("mate", gp.cxOnePoint)
-    toolbox.register("expr_mut", gp.genFull, min_=0, max_=2)
-    toolbox.register("mutate", gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
-    toolbox.decorate("mate", gp.staticLimit(key=operator.attrgetter("height"), max_value=6))
-    toolbox.decorate("mutate", gp.staticLimit(key=operator.attrgetter("height"), max_value=6))
-    return toolbox
+class Toolbox(object):    
+    def __init__(self, problem, functions):
+        problem_name, formal_params, example_inputs, evaluation_functions, hints, layer = problem
+        int_hints, var_hints, func_hints, solution_hints = hints
+        pset = gp.PrimitiveSet("MAIN", len(formal_params))
+        for i, param in enumerate(formal_params):
+            rename_cmd = f'pset.renameArguments(ARG{i}="{param}")'
+            # print("DEBUG 62 rename_cmd", rename_cmd)
+            eval(rename_cmd)
+        for c in int_hints:
+            pset.addTerminal(c)
+        for variable in var_hints:
+            if variable not in formal_params:
+                # print("DEBUG 68 variable", variable)
+                pset.addTerminal(variable)
+        for function in interpret.get_build_in_functions():
+            if function in func_hints:
+                param_types = interpret.get_build_in_function_param_types(function)
+                arity = sum([1 for t in param_types if t in [1, "v", []]])
+                pset.addPrimitive(f, arity, name=function)
+        for function, (params, code) in functions.items():
+            if function in func_hints:
+                arity = len(params)
+                pset.addPrimitive(f, arity, name=function)            
+        # toolbox = base.Toolbox()    
+        self.formal_params = formal_params
+        self.example_inputs = example_inputs
+        self.evaluation_functions = evaluation_functions
+        self.functions = functions
+        self.pset = pset
+        self.solution_code_str = interpret.convert_code_to_str(solution_hints)
 
 
-def add_if_unique(toolbox, ind, individuals):
-    deap_str = str(ind)
-    if len(toolbox.ind_str_set) >= toolbox.pop_size + toolbox.nchildren and deap_str in toolbox.ind_str_set:
-        return False
-    toolbox.ind_str_set.add(deap_str)
-    individuals.append(ind)
-    ind.fitness.values = evaluate_individual(toolbox, ind)
-    return True
-
-
-def generate_initial_population(toolbox):
-    evaluate.init_dynamic_error_weight_adjustment()        
-    toolbox.ind_str_set = set()
-    population = []
-    while len(population) < toolbox.pop_size:
-        ind = toolbox.population(n=1)[0]
-        if False:
-            if add_if_unique(toolbox, ind, population) and ind.fitness.values[0] == 0.0:
-                return None, ind
-        if True:
-            ind = local_search.local_search(toolbox, ind)
-            if add_if_unique(toolbox, ind, population) and ind.fitness.values[0] == 0.0:
-                return None, ind
-    return population, None
-
-
-def generate_offspring(toolbox, population):
-    offspring = []
-    while len(offspring) < toolbox.nchildren:
-        op_choice = random.random()
-        if op_choice < toolbox.pcrossover: # Apply crossover
-            ind, ind2 = list(map(toolbox.clone, random.sample(population, 2)))
-            ind, ind2 = toolbox.mate(ind, ind2)
-        else: # Apply mutation
-            ind = toolbox.clone(random.choice(population))
-            ind, = toolbox.mutate(ind)
-        if False:
-            if add_if_unique(toolbox, ind, offspring) and ind.fitness.values[0] == 0.0:
-                return None, ind
-        if True:
-            ind = local_search.local_search(toolbox, ind)
-            if add_if_unique(toolbox, ind, offspring) and ind.fitness.values[0] == 0.0:
-                return None, ind
-    return offspring, None
+def best_of_n(population, n):
+    inds = random.sample(population, n)
+    return min(inds, key=lambda ind: ind.evaluation)
 
 
 def update_dynamic_weighted_evaluation(toolbox, individuals):
     if toolbox.dynamic_weights:
         evaluate.dynamic_error_weight_adjustment()        
         for ind in individuals:        
-            ind.fitness.values = evaluate_individual(toolbox, ind)
+            ind.evaluation = evaluate_individual(toolbox, ind)
+            
+
+def write_population(toolbox, population, label):
+    if toolbox.f:
+        toolbox.f.write("write_population " + label + "\n")
+        write_path(toolbox.f, population[0], toolbox)
+        for i, ind in enumerate(population[:3]):
+            deap_str = str(ind)
+            code = interpret.compile_deap(deap_str, toolbox.functions)
+            code_str = interpret.convert_code_to_str(code)
+            toolbox.f.write(f"    ind {i} {ind.evaluation} {code_str}\n")
+        toolbox.f.write("write_population done\n")
+        toolbox.f.flush()
 
 
-def ga_seach_impl(toolbox):
+def write_path(f, ind, toolbox, indent=0):
+    indent_str = "".join(['  ' for i in range(indent)])
+    operator_str = ["", "mutatie", "crossover"][len(ind.parents)]
+    deap_str = str(ind)
+    code = interpret.compile_deap(deap_str, toolbox.functions)
+    code_str = interpret.convert_code_to_str(code)
+    f.write(f"{indent_str}{code_str} {ind.evaluation:.3f} {operator_str}\n")
+    for parent in ind.parents:
+        write_path(f, parent, toolbox, indent+1)
+        
+        
+def add_if_unique(toolbox, ind, individuals):
+    deap_str = str(ind)
+    if deap_str in toolbox.ind_str_set:
+        return False
+    toolbox.ind_str_set.add(deap_str)
+    individuals.append(ind)
+    if ind.evaluation is None:
+        ind.evaluation = evaluate_individual(toolbox, ind)
+    return True
+
+
+def create_individual(toolbox):
+    expr = gp.genHalfAndHalf(pset=toolbox.pset, min_=1, max_=3)
+    individual = gp.PrimitiveTree(expr)
+    individual.evaluation = None
+    return individual
+    
+
+def generate_initial_population(toolbox):
+    evaluate.init_dynamic_error_weight_adjustment()        
+    toolbox.ind_str_set = set()
+    population = []    
+    for i in range(toolbox.pop_size[0]): 
+        ind = create_individual(toolbox)
+        ind = local_search.local_search(toolbox, ind)
+        ind.parents = []
+        if add_if_unique(toolbox, ind, population) and ind.evaluation == 0.0:
+            return None, ind
+    return population, None
+
+
+def cxOnePoint(ind1, ind2):
+    if len(ind1) < 2 or len(ind2) < 2:
+        # No crossover on single node tree
+        return ind1
+    index1 = random.randrange(0, len(ind1))
+    index2 = random.randrange(0, len(ind2))
+    slice1 = ind1.searchSubtree(index1)
+    slice2 = ind2.searchSubtree(index2)
+    ind1[slice1], ind2[slice2] = ind2[slice2], ind1[slice1]
+    ind1.evaluation = None
+    ind2.evaluation = None
+    return ind1
+
+
+def crossover_with_local_search(toolbox, ind1, ind2):
+    if len(ind1) < 2 or len(ind2) < 2:
+        # No crossover on single node tree
+        return ind1
+    index2 = random.randrange(0, len(ind2))
+    slice2 = ind2.searchSubtree(index2)
+    ind1 = replace_subtree_at_best_location(toolbox, ind1, ind2[slice2] )
+    return ind1 
+
+
+def mutUniform(ind, expr, pset):
+    index = random.randrange(0, len(ind))
+    slice_ = ind.searchSubtree(index)
+    type_ = ind[index].ret
+    ind[slice_] = expr(pset=pset, type_=type_)
+    ind.evaluation = None
+    return ind
+
+
+def replace_subtree_at_best_location(toolbox, ind_orig, expr):
+    best_eval, best_index = None, None
+    indexes = [i for i in range(len(ind_orig))]
+    random.shuffle(indexes)
+    for index in indexes[:40]: # very big trees can make the optimalisation very slow
+        ind_tmp = copy.deepcopy(ind_orig)
+        slice_ = ind_tmp.searchSubtree(index)
+        ind_tmp[slice_] = expr
+        ind_tmp.evaluation = evaluate_individual(toolbox, ind_tmp)
+        if best_eval is None or best_eval > ind_tmp.evaluation:
+            best_eval = ind_tmp.evaluation
+            best_index = index
+    slice_ = ind_orig.searchSubtree(best_index)
+    ind_orig[slice_] = expr
+    ind_orig.evaluation = best_eval    
+    return ind_orig
+
+
+def generate_offspring(toolbox, population, nchildren):
+    offspring = []
+    expr_mut = lambda pset, type_: gp.genFull(pset=pset, min_=0, max_=2, type_=type_)
+    for i in range(nchildren):
+        op_choice = random.random()
+        if op_choice < toolbox.pcrossover: # Apply crossover
+            ind1, ind2 = [best_of_n(population, 2), best_of_n(population, 2)]
+            if toolbox.parachute_level == 0:
+                ind = cxOnePoint(copy.deepcopy(ind1), copy.deepcopy(ind2))
+            else:
+                ind = crossover_with_local_search(toolbox, copy.deepcopy(ind1), copy.deepcopy(ind2))
+            ind.parents = [ind1, ind2]
+        else: # Apply mutation
+            ind1 = best_of_n(population, 2)            
+            if toolbox.parachute_level == 0:
+                ind = mutUniform(copy.deepcopy(ind1), expr=expr_mut, pset=toolbox.pset)
+            else:
+                expr = gp.genFull(pset=toolbox.pset, min_=0, max_=2)
+                ind = replace_subtree_at_best_location(toolbox, copy.deepcopy(ind1), expr)
+            ind.parents = [ind1,]
+        ind = local_search.local_search(toolbox, ind)
+        if add_if_unique(toolbox, ind, offspring) and ind.evaluation == 0.0:
+            return None, ind
+    return offspring, None
+
+
+def ga_search_impl(toolbox):
     population, solution = generate_initial_population(toolbox)
     if solution:
         return solution, 0
     update_dynamic_weighted_evaluation(toolbox, population)
-    for gen in range(toolbox.ngen):
-        offspring, solution = generate_offspring(toolbox, population)
-        if solution:
-            return solution, gen+1
-        population[:] = toolbox.select(population + offspring, toolbox.pop_size)
-        update_dynamic_weighted_evaluation(toolbox, population)
-    best = min(population, key=lambda item: item.fitness.values[0])
-    return best, toolbox.ngen+1
+    population.sort(key=lambda item: item.evaluation)            
+    gen = 0
+    for toolbox.parachute_level in range(len(toolbox.ngen)):
+        while gen < toolbox.ngen[toolbox.parachute_level]:
+            #print("gen", gen, "fitness", population[0].evaluation)
+            write_population(toolbox, population, f"generation {gen}, pop at start")
+            offspring, solution = generate_offspring(toolbox, population, toolbox.nchildren[toolbox.parachute_level])
+            if solution:
+                return solution, gen+1
+            population += offspring
+            population.sort(key=lambda item: item.evaluation)            
+            population[:] = population[:toolbox.pop_size[toolbox.parachute_level]]
+            update_dynamic_weighted_evaluation(toolbox, population)
+            gen += 1
+    write_population(toolbox, population, "pop final")
+    best = population[0] # min(population, key=lambda item: item.evaluation)
+    return best, gen+1
     
     
-def ga_search(toolbox):
-    best, gen = ga_seach_impl(toolbox)
-    code = interpret.compile_deap(str(best), toolbox.functions)
-    code_str = interpret.convert_code_to_str(code)
-    error = best.fitness.values[0]
-    return code, code_str, error, gen
-
-
 def solve_by_new_function(problem, functions):
     problem_name, params, example_inputs, evaluation_functions, hints, layer = problem
-    toolbox = initialize_genetic_programming_toolbox(problem, functions)
+    toolbox = Toolbox(problem, functions)
     toolbox.monkey_mode = False
     toolbox.dynamic_weights = False # not toolbox.monkey_mode
-    hops = 100
+    hops = 1
     result = None
-    # for nchildren in [int(pop_size * 0.25), int(pop_size * 0.5), int(pop_size * 0.75), int(pop_size * 1.0)]:
-    # for ngen in [20, 30, 40, 50, 60, 70, 80, 90, 100]:
-    # for cxpb in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
-    # for pop_size in [300, 400, 500, 600, 700, 800, 900, 1000]:
-    if True:
-        toolbox.pop_size, toolbox.pcrossover, toolbox.ngen = 300, 0.5, 30
-        toolbox.nchildren, toolbox.pmutations = toolbox.pop_size, 1.0 - toolbox.pcrossover
-        global eval_count
-        eval_count = 0
+    with open("log.txt", "w") as f:
+        toolbox.f = None
+        toolbox.pcrossover = 0.5
+        toolbox.pmutations = 1.0 - toolbox.pcrossover
+        toolbox.pop_size, toolbox.ngen = [8000, 300], [0, 100]
+        toolbox.nchildren = toolbox.pop_size
+        toolbox.eval_count = 0
         for hop in range(hops):
-            code, code_str, error, gen = ga_search(toolbox)        
-            if error == 0:
+            best, gen = ga_search_impl(toolbox)        
+            if best.evaluation == 0:
+                deap_str = str(best)
+                code = interpret.compile_deap(deap_str, toolbox.functions)
+                code_str = interpret.convert_code_to_str(code)
                 result = ["function", problem_name, params, code]
                 result_str = interpret.convert_code_to_str(result)
-                print("problem", problem_name, f"solved after {eval_count} evaluations by", result_str)
+                print("problem", problem_name, f"solved after {toolbox.eval_count} evaluations by", result_str)
+                assert evaluate_individual(toolbox, best, False) == 0
+                write_path(f, best, toolbox)
                 break
-            if False:
-                print(f"hop {hop+1}, error {error:.3f}: {code_str}")
-                if toolbox.monkey_mode:
-                    print(f"    {code_str}")
-                    print(f"    {toolbox.solution_code_str}")
     return result
