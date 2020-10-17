@@ -2,7 +2,8 @@
 import sys
 import numpy as np
 import interpret
-import time
+# import time
+import math
 
 
 # used in dynamic weight adjustment
@@ -65,7 +66,7 @@ def evaluate_int(actual, expect, debug=False):
             actual = list(actual_numbers)[0]
     errors.append(error)
     # error : hoever zitten de expect getallen van de model getallen af
-    error = (actual - expect) ** 2
+    error = (abs(float(actual) - float(expect))) ** 1.2
     errors.append(error)
     return errors
 
@@ -108,9 +109,9 @@ def evaluate_list_of_ints(actual, expect, debug=False):
         assert type(expect[i]) == type(1)
         if i < len(actual) and type(actual[i]) == type(1):
             # print(actual[i], expect[i])            
-            error += abs(actual[i] - expect[i]) ** 1.5
+            error += (abs(actual[i] - expect[i])) ** 1.5
         else:
-            error += abs(expect[i]) ** 1.5
+            error += (abs(expect[i])) ** 1.5
     errors.append(error)
     return errors
 
@@ -138,9 +139,9 @@ def eval_board_col_diag_common(input, actual, extra_function_params, expect, exp
     # error : aantal outputs
     error_len = 0.0
     if len(actual) < len(expect):
-        error_len = (len(expect) - len(actual)) ** 2.0
+        error_len = (abs(len(expect) - len(actual))) ** 2.0
     elif len(actual) > len(expect):
-        error_len = 0.1 * (len(actual) - len(expect)) ** 1.2
+        error_len = 0.1 * (abs(len(actual) - len(expect))) ** 1.2
     else:
         error_len = 0.0
 
@@ -169,7 +170,7 @@ def eval_board_col_diag_common(input, actual, extra_function_params, expect, exp
         if col is not None:
             col_values[col] = 1
     actual_cols = np.sum(col_values)
-    error_columns = (actual_cols - expect_cols) ** 2
+    error_columns = (abs(actual_cols - expect_cols)) ** 2
     
     # error :zijn het de juiste elementen uit de rows
     error_correct_elements_ordered = 0.0
@@ -245,10 +246,12 @@ def eval_get_diag_sums(input, actual, extra_function_params):
 def eval_get_magic_number_n(input, actual, extra_function_params):
     n = input[0]
     assert type(n) == type(1)
+    assert n in [1, 2, 3, 4, 5, 6]
     expect = (n * (n * n + 1)) // 2
-    if 0 <= n <= 5:
-        assert expect == [0, 1, 5, 15, 34, 65][n]
-    return evaluate_int(actual, expect, False)
+    if 1 <= n <= 6:
+        assert expect == [0, 1, 5, 15, 34, 65, 111][n]
+    result = evaluate_int(actual, expect, False)
+    return result
     
     
 def eval_get_magic_number(input, actual, extra_function_params):
@@ -268,8 +271,9 @@ def eval_are_all_equal_to(input, actual, extra_function_params):
     return evaluate_int(actual, int(expect), False)
 
     
-def eval_is_magic_square(input, actual, extra_function_params):
+def eval_is_magic_square(inputs, actual, extra_function_params):
     board = input[0]
+    assert len(board) == len(board[0]) and type(board[0][0]) == type(1)
     n = len(board)
     magic_number = (n * (n * n + 1)) // 2
     sums = []
@@ -283,18 +287,190 @@ def eval_is_magic_square(input, actual, extra_function_params):
     return evaluate_int(actual, int(expect), False)
 
     
+def eval_is_magic_diags(inputs, actual, extra_function_params):
+    error = 0.0
+    if type(actual) != type(1):
+        error += 2.0
+    if type(actual) == type(1):
+        if actual not in [0, 1]:
+            error += 0.1
+    actual = bool(actual)
+    board = inputs[0]
+    assert len(board) == len(board[0]) and type(board[0][0]) == type(1)
+    n = len(board)
+    magic_number = (n * (n * n + 1)) // 2
+    expect, count_magic_diags, sum_board, sum_diag1, sum_diag2 = True, 0, 0, 0, 0
+    if expect == actual:
+        return error,
+    if expect:
+        # not detected magic
+        return error + 1.0,
+    else:
+        error += 0.9 * (2 - count_magic_diags) / 2
+        if sum_board != n * magic_number:
+            error += 0.1
+        return error,
+
+    
+def eval_is_magic_cols(inputs, actual, extra_function_params):
+    error = 0.0
+    if type(actual) != type(1):
+        error += 2.0
+    if type(actual) == type(1):
+        if actual not in [0, 1]:
+            error += 0.1
+    actual = bool(actual)
+    board = inputs[0]
+    assert len(board) == len(board[0]) and type(board[0][0]) == type(1)
+    n = len(board)
+    magic_number = (n * (n * n + 1)) // 2
+    expect, count_magic_cols, sum_board = True, 0, 0
+    for i in range(n):
+        col = [row[i] for row in board]
+        sum_board += sum(col)
+        if sum(col) != magic_number:
+            expect = False
+        else:
+            count_magic_cols += 1
+    if expect == actual:
+        return error,
+    if expect:
+        # not detected magic
+        return error + 1.0,
+    else:
+        error += 0.9 * (n - count_magic_cols) / n
+        if sum_board != n * magic_number:
+            error += 0.1
+        return error,
+
+    
+def eval_is_magic_rows(inputs, actual, extra_function_params):
+    error = 0.0
+    if type(actual) != type(1):
+        error += 2.0
+    if type(actual) == type(1):
+        if actual not in [0, 1]:
+            error += 0.1
+    actual = bool(actual)
+    board = inputs[0]
+    assert len(board) == len(board[0]) and type(board[0][0]) == type(1)
+    n = len(board)
+    magic_number = (n * (n * n + 1)) // 2
+    expect, count_magic_rows, sum_board = True, 0, 0
+    for row in board:
+        sum_board += sum(row)
+        if sum(row) != magic_number:
+            expect = False
+        else:
+            count_magic_rows += 1
+    if expect == actual:
+        return error,
+    if expect:
+        # not detected magic
+        return error + 1.0,
+    else:
+        error += 0.9 * (n - count_magic_rows) / n
+        if sum_board != n * magic_number:
+            error += 0.1
+        return error,
+
+    
+def eval_is_magic(inputs, actual, extra_function_params):
+    error = 0.0
+    if type(actual) != type(1):
+        error += 2.0
+    if type(actual) == type(1):
+        if actual not in [0, 1]:
+            error += 0.1
+    model_says_its_magic = bool(actual)
+    board = inputs[0]
+    assert len(board) == len(board[0]) and type(board[0][0]) == type(1)
+    n = len(board)
+    magic_number = (n * (n * n + 1)) // 2
+    count_magic_rows, count_magic_cols, count_magic_diags, sum_board, sum_diag1, sum_diag2 = 0, 0, 0, 0, 0, 0
+    for row in board:
+        sum_board += sum(row)
+    for row in board:
+        if sum(row) == magic_number:
+            count_magic_rows += 1
+    for i in range(n):
+        col = [row[i] for row in board]
+        if sum(col) == magic_number:
+            count_magic_cols += 1
+    for i, row in enumerate(board):
+        sum_diag1 += row[i]
+        sum_diag2 += row[(n-1) - i]
+    if sum_diag1 == magic_number:
+        count_magic_diags += 1
+    if sum_diag2 == magic_number:
+        count_magic_diags += 1
+    check_rows = bool(extra_function_params[0])
+    check_cols = bool(extra_function_params[1])
+    check_diags = bool(extra_function_params[2])
+    if model_says_its_magic:
+        if sum_board != n * magic_number:
+            error += 0.1
+        if check_rows:
+            error += 0.3 * (n - count_magic_rows) / n
+        if check_cols:
+            error += 0.3 * (n - count_magic_cols) / n
+        if check_diags:
+            error += 0.3 * (2 - count_magic_diags) / 2
+    else:
+        is_magic = True
+        if check_rows and count_magic_rows < n:
+            is_magic = False
+        if check_cols and count_magic_cols < n:
+            is_magic = False
+        if check_diags and count_magic_diags < 2:
+            is_magic = False
+        if is_magic:
+            if check_rows:
+                error += 0.3
+            if check_cols:
+                error += 0.3
+            if check_diags:
+                error += 0.3
+    return error,
+
+    
+def eval_is_sorted(input, actual, extra_function_params):
+    expect = 1
+    for i in range(len(input) - 1):
+        if input[i] > input[i+1]:
+            expect = 0
+    return evaluate_int(actual, expect, False)
+
+
+def count_equal_prefix_length(str1, str2):
+    n_eq = 0
+    for i in range(min(len(str1), len(str2))):
+        if str1[i] != str2[i]:
+            break
+        n_eq += 1
+    return n_eq
+    
+    
 # ============================================== INTERFACE ====================
 
 
 def evaluate_code(actual_code_str, expected_code_str):
-    n_eq = 0.0
-    for i in range(min(len(actual_code_str), len(expected_code_str))):
-        if actual_code_str[i] != expected_code_str[i]:
-            break
-        n_eq += 1.0
-    error = len(expected_code_str) - n_eq
-    if error == 0 and (len(actual_code_str) > len(expected_code_str)):
-        error += (len(actual_code_str) - len(expected_code_str)) / 10000.0
+    error = 0
+    error += len(expected_code_str) - count_equal_prefix_length(actual_code_str, expected_code_str)
+    
+    actual_code_str = actual_code_str[::-1]
+    expected_code_str = expected_code_str[::-1]
+    error += (len(expected_code_str) - count_equal_prefix_length(actual_code_str, expected_code_str)) / 10
+
+    actual_code_str = sorted(actual_code_str)
+    expected_code_str = sorted(expected_code_str)
+    error += (len(expected_code_str) - count_equal_prefix_length(actual_code_str, expected_code_str)) / 100
+    
+    actual_code_str = actual_code_str[::-1]
+    expected_code_str = expected_code_str[::-1]
+    error += (len(expected_code_str) - count_equal_prefix_length(actual_code_str, expected_code_str)) / 1000
+
+    error += abs(len(expected_code_str) - len(actual_code_str)) / 10000.0
     # print("evaluate_code", actual_code_str, expected_code_str, error)
     return error
 
@@ -303,16 +479,23 @@ def evaluate(input, actual_output, evaluation_functions, debug):
     errors = []
     for function_name, extra_function_params in evaluation_functions:
         f = eval(function_name)
-        errors.extend(f(input, actual_output, extra_function_params))
-    errors = np.array(errors)
+        y = f(input, actual_output, extra_function_params)
+        errors.extend(y)
+    assert len(errors) > 0
+    for e in errors:
+        e = float(e) # fails on complex numbers that are a result of (a - b) ** 1.5 with a-b negative.
+        assert math.isfinite(e)
+    errors = np.array(errors).astype(float)    
     global sum_errors, weights
-    if len(weights) != len(errors):
-        weights = np.ones((len(errors))) / len(errors)
+    if weights.shape[0] != errors.shape[0]:
+        weights = np.ones((errors.shape[0])) / errors.shape[0]
     weighted_errors = errors * weights
-    if len(sum_errors) != len(errors):
+    if sum_errors.shape[0] != errors.shape[0]:
         sum_errors = np.zeros_like(errors)
     sum_errors += errors
-    if debug:
+    result = float(np.sum(weighted_errors))
+    assert type(result) == type(1.0)
+    if debug >= 2 or (debug >= 1 and result > 0.0):
         print("    evaluate")
         print("      input", input)
         print("      actual_output", actual_output)
@@ -320,7 +503,6 @@ def evaluate(input, actual_output, evaluation_functions, debug):
         print("      evaluation", np.sum(weighted_errors))
         #print("      sums errors this hop", sum_errors)
         #print("      sums weighted errors this hop", sum_errors * weights)
-    result = np.sum(weighted_errors)    
     return result
     
     

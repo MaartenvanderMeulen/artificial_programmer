@@ -31,20 +31,54 @@
 #        )
 #        1
 #    )
-    (get_diag2 (board)
-        (
-            (((1 2 3) (4 5 6) (7 8 9)))
-            (((9 8 7) (6 5 4) (3 2 1)))
-            (((2 9 4) (7 5 3) (6 1 8)))
-        )
-        (
-            (eval_board_diag2 ())
-        )
-        ((2 3) (i) (for at3 sub)
-            (for i 3 (at3 board i (sub 2 i)))
-        )
-        1
-    )
+#    (get_diag2 (board)
+#        (
+#            (((1 2 3) (4 5 6) (7 8 9)))
+#            (((9 8 7) (6 5 4) (3 2 1)))
+#            (((2 9 4) (7 5 3) (6 1 8)))
+#        )
+#        (
+#            (eval_board_diag2 ())
+#        )
+#        ((2 3) (i) (for at3 sub)
+#            (for i 3 (at3 board i (sub 2 i)))
+#        )
+#        1
+#    )
+#    (get_magic_number_n (n)
+#        (
+#            (1)
+#            (2)
+#            (3)
+#            (4)
+#            (5)
+#            (6)
+#        )
+#        (
+#            (eval_get_magic_number_n ())
+#        )
+#        ((1 2) () (div mul add)
+#            (div (mul n (add (mul n n) 1)) 2)
+#        )
+#        1        
+#    )
+#    (are_all_equal_to (values x)
+#        (
+#            ((1 2 3 4 15 16 17 18 19) 15)
+#            ((15 15 15 15) 15)
+#            ((1 2 3 4 5 6 7 8 9) 2)
+#            ((2 2 2 2 2 2 2 2 2) 2)
+#            ((5 5 3 5 5) 5)
+#            ((5 5 5 5 5) 5)
+#        )
+#        (
+#            (eval_are_all_equal_to ())
+#        )
+#        (() (value) (eq sum for len)
+#            (eq (sum (for value values (eq value x)))(len values))
+#        )
+#        1        
+#    )
 #    (get_row_sums (board)
 #        (
 #            (((1 2 3) (4 5 6) (7 8 9)))
@@ -80,39 +114,6 @@
 #        (() () (list2 sum get_diag1 get_diag2) (list2 (sum (get_diag1 board)) (sum (get_diag2 board))))
 #        2
 #    )
-#    (get_sums_magic_square (board)
-#        (
-#            (((1 2 3) (4 5 6) (7 8 9)))
-#            (((9 8 7) (6 5 4) (3 2 1)))
-#            (((9 7 3) (4 8 1) (2 6 5)))
-#            (((2 9 4) (7 5 3) (6 1 8)))
-#        )
-#        (
-#            (eval_magic_square_sums ())
-#        )
-#        (() ()
-#            (add get_row_sums get_col_sums get_diag_sums)
-#            (add (get_row_sums board) (add (get_col_sums board) (get_diag_sums board)))
-#        )
-#        3
-#    )
-#    (get_magic_number_n (n)
-#        (
-#            (1)
-#            (2)
-#            (3)
-#            (4)
-#            (5)
-#            (6)
-#        )
-#        (
-#            (eval_get_magic_number_n ())
-#        )
-#        ((1 2) () (div mul add)
-#            (div (mul n (add (mul n n) 1)) 2)
-#        )
-#        1        
-#    )
 #    (get_magic_number (board)
 #        (
 #            (((1 2 3) (4 5 6) (7 8 9)))
@@ -130,22 +131,21 @@
 #        )            
 #        2
 #    )
-#    (are_all_equal_to (values x)
+#    (get_sums_magic_square (board)
 #        (
-#            ((1 2 3 4 15 16 17 18 19) 15)
-#            ((15 15 15 15) 15)
-#            ((1 2 3 4 5 6 7 8 9) 2)
-#            ((2 2 2 2 2 2 2 2 2) 2)
-#            ((5 5 3 5 5) 5)
-#            ((5 5 5 5 5) 5)
+#            (((1 2 3) (4 5 6) (7 8 9)))
+#            (((9 8 7) (6 5 4) (3 2 1)))
+#            (((9 7 3) (4 8 1) (2 6 5)))
+#            (((2 9 4) (7 5 3) (6 1 8)))
 #        )
 #        (
-#            (eval_are_all_equal_to ())
+#            (eval_magic_square_sums ())
 #        )
-#        (() (value) (eq sum for len)
-#            (eq (sum (for value values (eq value x)))(len values))
+#        (() ()
+#            (add get_row_sums get_col_sums get_diag_sums)
+#            (add (get_row_sums board) (add (get_col_sums board) (get_diag_sums board)))
 #        )
-#        1        
+#        3
 #    )
 #    (is_magic_square (board)
 #        (
@@ -159,5 +159,63 @@
 #            (are_all_equal_to (get_sums_magic_square board) (get_magic_number board))
 #        )            
 #        4
+#    )
+    (is_magic_level3 (board)
+        (
+            # list of actual params
+            (((1 2 3) (4 5 6) (7 8 9)))
+            (((2 9 4) (7 5 3) (6 1 8)))
+            (((2 1 4) (7 5 3) (6 9 8)))
+            (((2 9 4) (3 5 7) (6 1 8)))
+            (((4 3 8) (9 5 1) (2 7 6)))
+            (((4 7 8) (9 5 1) (2 3 6)))
+            (((4 3 8) (1 5 9) (2 7 6)))
+            (((4 3 8) (9 1 5) (2 7 6)))
+            (((6 7 2) (8 3 4) (1 5 9)))
+            (((12 19 14) (17 15 13) (16 11 18)))
+        )
+        (
+            (eval_is_magic (1 1 1))
+        )
+        (()
+            # Local variables that may be used
+            # (i row)
+            ()
+            
+            # functions that may be called
+            # (at len for add list2 sum are_all_equal_to get_magic_number_n get_col get_diag1 get_diag2 get_row_sums get_col_sums get_diag_sums get_magic_number)
+            (add are_all_equal_to get_row_sums get_col_sums get_diag_sums get_magic_number)
+            
+            # examples for monkey testing
+            # (are_all_equal_to (get_row_sums board) (get_magic_number board))
+            # (are_all_equal_to (get_col_sums board) (get_magic_number board))
+            # (are_all_equal_to (get_diag_sums board) (get_magic_number board))
+            # (are_all_equal_to (add (get_row_sums board) (get_col_sums board)) (get_magic_number board))
+            # (are_all_equal_to (add (get_row_sums board) (add (get_col_sums board) (get_diag_sums board))) (get_magic_number board))
+            ()
+        )            
+        3
+    )
+#    (is_magic_rows_level2 (board)
+#        (
+#            # list of actual params
+#            (((1 2 3) (4 5 6) (7 8 9)))
+#            (((2 9 4) (7 5 3) (6 1 8)))
+#            (((2 1 4) (7 5 3) (6 9 8)))
+#            (((2 9 4) (3 5 7) (6 1 8)))
+#            (((4 3 8) (9 5 1) (2 7 6)))
+#            (((4 7 8) (9 5 1) (2 3 6)))
+#            (((4 3 8) (1 5 9) (2 7 6)))
+#            (((4 3 8) (9 1 5) (2 7 6)))
+#            (((12 19 14) (17 15 13) (16 11 18)))
+#        )
+#        (
+#            (eval_is_magic_rows ())
+#        )
+#        (() (i row) (at len for add list2 sum are_all_equal_to get_magic_number_n get_col get_diag1 get_diag2 get_row_sums get_col_sums get_diag_sums get_magic_number)
+#            # (are_all_equal_to (add (for row board (sum row)) (add (for i (len board) (sum (get_col board i))) (list (sum (get_diag1 board)) (sum (get_diag2 board))))) (get_magic_number_n (len board)))
+#            (are_all_equal_to (for row board (sum row)) (get_magic_number_n (len board)))
+#        )            
+#        2
 #    )
 )

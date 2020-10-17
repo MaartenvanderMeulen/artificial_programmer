@@ -4,6 +4,7 @@ import random
 import copy
 import interpret
 import evaluate
+import math
 from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull
 
 
@@ -11,7 +12,7 @@ global total_eval_count
 total_eval_count = 0
 
 
-def evaluate_individual(toolbox, individual, debug=False):
+def evaluate_individual(toolbox, individual, debug=0):
     toolbox.eval_count += 1
     global total_eval_count
     total_eval_count += 1
@@ -21,17 +22,21 @@ def evaluate_individual(toolbox, individual, debug=False):
         code_str = interpret.convert_code_to_str(code)
         weighted_error = evaluate.evaluate_code(code_str, toolbox.solution_code_str)
         if weighted_error == 0.0:
-            print("check the evaluation of the solution (should be error 0)")
+            sum_v = 0
             for input in toolbox.example_inputs:
                 variables = interpret.bind_params(toolbox.formal_params, input)
                 model_output = interpret.run(code, variables, toolbox.functions)
-                _ = evaluate.evaluate(input, model_output, toolbox.evaluation_functions, True)
+                sum_v += evaluate.evaluate(input, model_output, toolbox.evaluation_functions, 1)
+            if sum_v != 0:
+                print("There is something wrong")
+                
     else:
         weighted_error = 0.0
         for input in toolbox.example_inputs:
             variables = interpret.bind_params(toolbox.formal_params, input)
             model_output = interpret.run(code, variables, toolbox.functions)
-            weighted_error += evaluate.evaluate(input, model_output, toolbox.evaluation_functions, debug)
+            v = evaluate.evaluate(input, model_output, toolbox.evaluation_functions, debug)
+            weighted_error += v
     return weighted_error
 
 
@@ -73,12 +78,10 @@ class Toolbox(object):
         self.functions = functions
         self.pset = pset
         self.solution_code_str = interpret.convert_code_to_str(solution_hints)
-        print("Finding zero ...")
         self.expr_zero = gp.genHalfAndHalf(pset=self.pset, min_=0, max_=0)
         while self.expr_zero[0].name != '0':
             self.expr_zero = gp.genHalfAndHalf(pset=self.pset, min_=0, max_=0)
         assert self.expr_zero[0].name == '0'
-        print("Found zero")
 
 
 def best_of_n(population, n):
@@ -96,27 +99,30 @@ def update_dynamic_weighted_evaluation(toolbox, individuals):
 def write_population(toolbox, population, label):
     if toolbox.f:
         toolbox.f.write("write_population " + label + "\n")
-        for i, ind in enumerate(population[:3]):
-            toolbox.f.write(f"individual {i}\n")
-            write_path(toolbox.f, ind, toolbox)
+        for i in range(0, len(population), len(population) // 10):
+            ind = population[i]
             if False:
+                toolbox.f.write(f"individual {i} ")
+                write_path(toolbox, ind)
+            if True:
                 deap_str = str(ind)
-                code = interpret.compile_deap(deap_str, toolbox.functions)
-                code_str = interpret.convert_code_to_str(code)
-                toolbox.f.write(f"    ind {i} {ind.evaluation} {code_str}\n")
+                #code = interpret.compile_deap(deap_str, toolbox.functions)
+                #code_str = interpret.convert_code_to_str(code)
+                toolbox.f.write(f"    ind {i} {ind.evaluation} {len(ind)} {deap_str}\n")
         toolbox.f.write("\n")
         toolbox.f.flush()
 
 
-def write_path(f, ind, toolbox, indent=0):
-    indent_str = "".join(['  ' for i in range(indent)])
-    operator_str = ["", "mutatie", "crossover"][len(ind.parents)]
-    deap_str = str(ind)
-    code = interpret.compile_deap(deap_str, toolbox.functions)
-    code_str = interpret.convert_code_to_str(code)
-    f.write(f"{indent_str}{code_str} {ind.evaluation:.3f} {operator_str}\n")
-    for parent in ind.parents:
-        write_path(f, parent, toolbox, indent+1)
+def write_path(toolbox, ind, indent=0):
+    if toolbox.f:
+        indent_str = "".join(['  ' for i in range(indent)])
+        operator_str = ["", "mutatie", "crossover"][len(ind.parents)]
+        deap_str = str(ind)
+        code = interpret.compile_deap(deap_str, toolbox.functions)
+        code_str = interpret.convert_code_to_str(code)
+        toolbox.f.write(f"{indent_str}{code_str} {ind.evaluation:.3f} {operator_str}\n")
+        for parent in ind.parents:
+            write_path(toolbox, parent, indent+1)
         
         
 def add_if_unique(toolbox, ind, individuals):
@@ -149,7 +155,6 @@ def create_individual(toolbox):
     
 
 def generate_initial_population(toolbox):
-    print("generate intial pop...")
     evaluate.init_dynamic_error_weight_adjustment()        
     toolbox.ind_str_set = set()
     population = []    
@@ -158,7 +163,6 @@ def generate_initial_population(toolbox):
         ind.parents = []
         if add_if_unique(toolbox, ind, population) and ind.evaluation == 0.0:
             return None, ind
-    print("generate intial pop done")
     return population, None
 
 
@@ -245,8 +249,9 @@ def ga_search_impl(toolbox):
     population.sort(key=lambda item: item.evaluation)            
     gen = 0
     for toolbox.parachute_level in range(len(toolbox.ngen)):
-        while gen < toolbox.ngen[toolbox.parachute_level]:
-            #print("gen", gen, "fitness", population[0].evaluation)
+        while gen < toolbox.ngen[toolbox.parachute_level]:            
+            print("gen", gen, "fitness", population[0].evaluation, str(population[0]))
+            #evaluate_individual(toolbox, population[0], debug=True)
             write_population(toolbox, population, f"generation {gen}, pop at start")
             offspring, solution = generate_offspring(toolbox, population, toolbox.nchildren[toolbox.parachute_level])
             if solution:
@@ -266,13 +271,13 @@ def solve_by_new_function(problem, functions):
     toolbox = Toolbox(problem, functions)
     toolbox.monkey_mode = False
     toolbox.dynamic_weights = False # not toolbox.monkey_mode
-    hops = 1
+    hops = 3
     result = None
     with open("tmp_log.txt", "w") as f:
         toolbox.f = f
         toolbox.pcrossover = 0.5
         toolbox.pmutations = 1.0 - toolbox.pcrossover
-        toolbox.pop_size, toolbox.ngen = [8000, 600], [0, 100]
+        toolbox.pop_size, toolbox.ngen = [8000, 1000], [4, 1000]
         toolbox.nchildren = toolbox.pop_size
         toolbox.eval_count = 0
         for hop in range(hops):
@@ -284,7 +289,7 @@ def solve_by_new_function(problem, functions):
                 result = ["function", problem_name, params, code]
                 result_str = interpret.convert_code_to_str(result)
                 print("problem", problem_name, f"solved after {toolbox.eval_count} evaluations by", result_str)
-                assert evaluate_individual(toolbox, best, False) == 0
-                write_path(f, best, toolbox)
+                assert evaluate_individual(toolbox, best, 1) == 0
+                write_path(toolbox, best)
                 break
     return result
