@@ -271,110 +271,6 @@ def eval_are_all_equal_to(input, actual, extra_function_params):
     return evaluate_int(actual, int(expect), False)
 
     
-def eval_is_magic_square(inputs, actual, extra_function_params):
-    board = input[0]
-    assert len(board) == len(board[0]) and type(board[0][0]) == type(1)
-    n = len(board)
-    magic_number = (n * (n * n + 1)) // 2
-    sums = []
-    for row in board:
-        sums.append(sum(row))
-    for i in range(n):
-        sums.append(sum([row[i] for row in board]))
-    sums.append(sum([board[i][i] for i in range(len(board))]))
-    sums.append(sum([board[i][(n-1) - i] for i in range(len(board))]))
-    expect = sum([1 if value == magic_number else 0 for value in sums]) == len(sums)
-    return evaluate_int(actual, int(expect), False)
-
-    
-def eval_is_magic_diags(inputs, actual, extra_function_params):
-    error = 0.0
-    if type(actual) != type(1):
-        error += 2.0
-    if type(actual) == type(1):
-        if actual not in [0, 1]:
-            error += 0.1
-    actual = bool(actual)
-    board = inputs[0]
-    assert len(board) == len(board[0]) and type(board[0][0]) == type(1)
-    n = len(board)
-    magic_number = (n * (n * n + 1)) // 2
-    expect, count_magic_diags, sum_board, sum_diag1, sum_diag2 = True, 0, 0, 0, 0
-    if expect == actual:
-        return error,
-    if expect:
-        # not detected magic
-        return error + 1.0,
-    else:
-        error += 0.9 * (2 - count_magic_diags) / 2
-        if sum_board != n * magic_number:
-            error += 0.1
-        return error,
-
-    
-def eval_is_magic_cols(inputs, actual, extra_function_params):
-    error = 0.0
-    if type(actual) != type(1):
-        error += 2.0
-    if type(actual) == type(1):
-        if actual not in [0, 1]:
-            error += 0.1
-    actual = bool(actual)
-    board = inputs[0]
-    assert len(board) == len(board[0]) and type(board[0][0]) == type(1)
-    n = len(board)
-    magic_number = (n * (n * n + 1)) // 2
-    expect, count_magic_cols, sum_board = True, 0, 0
-    for i in range(n):
-        col = [row[i] for row in board]
-        sum_board += sum(col)
-        if sum(col) != magic_number:
-            expect = False
-        else:
-            count_magic_cols += 1
-    if expect == actual:
-        return error,
-    if expect:
-        # not detected magic
-        return error + 1.0,
-    else:
-        error += 0.9 * (n - count_magic_cols) / n
-        if sum_board != n * magic_number:
-            error += 0.1
-        return error,
-
-    
-def eval_is_magic_rows(inputs, actual, extra_function_params):
-    error = 0.0
-    if type(actual) != type(1):
-        error += 2.0
-    if type(actual) == type(1):
-        if actual not in [0, 1]:
-            error += 0.1
-    actual = bool(actual)
-    board = inputs[0]
-    assert len(board) == len(board[0]) and type(board[0][0]) == type(1)
-    n = len(board)
-    magic_number = (n * (n * n + 1)) // 2
-    expect, count_magic_rows, sum_board = True, 0, 0
-    for row in board:
-        sum_board += sum(row)
-        if sum(row) != magic_number:
-            expect = False
-        else:
-            count_magic_rows += 1
-    if expect == actual:
-        return error,
-    if expect:
-        # not detected magic
-        return error + 1.0,
-    else:
-        error += 0.9 * (n - count_magic_rows) / n
-        if sum_board != n * magic_number:
-            error += 0.1
-        return error,
-
-    
 def eval_is_magic(inputs, actual, extra_function_params):
     error = 0.0
     if type(actual) != type(1):
@@ -411,11 +307,11 @@ def eval_is_magic(inputs, actual, extra_function_params):
         if sum_board != n * magic_number:
             error += 0.1
         if check_rows:
-            error += 0.3 * (n - count_magic_rows) / n
+            error += 0.425 * (n - count_magic_rows) / n
         if check_cols:
-            error += 0.3 * (n - count_magic_cols) / n
+            error += 0.325 * (n - count_magic_cols) / n
         if check_diags:
-            error += 0.3 * (2 - count_magic_diags) / 2
+            error += 0.25 * (2 - count_magic_diags) / 2
     else:
         is_magic = True
         if check_rows and count_magic_rows < n:
@@ -426,11 +322,11 @@ def eval_is_magic(inputs, actual, extra_function_params):
             is_magic = False
         if is_magic:
             if check_rows:
-                error += 0.3
+                error += 0.45
             if check_cols:
-                error += 0.3
+                error += 0.35
             if check_diags:
-                error += 0.3
+                error += 0.2
     return error,
 
     
@@ -451,10 +347,30 @@ def count_equal_prefix_length(str1, str2):
     return n_eq
     
     
+def count_equal_and_unequal_chars(str1, str2):
+    count_eq, count_ne = 0, 0
+    i, j = 0, 0
+    while i < len(str1) and j < len(str2):
+        if str1[i] == str2[j]:
+            count_eq += 1
+            i += 1
+            j += 1
+        else:
+            while j < len(str2) and str1[i] != str2[j]:
+                j += 1
+                count_ne += 1
+    count_ne += (len(str1) - i) + (len(str2) - j)
+    return count_eq, count_ne 
+    
+    
 # ============================================== INTERFACE ====================
 
 
 def evaluate_code(actual_code_str, expected_code_str):
+    count_eq, count_ne = count_equal_and_unequal_chars(actual_code_str, expected_code_str)
+    return count_ne + count_ne/(count_eq + 1)
+
+
     error = 0
     error += len(expected_code_str) - count_equal_prefix_length(actual_code_str, expected_code_str)
     
