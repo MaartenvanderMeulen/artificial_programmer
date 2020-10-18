@@ -274,6 +274,8 @@ def _run(program, variables, functions, debug, depth):
             loop_variable = program[1]
             steps = _run(program[2], variables, functions, debug, depth+1)
             if type(steps) == type(1):
+                if steps > 1000:
+                    raise RuntimeError("for loop max iterations exceeded")
                 steps = [i for i in range(steps)]
             result = []
             for i in steps:
@@ -358,9 +360,13 @@ def run(program, variables, functions, debug=False):
             #print(convert_code_to_str(program))
             #print(longest_run, "seconds")
     except RuntimeError as e:
-        if str(e) != "code run calls exceeded":
+        if str(e) not in ["code run calls exceeded", "code depth exceeded", "for loop max iterations exceeded"]:
             print(convert_code_to_str(program))
-            print(str(e))
+            print("RuntimeError", str(e))
+        return 0
+    except MemoryError as e:
+        print(convert_code_to_str(program))
+        print("MemoryError", str(e))
         return 0
     #print("run end") 
     return result

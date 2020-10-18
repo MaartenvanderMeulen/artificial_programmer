@@ -13,10 +13,12 @@ total_eval_count = 0
 
 
 def evaluate_individual(toolbox, individual, debug=0):
+    deap_str = str(individual)
+    if deap_str in toolbox.eval_cache:
+        return toolbox.eval_cache[deap_str]
     toolbox.eval_count += 1
     global total_eval_count
     total_eval_count += 1
-    deap_str = str(individual)
     code = interpret.compile_deap(deap_str, toolbox.functions)
     if toolbox.monkey_mode: # if the solution can be found in monkey mode, the real search could in theory find it also
         code_str = interpret.convert_code_to_str(code)
@@ -32,11 +34,20 @@ def evaluate_individual(toolbox, individual, debug=0):
                 
     else:
         weighted_error = 0.0
+        prev_model_output, model_reacts_on_input = None, False
         for input in toolbox.example_inputs:
             variables = interpret.bind_params(toolbox.formal_params, input)
             model_output = interpret.run(code, variables, toolbox.functions)
+            if model_output != prev_model_output:
+                model_reacts_on_input = True
+                prev_model_output = model_output
             v = evaluate.evaluate(input, model_output, toolbox.evaluation_functions, debug)
             weighted_error += v
+        if weighted_error > 0 and not model_reacts_on_input:
+            # always the same wrong answer, penalize that.  
+            weighted_error *= 2
+            
+    toolbox.eval_cache[deap_str] = weighted_error
     return weighted_error
 
 
@@ -54,8 +65,6 @@ class Toolbox(object):
             rename_cmd = f'pset.renameArguments(ARG{i}="{param}")'
             # print("DEBUG 62 rename_cmd", rename_cmd)
             eval(rename_cmd)
-        if 0 not in int_hints:
-            int_hints.append(0)
         for c in int_hints:
             pset.addTerminal(c)
         for variable in var_hints:
@@ -78,10 +87,7 @@ class Toolbox(object):
         self.functions = functions
         self.pset = pset
         self.solution_code_str = interpret.convert_code_to_str(solution_hints)
-        self.expr_zero = gp.genHalfAndHalf(pset=self.pset, min_=0, max_=0)
-        while self.expr_zero[0].name != '0':
-            self.expr_zero = gp.genHalfAndHalf(pset=self.pset, min_=0, max_=0)
-        assert self.expr_zero[0].name == '0'
+        self.eval_cache = dict()
 
 
 def best_of_n(population, n):
@@ -99,16 +105,16 @@ def update_dynamic_weighted_evaluation(toolbox, individuals):
 def write_population(toolbox, population, label):
     if toolbox.f:
         toolbox.f.write("write_population " + label + "\n")
-        for i in range(0, len(population), len(population) // 10):
-            ind = population[i]
-            if False:
-                toolbox.f.write(f"individual {i} ")
-                write_path(toolbox, ind)
-            if True:
-                deap_str = str(ind)
-                #code = interpret.compile_deap(deap_str, toolbox.functions)
-                #code_str = interpret.convert_code_to_str(code)
-                toolbox.f.write(f"    ind {i} {ind.evaluation} {len(ind)} {deap_str}\n")
+        for i, ind in enumerate(population):            
+            if ind.evaluation < 2:
+                if False:
+                    toolbox.f.write(f"individual {i} ")
+                    write_path(toolbox, ind)
+                if True:
+                    deap_str = str(ind)
+                    #code = interpret.compile_deap(deap_str, toolbox.functions)
+                    #code_str = interpret.convert_code_to_str(code)
+                    toolbox.f.write(f"    ind {i} {ind.evaluation} {len(ind)} {deap_str}\n")
         toolbox.f.write("\n")
         toolbox.f.flush()
 
@@ -140,17 +146,6 @@ def create_individual(toolbox):
     expr = gp.genHalfAndHalf(pset=toolbox.pset, min_=1, max_=3)
     individual = gp.PrimitiveTree(expr)
     individual.evaluation = evaluate_individual(toolbox, individual)
-    if False:
-        # replace parts that make no difference by 0
-        index = 0
-        while index < len(individual):
-            ind_tmp = copy.deepcopy(individual)
-            slice_ = ind_tmp.searchSubtree(index)
-            ind_tmp[slice_] = toolbox.expr_zero
-            ind_tmp.evaluation = evaluate_individual(toolbox, ind_tmp)
-            if individual.evaluation == ind_tmp.evaluation and len(individual) > len(ind_tmp):
-                individual[slice_] = toolbox.expr_zero
-            index += 1    
     return individual
     
 
@@ -186,10 +181,45 @@ def crossover_with_local_search(toolbox, ind1, ind2):
         return ind1
     if ind1.evaluation > ind2.evaluation or (ind1.evaluation == ind2.evaluation and len(ind1) > len(ind2)):
         ind1, ind2 = ind2, ind1
-    index2 = random.randrange(0, len(ind2))
-    slice2 = ind2.searchSubtree(index2)
-    ind1 = replace_subtree_at_best_location(toolbox, ind1, ind2[slice2] )
-    return ind1 
+    indexes1 = [i for i in range(len(ind1))]
+    indexes2 = [i for i in range(len(ind2))]
+    random.shuffle(indexes1)
+    random.shuffle(indexes2)
+    count_bloat, count_test, count_non_unique = 0, 0, 0
+    best_evaluation, best_slice1, best_expr2, best_len = None, None, None, None
+    for index2 in indexes2:
+        slice2 = ind2.searchSubtree(index2)
+        expr2 = ind2[slice2]
+        for index1 in indexes1:
+            ind1_tmp = copy.deepcopy(ind1)
+            slice1 = ind1_tmp.searchSubtree(index1)
+            ind1_tmp[slice1] = expr2
+            if len(ind1_tmp) <= toolbox.max_individual_size:
+                deap_str = str(ind1_tmp)
+                if deap_str not in toolbox.ind_str_set:
+                    count_test += 1
+                    ind1_tmp.evaluation = evaluate_individual(toolbox, ind1_tmp)
+                    if ind1.evaluation > ind1_tmp.evaluation or (ind1.evaluation == ind1_tmp.evaluation and len(ind1) > len(ind1_tmp)):
+                        ind1[slice1] = expr2
+                        ind1.evaluation = ind1_tmp.evaluation
+                        return ind1
+                    if best_evaluation is None or best_evaluation > ind1_tmp.evaluation or (best_evaluation == ind1_tmp.evaluation and best_len > len(ind1_tmp)):
+                        best_evaluation = ind1_tmp.evaluation
+                        best_slice1 = slice1
+                        best_expr2 = expr2
+                        best_len = len(ind1_tmp)
+                else:
+                    count_non_unique += 1
+            else:
+                count_bloat += 1
+    assert len(ind1) * len(ind2) == count_test + count_non_unique + count_bloat
+    # print(f"crossover anomaly, count_test {count_test}, len1 {len(ind1)}, len2 {len(ind2)}, count_bloat {count_bloat}, count_non_unique {count_non_unique}, current eval {ind1.evaluation}")
+    if True:
+        if best_evaluation is not None:
+            ind1[best_slice1] = best_expr2
+            ind1.evaluation = best_evaluation
+            return ind1
+    return None 
 
 
 def mutUniform(ind, expr, pset):
@@ -204,16 +234,29 @@ def mutUniform(ind, expr, pset):
 def replace_subtree_at_best_location(toolbox, ind_orig, expr):
     indexes = [i for i in range(len(ind_orig))]
     random.shuffle(indexes)
-    for index in indexes[:40]: # very big trees can make the optimalisation very slow
+    best_evaluation, best_slice1, best_expr2, best_len = None, None, None, None
+    for index in indexes:
         ind_tmp = copy.deepcopy(ind_orig)
-        slice_ = ind_tmp.searchSubtree(index)
-        ind_tmp[slice_] = expr
-        ind_tmp.evaluation = evaluate_individual(toolbox, ind_tmp)
-        if ind_orig.evaluation > ind_tmp.evaluation or (ind_orig.evaluation == ind_tmp.evaluation and len(ind_orig) > len(ind_tmp)):
-            ind_orig[slice_] = expr
-            ind_orig.evaluation = ind_tmp.evaluation
-            break
-    return ind_orig
+        slice1 = ind_tmp.searchSubtree(index)
+        ind_tmp[slice1] = expr
+        if len(ind_tmp) <= toolbox.max_individual_size:
+            deap_str = str(ind_tmp)
+            if deap_str not in toolbox.ind_str_set:
+                ind_tmp.evaluation = evaluate_individual(toolbox, ind_tmp)
+                if ind_orig.evaluation > ind_tmp.evaluation or (ind_orig.evaluation == ind_tmp.evaluation and len(ind_orig) > len(ind_tmp)):
+                    ind_orig[slice1] = expr
+                    ind_orig.evaluation = ind_tmp.evaluation
+                    return ind_orig
+                if best_evaluation is None or best_evaluation > ind_tmp.evaluation or (best_evaluation == ind_tmp.evaluation and best_len > len(ind_tmp)):
+                    best_evaluation = ind_tmp.evaluation
+                    best_slice1 = slice1
+                    best_len = len(ind_tmp)
+    if True:
+        if best_evaluation is not None:
+            ind_orig[best_slice1] = expr
+            ind_orig.evaluation = best_evaluation
+            return ind_orig
+    return None
 
 
 def generate_offspring(toolbox, population, nchildren):
@@ -227,7 +270,7 @@ def generate_offspring(toolbox, population, nchildren):
                 ind = cxOnePoint(copy.deepcopy(ind1), copy.deepcopy(ind2))
             else:
                 ind = crossover_with_local_search(toolbox, copy.deepcopy(ind1), copy.deepcopy(ind2))
-            ind.parents = [ind1, ind2]
+            parents = [ind1, ind2]
         else: # Apply mutation
             ind1 = best_of_n(population, 2)            
             if toolbox.parachute_level == 0:
@@ -235,9 +278,11 @@ def generate_offspring(toolbox, population, nchildren):
             else:
                 expr = gp.genFull(pset=toolbox.pset, min_=0, max_=2)
                 ind = replace_subtree_at_best_location(toolbox, copy.deepcopy(ind1), expr)
-            ind.parents = [ind1,]
-        if add_if_unique(toolbox, ind, offspring) and ind.evaluation == 0.0:
-            return None, ind
+            parents = [ind1,]
+        if ind is not None:
+            ind.parents = parents
+            if add_if_unique(toolbox, ind, offspring) and ind.evaluation == 0.0:
+                return None, ind
     return offspring, None
 
 
@@ -256,9 +301,11 @@ def ga_search_impl(toolbox):
             offspring, solution = generate_offspring(toolbox, population, toolbox.nchildren[toolbox.parachute_level])
             if solution:
                 return solution, gen+1
+            print(len(offspring), "offspring")
             population += offspring
-            population.sort(key=lambda item: item.evaluation)            
+            population.sort(key=lambda item: item.evaluation)    
             population[:] = population[:toolbox.pop_size[toolbox.parachute_level]]
+            toolbox.ind_str_set = {str(ind) for ind in population} # refresh set
             update_dynamic_weighted_evaluation(toolbox, population)
             gen += 1
     write_population(toolbox, population, "pop final")
@@ -271,6 +318,7 @@ def solve_by_new_function(problem, functions):
     toolbox = Toolbox(problem, functions)
     toolbox.monkey_mode = False
     toolbox.dynamic_weights = False # not toolbox.monkey_mode
+    toolbox.max_individual_size = 40 # max of len(individual).  Don't make individuals larger than it
     hops = 3
     result = None
     with open("tmp_log.txt", "w") as f:
