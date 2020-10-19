@@ -44,8 +44,8 @@ def evaluate_individual(toolbox, individual, debug=0):
             v = evaluate.evaluate(input, model_output, toolbox.evaluation_functions, debug)
             weighted_error += v
         if weighted_error > 0 and not model_reacts_on_input:
-            # always the same wrong answer, penalize that.  
-            weighted_error *= 2
+            # always the same wrong answer, penalize that heavily.  
+            weighted_error += 10 + 10*weighted_error
             
     toolbox.eval_cache[deap_str] = weighted_error
     return weighted_error
@@ -295,7 +295,8 @@ def ga_search_impl(toolbox):
     gen = 0
     for toolbox.parachute_level in range(len(toolbox.ngen)):
         while gen < toolbox.ngen[toolbox.parachute_level]:            
-            print("gen", gen, "fitness", population[0].evaluation, str(population[0]))
+            code_str = interpret.convert_code_to_str(interpret.compile_deap(str(population[0]), toolbox.functions))
+            print("gen", gen, "fitness", population[0].evaluation, code_str)
             #evaluate_individual(toolbox, population[0], debug=True)
             write_population(toolbox, population, f"generation {gen}, pop at start")
             offspring, solution = generate_offspring(toolbox, population, toolbox.nchildren[toolbox.parachute_level])

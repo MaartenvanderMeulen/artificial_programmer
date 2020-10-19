@@ -359,7 +359,7 @@ def count_equal_and_unequal_chars(str1, str2):
             while j < len(str2) and str1[i] != str2[j]:
                 j += 1
                 count_ne += 1
-    count_ne += (len(str1) - i) + (len(str2) - j)
+    count_ne += (len(str1) - i) + (len(str2) - j)/10
     return count_eq, count_ne 
     
     
@@ -367,12 +367,13 @@ def count_equal_and_unequal_chars(str1, str2):
 
 
 def evaluate_code(actual_code_str, expected_code_str):
-    count_eq, count_ne = count_equal_and_unequal_chars(actual_code_str, expected_code_str)
-    return count_ne + count_ne/(count_eq + 1)
+    # count_eq, count_ne = count_equal_and_unequal_chars(actual_code_str, expected_code_str)
+    # return count_ne + count_ne/(count_eq + 1)
 
 
     error = 0
     error += len(expected_code_str) - count_equal_prefix_length(actual_code_str, expected_code_str)
+    return error
     
     actual_code_str = actual_code_str[::-1]
     expected_code_str = expected_code_str[::-1]

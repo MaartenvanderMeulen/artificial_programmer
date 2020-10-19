@@ -6,6 +6,15 @@
     (function get_diag1 (board) (for i (len board) (at board i i)))
     (function get_diag2 (board) (for i (len board) (at board i (sub (len board) 1 i))))
     (function are_all_equal_to (values x) (if (len values) (eq (sum (for value values (eq value x))) (len values)) 0))
+    (function are_all_equal (values)
+        (if (len values)
+            (eq
+                (sum (for i (len values) (eq (at values i) (at values 0))))
+                (len values)
+            )
+            0
+        )
+    )
     (function get_magic_number_n (n) (div (mul n (add (mul n n) 1)) 2))
     # layer 2
     (function get_row_sums (board) (for row board (sum row )))
@@ -32,3 +41,6 @@
 #    (function is_magic_square (board) (are_all_equal_to (add (add (get_col_sums board) (get_row_sums (list (get_diag2 board) (get_diag2 board)))) (get_row_sums (get_diag2 (list board)))) (get_magic_number_n (len (get_col_sums (get_row_sums (get_col_sums board)))))))
 #    (function is_magic_square (board) (are_all_equal_to (add (for row board (sum row)) (for i (len board) (sum (get_col board i)))) (sum (get_diag1 board))))
 #    (function is_magic_square (board) (are_all_equal_to (get_row_sums (get_diag1 (for i (are_all_equal_to (get_row_sums board) (sum (get_col board (add (get_row_sums i) (get_diag1 i))))) board))) (sum (get_diag1 board))))
+#    (function is_magic_square (board) (are_all_equal_to (for board (add (for (len (get_col i i)) board (get_diag1 board)) (add (for i board (get_col board (sum board))) board)) (sum board)) (sum board)))
+#    (function is_magic_square (board) (are_all_equal (add (for i board (sum i)) (add (for i (len board) (sum (get_col board i))) (list (sum (get_diag1 board)))))))
+#    (function is_magic_square (board) (are_all_equal (add (for i board (sum i)) (add (for i (len board) (sum (get_col board i))) (list (sum (get_diag1 board)))))))

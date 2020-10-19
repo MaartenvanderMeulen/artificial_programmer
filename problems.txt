@@ -165,9 +165,14 @@
             # (are_all_equal_to (add (get_row_sums board) (add (get_col_sums board) (list2 (sum (get_diag1 board)) (sum (get_diag2 board))))) (get_magic_number_n (len board)))
 
             # Using only level 1 functions (trick, we say get_row_sums is a level 1 function)
+            #(i)
+            #(add for sum len are_all_equal_to get_row_sums get_col get_diag1)
+            #(are_all_equal_to (add (get_row_sums board) (for i (len board) (sum (get_col board i)))) (sum (get_diag1 board)))
+
+            # Using only level 1 functions, AND NO GET_ROW_SUMS
             (i)
-            (add for sum len are_all_equal_to get_row_sums get_col get_diag1)
-            (are_all_equal_to (add (get_row_sums board) (for i (len board) (sum (get_col board i)))) (sum (get_diag1 board)))
+            (add for sum len list1 are_all_equal get_row get_col get_diag1 get_diag2)
+            (are_all_equal (add (for i board (sum i)) (add (for i (len board) (sum (get_col board i))) (list1 (sum (get_diag1 board))))))
         )            
         2
     )
