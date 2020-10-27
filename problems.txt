@@ -143,6 +143,9 @@
             (((4 3 8) (1 5 9) (2 7 6)))
             (((4 3 8) (9 1 5) (2 7 6)))
             (((6 7 2) (8 3 4) (1 5 9)))
+            # special cases below : all ok except col2, col3 and diag2.  One without 5 in the middle, and with 5 in the middle.
+            (((6 1 8) (2 4 9) (7 3 5)))
+            (((6 2 7) (1 5 9) (8 3 4)))
             # (((12 19 14) (17 15 13) (16 11 18)))
         )
         (
@@ -171,7 +174,7 @@
 
             # Using only level 1 functions, AND NO GET_ROW_SUMS
             (i)
-            (add for sum len list1 are_all_equal get_row get_col get_diag1 get_diag2)
+            (add for sum len list1 are_all_equal get_col get_diag1)
             (are_all_equal (add (for i board (sum i)) (add (for i (len board) (sum (get_col board i))) (list1 (sum (get_diag1 board))))))
         )            
         2
