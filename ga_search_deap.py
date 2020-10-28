@@ -5,6 +5,7 @@ import copy
 import interpret
 import evaluate
 import math
+import time
 from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull
 
 
@@ -161,6 +162,17 @@ def generate_initial_population(toolbox):
     return population, None
 
 
+def copy_individual(ind):
+    copy_ind = gp.PrimitiveTree(list(ind[:]))
+    if hasattr(ind, "deap_str"):
+        copy_ind.deap_str = ind.deap_str
+    if hasattr(ind, "parents"):
+        copy_ind.parents = [parent for parent in ind.parents]
+    if hasattr(ind, "evaluation"):
+        copy_ind.evaluation = ind.evaluation
+    return copy_ind
+        
+
 def cxOnePoint(ind1, ind2):
     if len(ind1) < 2 or len(ind2) < 2:
         # No crossover on single node tree
@@ -191,7 +203,7 @@ def crossover_with_local_search(toolbox, ind1, ind2):
         slice2 = ind2.searchSubtree(index2)
         expr2 = ind2[slice2]
         for index1 in indexes1:
-            ind1_tmp = copy.deepcopy(ind1)
+            ind1_tmp = copy_individual(ind1)
             slice1 = ind1_tmp.searchSubtree(index1)
             ind1_tmp[slice1] = expr2
             if len(ind1_tmp) <= toolbox.max_individual_size:
@@ -236,7 +248,7 @@ def replace_subtree_at_best_location(toolbox, ind_orig, expr):
     random.shuffle(indexes)
     best_evaluation, best_slice1, best_expr2, best_len = None, None, None, None
     for index in indexes:
-        ind_tmp = copy.deepcopy(ind_orig)
+        ind_tmp = copy_individual(ind_orig)
         slice1 = ind_tmp.searchSubtree(index)
         ind_tmp[slice1] = expr
         if len(ind_tmp) <= toolbox.max_individual_size:
@@ -267,17 +279,17 @@ def generate_offspring(toolbox, population, nchildren):
         if op_choice < toolbox.pcrossover: # Apply crossover
             ind1, ind2 = [best_of_n(population, 2), best_of_n(population, 2)]
             if toolbox.parachute_level == 0:
-                ind = cxOnePoint(copy.deepcopy(ind1), copy.deepcopy(ind2))
+                ind = cxOnePoint(copy_individual(ind1), copy_individual(ind2))
             else:
-                ind = crossover_with_local_search(toolbox, copy.deepcopy(ind1), copy.deepcopy(ind2))
+                ind = crossover_with_local_search(toolbox, copy_individual(ind1), copy_individual(ind2))
             parents = [ind1, ind2]
         else: # Apply mutation
             ind1 = best_of_n(population, 2)            
             if toolbox.parachute_level == 0:
-                ind = mutUniform(copy.deepcopy(ind1), expr=expr_mut, pset=toolbox.pset)
+                ind = mutUniform(copy_individual(ind1), expr=expr_mut, pset=toolbox.pset)
             else:
                 expr = gp.genFull(pset=toolbox.pset, min_=0, max_=2)
-                ind = replace_subtree_at_best_location(toolbox, copy.deepcopy(ind1), expr)
+                ind = replace_subtree_at_best_location(toolbox, copy_individual(ind1), expr)
             parents = [ind1,]
         if ind is not None:
             ind.parents = parents
@@ -296,13 +308,13 @@ def ga_search_impl(toolbox):
     for toolbox.parachute_level in range(len(toolbox.ngen)):
         while gen < toolbox.ngen[toolbox.parachute_level]:            
             code_str = interpret.convert_code_to_str(interpret.compile_deap(str(population[0]), toolbox.functions))
-            print("gen", gen, "fitness", population[0].evaluation, code_str)
+            print("start generation", gen, "best evaluation", population[0].evaluation, code_str)
             #evaluate_individual(toolbox, population[0], debug=True)
             write_population(toolbox, population, f"generation {gen}, pop at start")
             offspring, solution = generate_offspring(toolbox, population, toolbox.nchildren[toolbox.parachute_level])
             if solution:
                 return solution, gen+1
-            print(len(offspring), "offspring")
+            # print(len(offspring), "offspring")
             population += offspring
             population.sort(key=lambda item: item.evaluation)    
             population[:] = population[:toolbox.pop_size[toolbox.parachute_level]]
@@ -326,11 +338,15 @@ def solve_by_new_function(problem, functions):
         toolbox.f = f
         toolbox.pcrossover = 0.5
         toolbox.pmutations = 1.0 - toolbox.pcrossover
-        toolbox.pop_size, toolbox.ngen = [8000, 1000], [4, 1000]
+        toolbox.pop_size, toolbox.ngen = [8000, 1000], [4, 20]
         toolbox.nchildren = toolbox.pop_size
-        toolbox.eval_count = 0
         for hop in range(hops):
+            toolbox.eval_count = 0
+            t0 = time.time()
             best, gen = ga_search_impl(toolbox)        
+            t1 = time.time()
+            print("elaspsed", round(t1-t0), "count evals", toolbox.eval_count)
+
             if best.evaluation == 0:
                 deap_str = str(best)
                 code = interpret.compile_deap(deap_str, toolbox.functions)
@@ -340,5 +356,5 @@ def solve_by_new_function(problem, functions):
                 print("problem", problem_name, f"solved after {toolbox.eval_count} evaluations by", result_str)
                 assert evaluate_individual(toolbox, best, 1) == 0
                 write_path(toolbox, best)
-                break
+                # break
     return result
