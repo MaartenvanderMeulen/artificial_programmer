@@ -30,6 +30,3 @@
     #    (are_all_equal_to (get_sums_magic_square board) (get_magic_number board))
     #)
 )
-#    (function is_magic_square (board) (are_all_equal (for i (add (for i (len board) (get_col board i)) (add (for i board i) (for (list i) (len i) (get_diag1 board)))) (sum (add (get_diag1 board) i)))))
-#    (function is_magic_square (board) (are_all_equal (for i (add (for i (len board) (get_col board i)) (add (for i board i) (for (list i) (len i) (get_diag1 board)))) (sum (add (get_diag1 board) i)))))
-#    (function is_magic_square (board) (add (sum i) (are_all_equal (add (add (get_col_sums board) (get_diag_sums board)) (get_row_sums board)))))

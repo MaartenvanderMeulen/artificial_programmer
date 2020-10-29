@@ -34,7 +34,8 @@ def solve_by_existing_function(problem, functions):
     return None
 
 
-def find_new_functions(problems, functions, functions_file_name, layer):
+def find_new_functions(problems, functions, layer, append_functions_to_file=None):
+    '''If append_functions_to_file is a string, the new functions will be appended to that file'''
     print("Solving problems, layer", layer, "...")
     new_functions = []
     for problem in problems:
@@ -58,7 +59,7 @@ def find_new_functions(problems, functions, functions_file_name, layer):
             pass
             # print("problem", problem_label, "will be tried at layer", problem_layer)        
     for function_code in new_functions:
-        interpret.add_function(function_code, functions, functions_file_name)
+        interpret.add_function(function_code, functions, append_functions_to_file)
     return len(new_functions) > 0
 
 
@@ -72,6 +73,6 @@ if __name__ == "__main__":
     t0 = time.time()
     max_layer = max([problem[-1] for problem in problems])
     for layer in range(1, max_layer+1):
-        find_new_functions(problems, functions, functions_file_name, layer)
+        find_new_functions(problems, functions, layer, append_functions_to_file=None)
     t1 = time.time()
     print("total execution time", int(t1 - t0), "seconds", "total evaluations", ga_search_deap.total_eval_count)

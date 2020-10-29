@@ -450,7 +450,7 @@ def convert_code_to_deap_str(code, toolbox):
     return result
 
     
-def add_function(function, functions, functions_file_name):
+def add_function(function, functions, append_functions_to_file=None):
     # print("DEBUG 405", function)
     keyword, fname, params, code = function
     if keyword != "function":
@@ -460,10 +460,11 @@ def add_function(function, functions, functions_file_name):
     if type(code) != type([]):
         raise RuntimeError(f"interpret.add_function : code of type list expected")
     functions[fname] = [params, code]
-    with open(functions_file_name, "a") as f:
-        params = convert_code_to_str(params)
-        code = convert_code_to_str(code)
-        f.write(f"#    (function {fname} {params} {code})\n")
+    if append_functions_to_file is not None:
+        with open(append_functions_to_file, "a") as f:
+            params = convert_code_to_str(params)
+            code = convert_code_to_str(code)
+            f.write(f"#    (function {fname} {params} {code})\n")
 
 
 def compile_deap(program_str, functions):
