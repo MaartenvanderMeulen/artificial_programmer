@@ -34,9 +34,10 @@ def solve_by_existing_function(problem, functions):
     return None
 
 
-def find_new_functions(problems, functions, layer, append_functions_to_file=None):
+def find_new_functions(problems, functions, layer, f, verbose, append_functions_to_file=None):
     '''If append_functions_to_file is a string, the new functions will be appended to that file'''
-    print("Solving problems, layer", layer, "...")
+    if verbose > 0:
+        f.write(f"Solving problems, layer {layer} ...\n")
     new_functions = []
     for problem in problems:
         problem_label = problem[0]
@@ -45,34 +46,33 @@ def find_new_functions(problems, functions, layer, append_functions_to_file=None
             function_str = solve_by_existing_function(problem, functions)
             if function_str:
                 pass
-                # print("problem", problem_label, "is solved by existing function", function_str)
             else:
-                print("problem", problem_label, "...")
-                function_code = ga_search_deap.solve_by_new_function(problem, functions)
+                if verbose > 0:
+                    f.write(f"problem  {problem_label} ...\n")
+                function_code = ga_search_deap.solve_by_new_function(problem, functions, f, 1)
                 if function_code:
                     function_str = interpret.convert_code_to_str(function_code)
-                    #print("problem", problem_label, "is be solved by new function", function_str)
                     new_functions.append(function_code)
-                else:
-                    print("problem", problem_label, "cannot be solved in this layer")
         else:
             pass
-            # print("problem", problem_label, "will be tried at layer", problem_layer)        
     for function_code in new_functions:
         interpret.add_function(function_code, functions, append_functions_to_file)
     return len(new_functions) > 0
 
 
 if __name__ == "__main__":
-    random.seed(42)
-    np.random.seed(42)
-    functions_file_name = sys.argv[1] if len(sys.argv) >= 2 else "functions.txt"
-    problems_file_name = sys.argv[2] if len(sys.argv) >= 3 else "problems.txt"
-    functions = interpret.get_functions(functions_file_name)
-    problems = interpret.compile(interpret.load(problems_file_name))
-    t0 = time.time()
-    max_layer = max([problem[-1] for problem in problems])
-    for layer in range(1, max_layer+1):
-        find_new_functions(problems, functions, layer, append_functions_to_file=None)
-    t1 = time.time()
-    print("total execution time", int(t1 - t0), "seconds", "total evaluations", ga_search_deap.total_eval_count)
+    seed = int(sys.argv[1]) if len(sys.argv) > 1 else 142
+    verbose = 0
+    random.seed(seed)
+    np.random.seed(seed)
+    with open(f"tmp/log_{seed}.txt", "w") as f:
+        functions_file_name = sys.argv[2] if len(sys.argv) > 2 else "functions.txt"
+        problems_file_name = sys.argv[3] if len(sys.argv) > 3 else "problems.txt"
+        functions = interpret.get_functions(functions_file_name)
+        problems = interpret.compile(interpret.load(problems_file_name))
+        t0 = time.time()
+        max_layer = max([problem[-1] for problem in problems])
+        for layer in range(1, max_layer+1):
+            find_new_functions(problems, functions, layer, f, verbose, append_functions_to_file=None)
+        t1 = time.time()
+        f.write(f"total execution time {int(t1 - t0)} seconds, total evaluations {ga_search_deap.total_eval_count}\n")

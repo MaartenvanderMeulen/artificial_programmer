@@ -21,6 +21,9 @@ def recursive_tuple(value):
 
 
 def evaluate_individual(toolbox, individual, debug=0):
+    if time.time() >= toolbox.t0 + toolbox.max_seconds:
+        toolbox.f.write(f"Stopped after {round(time.time()-toolbox.t0)} seconds") 
+        exit()
     deap_str = str(individual)
     if deap_str in toolbox.eval_cache:
         eval, model_output = toolbox.eval_cache[deap_str]
@@ -40,9 +43,7 @@ def evaluate_individual(toolbox, individual, debug=0):
                 variables = interpret.bind_params(toolbox.formal_params, input)
                 model_output = interpret.run(code, variables, toolbox.functions)
                 sum_v += evaluate.evaluate(input, model_output, toolbox.evaluation_functions, 1)
-            if sum_v != 0:
-                print("There is something wrong")
-
+            assert sum_v == 0
     else:
         weighted_error = 0.0
         model_outputs = []
@@ -77,13 +78,11 @@ class Toolbox(object):
         pset = gp.PrimitiveSet("MAIN", len(formal_params))
         for i, param in enumerate(formal_params):
             rename_cmd = f'pset.renameArguments(ARG{i}="{param}")'
-            # print("DEBUG 62 rename_cmd", rename_cmd)
             eval(rename_cmd)
         for c in int_hints:
             pset.addTerminal(c)
         for variable in var_hints:
             if variable not in formal_params:
-                # print("DEBUG 68 variable", variable)
                 pset.addTerminal(variable)
         for function in interpret.get_build_in_functions():
             if function in func_hints:
@@ -102,6 +101,7 @@ class Toolbox(object):
         self.pset = pset
         self.solution_code_str = interpret.convert_code_to_str(solution_hints)
         self.eval_cache = dict()
+        self.ind_str_set = set()
 
 
 def best_of_n(population, n):
@@ -119,8 +119,8 @@ def update_dynamic_weighted_evaluation(toolbox, individuals):
 
 
 def write_population(toolbox, population, label):
-    if toolbox.f:
-        toolbox.f.write("write_population " + label + "\n")
+    if toolbox.verbose >= 2:
+        toolbox.f.write(f"write_population {label}\n")
         for i, ind in enumerate(population):
             if ind.eval < 2:
                 if False:
@@ -136,7 +136,7 @@ def write_population(toolbox, population, label):
 
 
 def write_path(toolbox, ind, indent=0):
-    if toolbox.f:
+    if toolbox.verbose >= 1:
         indent_str = "".join(['  ' for i in range(indent)])
         operator_str = ["", "mutatie", "crossover"][len(ind.parents)]
         deap_str = str(ind)
@@ -269,8 +269,6 @@ def select_parents(toolbox, population):
         return [best_of_n(population, 2), best_of_n(population, 2)]
     # The parents must have different model_output
     group1, group2 = random.sample(list(toolbox.model_outputs_dict), 2)
-    #print("group1", group1)
-    #print("group2", group2)
     group1, group2 = toolbox.model_outputs_dict[group1], toolbox.model_outputs_dict[group2]
     parent1, parent2 = random.sample(group1, 1), random.sample(group2, 1) # all individuals in the group have the same eval
     return parent1, parent2
@@ -319,11 +317,6 @@ def refresh_toolbox_from_population(toolbox, population):
         if ind.model_output not in toolbox.model_outputs_dict:
             toolbox.model_outputs_dict[ind.model_output] = []
         toolbox.model_outputs_dict[ind.model_output].append(ind)
-    if False:
-        print("#different model outputs", len(toolbox.model_outputs_dict))
-        if len(toolbox.model_outputs_dict) < 10:
-            for model_output, inds in toolbox.model_outputs_dict.items():
-                print(f"    len {len(inds):4d}, eval {inds[0].eval:.5f}")
 
 
 def consistency_check_ind(ind):
@@ -343,8 +336,6 @@ def consistency_check(inds):
 
 def ga_search_impl(toolbox):
     population, solution = generate_initial_population(toolbox)
-    if len(population) != toolbox.pop_size[0]:
-        print(len(population), "initial population")
     consistency_check(population)
     if solution:
         return solution, 0
@@ -355,7 +346,7 @@ def ga_search_impl(toolbox):
     for toolbox.parachute_level in range(len(toolbox.ngen)):
         while gen < toolbox.ngen[toolbox.parachute_level]:
             code_str = interpret.convert_code_to_str(interpret.compile_deap(str(population[0]), toolbox.functions))
-            print(f"start generation {gen:2d} best eval {population[0].eval:.5f} {code_str}")
+            toolbox.f.write(f"start generation {gen:2d} best eval {population[0].eval:.5f} {code_str}\n")
             #evaluate_individual(toolbox, population[0], debug=True)
             write_population(toolbox, population, f"generation {gen}, pop at start")
             offspring, solution = generate_offspring(toolbox, population, toolbox.nchildren[toolbox.parachute_level])
@@ -363,7 +354,7 @@ def ga_search_impl(toolbox):
                 return solution, gen+1
             consistency_check(offspring)
             if len(offspring) != toolbox.nchildren[toolbox.parachute_level]:
-                print(len(offspring), "offspring")
+                toolbox.f.write(f"{len(offspring)} offspring\n")
             population += offspring
             population.sort(key=lambda item: item.eval)
             population[:] = population[:toolbox.pop_size[toolbox.parachute_level]]
@@ -376,7 +367,7 @@ def ga_search_impl(toolbox):
     return best, gen+1
 
 
-def solve_by_new_function(problem, functions):
+def solve_by_new_function(problem, functions, f, verbose):
     problem_name, params, example_inputs, evaluation_functions, hints, layer = problem
     toolbox = Toolbox(problem, functions)
     toolbox.monkey_mode = False
@@ -384,30 +375,31 @@ def solve_by_new_function(problem, functions):
     toolbox.max_individual_size = 40 # max of len(individual).  Don't make individuals larger than it
     toolbox.inter_family_cx_taboo = True
     toolbox.child_creation_retries = 99
-    hops = 3
+    toolbox.max_seconds = 120
     result = None
-    with open("tmp_log.txt", "w") as f:
-        toolbox.f = f
-        toolbox.pcrossover = 0.5
-        toolbox.pmutations = 1.0 - toolbox.pcrossover
-        toolbox.pop_size, toolbox.ngen = [2000, 500], [4, 30]
-        toolbox.nchildren = toolbox.pop_size
-        for hop in range(hops):
-            toolbox.eval_cache = dict()
-            toolbox.eval_count = 0
-            t0 = time.time()
-            best, gen = ga_search_impl(toolbox)
-            t1 = time.time()
-            print("elaspsed", round(t1-t0), "count evals", toolbox.eval_count)
-
-            if best.eval == 0:
-                deap_str = str(best)
-                code = interpret.compile_deap(deap_str, toolbox.functions)
-                code_str = interpret.convert_code_to_str(code)
-                result = ["function", problem_name, params, code]
-                result_str = interpret.convert_code_to_str(result)
-                print("problem", problem_name, f"solved after {toolbox.eval_count} evaluations by", result_str)
-                assert evaluate_individual(toolbox, best, 1) == 0
-                write_path(toolbox, best)
-                # break
+    toolbox.f = f
+    toolbox.verbose = verbose
+    toolbox.pcrossover = 0.5
+    toolbox.pmutations = 1.0 - toolbox.pcrossover
+    toolbox.pop_size, toolbox.ngen = [2000, 500], [4, 30]
+    toolbox.nchildren = toolbox.pop_size
+    for hop in range(1):
+        toolbox.ind_str_set = set()
+        toolbox.eval_cache = dict()
+        toolbox.eval_count = 0
+        toolbox.t0 = time.time()
+        best, gen = ga_search_impl(toolbox)
+        if best.eval == 0:
+            deap_str = str(best)
+            code = interpret.compile_deap(deap_str, toolbox.functions)
+            code_str = interpret.convert_code_to_str(code)
+            result = ["function", problem_name, params, code]
+            result_str = interpret.convert_code_to_str(result)
+            f.write(f"problem {problem_name} solved after {toolbox.eval_count} evaluations, {seconds} seconds, by {result_str}\n")
+            assert evaluate_individual(toolbox, best, 1) == 0
+            write_path(toolbox, best)
+            break
+        else:
+            f.write(f"problem {problem_name} failed after {toolbox.eval_count} evaluations, {seconds} seconds\n")
+        
     return result
