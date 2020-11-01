@@ -105,7 +105,7 @@ class Toolbox(object):
 
 
 def best_of_n(population, n):
-    inds = random.sample(population, n)
+    inds = random.sample(population, n) # sample always returns a list
     ind = min(inds, key=lambda ind: ind.eval)
     return ind
 
@@ -187,7 +187,6 @@ def copy_individual(ind):
 def cxOnePoint(toolbox, parent1, parent2):
     if len(parent1) < 2 or len(parent2) < 2:
         # No crossover on single node tree
-        print("len(parent1) < 2 or len(parent2) < 2")
         return None
     child = copy_individual(parent1)
     child.parents = [parent1, parent2]
@@ -199,7 +198,6 @@ def cxOnePoint(toolbox, parent1, parent2):
     child[slice1] = parent2[slice2]
     child.deap_str = str(child)
     if child.deap_str in toolbox.ind_str_set:
-        print("child.deap_str in toolbox.ind_str_set", child.deap_str)
         return None
     child.eval = evaluate_individual(toolbox, child)
     return child
@@ -229,7 +227,6 @@ def crossover_with_local_search(toolbox, parent1, parent2):
                 if child.deap_str not in toolbox.ind_str_set:
                     child.eval = evaluate_individual(toolbox, child)
                     if parent1.eval > child.eval or (parent1.eval == child.eval and len(parent1) > len(child)):
-                        print("DEBUG 227")
                         return child
                     if best is None or best.eval > child.eval or (best.eval == child.eval and len(best) > len(child)):
                         best = child
@@ -271,22 +268,13 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
 
 
 def select_parents(toolbox, population):
-    for i, ind in enumerate(population):
-        print(f"DEBUG 272    ind {i} {ind.eval} {len(ind)} {ind.deap_str} {str(ind)}\n")
     if not toolbox.inter_family_cx_taboo or len(toolbox.model_outputs_dict) == 1:
         return [best_of_n(population, 2), best_of_n(population, 2)]
     # The parents must have different model_output
-    for key, value in toolbox.model_outputs_dict.items():
-        print("DEBUG 277", key, len(value))
-    group1, group2 = random.sample(list(toolbox.model_outputs_dict), 2)
-    print("DEBUG 279", str(group1), str(group2))
+    group1, group2 = random.sample(list(toolbox.model_outputs_dict), 2) # sample always returns a list
     group1, group2 = toolbox.model_outputs_dict[group1], toolbox.model_outputs_dict[group2]
-    print("DEBUG 281A", type(group1), type(group2))
-    print("DEBUG 281", str(group1), str(group2))
-    parent1, parent2 = random.sample(group1, 1), random.sample(group2, 1) # all individuals in the group have the same eval
-    print("parent1", parent1.deap_str)
-    print("parent2", parent2.deap_str)
-    exit()
+    index1, index2 = random.randrange(0, len(group1)), random.randrange(0, len(group2))
+    parent1, parent2 = group1[index1], group2[index2] # all individuals in the group have the same eval
     return parent1, parent2
 
 
@@ -331,7 +319,6 @@ def generate_offspring(toolbox, population, nchildren):
         assert child.deap_str not in toolbox.ind_str_set
         toolbox.ind_str_set.add(child.deap_str)
         offspring.append(child)
-    print("cx_count, mut_count", cx_count, mut_count, "cxp_count, mutp_count", cxp_count, mutp_count, "toolbox.parachute_level", toolbox.parachute_level)
     return offspring, None
 
 
@@ -339,9 +326,11 @@ def refresh_toolbox_from_population(toolbox, population):
     toolbox.ind_str_set = {str(ind) for ind in population} # refresh set
     toolbox.model_outputs_dict = dict()
     for ind in population:
+        type(ind)
         if ind.model_output not in toolbox.model_outputs_dict:
             toolbox.model_outputs_dict[ind.model_output] = []
         toolbox.model_outputs_dict[ind.model_output].append(ind)
+        type(toolbox.model_outputs_dict[ind.model_output][-1])
 
 
 def consistency_check_ind(ind):
@@ -400,13 +389,13 @@ def solve_by_new_function(problem, functions, f, verbose):
     toolbox.max_individual_size = 40 # max of len(individual).  Don't make individuals larger than it
     toolbox.inter_family_cx_taboo = True
     toolbox.child_creation_retries = 99
-    toolbox.max_seconds = 600
+    toolbox.max_seconds = 60
     result = None
     toolbox.f = f
-    toolbox.verbose = verbose
+    toolbox.verbose = 2 # verbose
     toolbox.pcrossover = 0.5
     toolbox.pmutations = 1.0 - toolbox.pcrossover
-    toolbox.pop_size, toolbox.ngen = [16, 8], [4, 30]
+    toolbox.pop_size, toolbox.ngen = [1000, 500], [4, 30]
     toolbox.nchildren = toolbox.pop_size
     for hop in range(1):
         toolbox.ind_str_set = set()
