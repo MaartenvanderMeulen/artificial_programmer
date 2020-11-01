@@ -22,7 +22,7 @@ def recursive_tuple(value):
 
 def evaluate_individual(toolbox, individual, debug=0):
     if time.time() >= toolbox.t0 + toolbox.max_seconds:
-        toolbox.f.write(f"Stopped after {round(time.time()-toolbox.t0)} seconds") 
+        toolbox.f.write(f"Stopped after {round(time.time()-toolbox.t0)} seconds\n") 
         exit()
     deap_str = str(individual)
     if deap_str in toolbox.eval_cache:
@@ -153,8 +153,9 @@ def generate_initial_population(toolbox):
     population = []
     retry_count = 0
     while len(population) < toolbox.pop_size[0]:
-        ind = gp.PrimitiveTree(gp.genHalfAndHalf(pset=toolbox.pset, min_=1, max_=4))
+        ind = gp.PrimitiveTree(gp.genHalfAndHalf(pset=toolbox.pset, min_=2, max_=4))
         ind.deap_str = str(ind)
+        ind.id = f"init{len(population)}"
         if ind.deap_str in toolbox.ind_str_set:
             if retry_count < toolbox.child_creation_retries:
                 retry_count += 1
@@ -174,10 +175,11 @@ def generate_initial_population(toolbox):
 def copy_individual(ind):
     consistency_check_ind(ind)
     copy_ind = gp.PrimitiveTree(list(ind[:]))
-    copy_ind.deap_str = ind.deap_str
+    copy_ind.deap_str = copy.deepcopy(ind.deap_str)
     copy_ind.parents = [parent for parent in ind.parents]
     copy_ind.eval = ind.eval
     copy_ind.model_output = copy.deepcopy(ind.model_output)
+    copy_ind.id = "copy" + ind.id
     consistency_check_ind(copy_ind)
     return copy_ind
 
@@ -185,9 +187,11 @@ def copy_individual(ind):
 def cxOnePoint(toolbox, parent1, parent2):
     if len(parent1) < 2 or len(parent2) < 2:
         # No crossover on single node tree
+        print("len(parent1) < 2 or len(parent2) < 2")
         return None
     child = copy_individual(parent1)
     child.parents = [parent1, parent2]
+    child.id = "cx" + parent1.id + "," + parent2.id
     index1 = random.randrange(0, len(parent1))
     index2 = random.randrange(0, len(parent2))
     slice1 = parent1.searchSubtree(index1)
@@ -195,6 +199,7 @@ def cxOnePoint(toolbox, parent1, parent2):
     child[slice1] = parent2[slice2]
     child.deap_str = str(child)
     if child.deap_str in toolbox.ind_str_set:
+        print("child.deap_str in toolbox.ind_str_set", child.deap_str)
         return None
     child.eval = evaluate_individual(toolbox, child)
     return child
@@ -224,6 +229,7 @@ def crossover_with_local_search(toolbox, parent1, parent2):
                 if child.deap_str not in toolbox.ind_str_set:
                     child.eval = evaluate_individual(toolbox, child)
                     if parent1.eval > child.eval or (parent1.eval == child.eval and len(parent1) > len(child)):
+                        print("DEBUG 227")
                         return child
                     if best is None or best.eval > child.eval or (best.eval == child.eval and len(best) > len(child)):
                         best = child
@@ -265,34 +271,52 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
 
 
 def select_parents(toolbox, population):
+    for i, ind in enumerate(population):
+        print(f"DEBUG 272    ind {i} {ind.eval} {len(ind)} {ind.deap_str} {str(ind)}\n")
     if not toolbox.inter_family_cx_taboo or len(toolbox.model_outputs_dict) == 1:
         return [best_of_n(population, 2), best_of_n(population, 2)]
     # The parents must have different model_output
+    for key, value in toolbox.model_outputs_dict.items():
+        print("DEBUG 277", key, len(value))
     group1, group2 = random.sample(list(toolbox.model_outputs_dict), 2)
+    print("DEBUG 279", str(group1), str(group2))
     group1, group2 = toolbox.model_outputs_dict[group1], toolbox.model_outputs_dict[group2]
+    print("DEBUG 281A", type(group1), type(group2))
+    print("DEBUG 281", str(group1), str(group2))
     parent1, parent2 = random.sample(group1, 1), random.sample(group2, 1) # all individuals in the group have the same eval
+    print("parent1", parent1.deap_str)
+    print("parent2", parent2.deap_str)
+    exit()
     return parent1, parent2
 
 
 def generate_offspring(toolbox, population, nchildren):
     offspring = []
     expr_mut = lambda pset, type_: gp.genFull(pset=pset, min_=0, max_=2, type_=type_)
-    retry_count = 0    
+    retry_count = 0  
+    cxp_count, mutp_count = 0, 0    
+    cx_count, mut_count = 0, 0    
     while len(offspring) < nchildren:
         op_choice = random.random()
         if op_choice < toolbox.pcrossover: # Apply crossover
+            cxp_count += 1
             parent1, parent2 = select_parents(toolbox, population)
             if toolbox.parachute_level == 0:
                 child = cxOnePoint(toolbox, parent1, parent2)
             else:
                 child = crossover_with_local_search(toolbox, parent1, parent2)
+            if child:
+                cx_count += 1
         else: # Apply mutation
+            mutp_count += 1
             parent = best_of_n(population, 2)
             if toolbox.parachute_level == 0:
                 child = mutUniform(toolbox, parent, expr=expr_mut, pset=toolbox.pset)
             else:
                 expr = gp.genFull(pset=toolbox.pset, min_=0, max_=2)
                 child = replace_subtree_at_best_location(toolbox, parent, expr)
+            if child:
+                mut_count += 1
         if child is None:
             if retry_count < toolbox.child_creation_retries:
                 retry_count += 1
@@ -307,6 +331,7 @@ def generate_offspring(toolbox, population, nchildren):
         assert child.deap_str not in toolbox.ind_str_set
         toolbox.ind_str_set.add(child.deap_str)
         offspring.append(child)
+    print("cx_count, mut_count", cx_count, mut_count, "cxp_count, mutp_count", cxp_count, mutp_count, "toolbox.parachute_level", toolbox.parachute_level)
     return offspring, None
 
 
@@ -375,13 +400,13 @@ def solve_by_new_function(problem, functions, f, verbose):
     toolbox.max_individual_size = 40 # max of len(individual).  Don't make individuals larger than it
     toolbox.inter_family_cx_taboo = True
     toolbox.child_creation_retries = 99
-    toolbox.max_seconds = 120
+    toolbox.max_seconds = 600
     result = None
     toolbox.f = f
     toolbox.verbose = verbose
     toolbox.pcrossover = 0.5
     toolbox.pmutations = 1.0 - toolbox.pcrossover
-    toolbox.pop_size, toolbox.ngen = [2000, 500], [4, 30]
+    toolbox.pop_size, toolbox.ngen = [16, 8], [4, 30]
     toolbox.nchildren = toolbox.pop_size
     for hop in range(1):
         toolbox.ind_str_set = set()
@@ -389,6 +414,7 @@ def solve_by_new_function(problem, functions, f, verbose):
         toolbox.eval_count = 0
         toolbox.t0 = time.time()
         best, gen = ga_search_impl(toolbox)
+        seconds = time.time() - toolbox.t0
         if best.eval == 0:
             deap_str = str(best)
             code = interpret.compile_deap(deap_str, toolbox.functions)
