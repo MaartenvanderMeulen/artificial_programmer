@@ -395,7 +395,7 @@ def solve_by_new_function(problem, functions, f, verbose):
     toolbox.verbose = 2 # verbose
     toolbox.pcrossover = 0.5
     toolbox.pmutations = 1.0 - toolbox.pcrossover
-    toolbox.pop_size, toolbox.ngen = [1000, 500], [4, 30]
+    toolbox.pop_size, toolbox.ngen = [1000, 1000], [4, 1000]
     toolbox.nchildren = toolbox.pop_size
     for hop in range(1):
         toolbox.ind_str_set = set()
