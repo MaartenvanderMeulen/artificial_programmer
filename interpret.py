@@ -278,10 +278,17 @@ def _run(program, variables, functions, debug, depth):
                     raise RuntimeError("for loop max iterations exceeded")
                 steps = [i for i in range(steps)]
             result = []
+            if type(loop_variable) == type("") and loop_variable in variables:
+                old_value = variables[loop_variable]
+                variables[loop_variable] = 0 # make sure the old value cannot be accessed anymore
+            else:
+                old_value = None
             for i in steps:
                 if type(loop_variable) == type(""):
                     variables[loop_variable] = i
                 result.append(_run(program[3], variables, functions, debug, depth+1))
+            if type(loop_variable) == type("") and old_value is not None:
+                variables[loop_variable] = old_value
         elif program[0] == "print":
             result = 0
             for p in program[1:]:
