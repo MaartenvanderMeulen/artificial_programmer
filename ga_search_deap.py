@@ -226,8 +226,9 @@ def crossover_with_local_search(toolbox, parent1, parent2):
                 child.deap_str = str(child)
                 if child.deap_str not in toolbox.ind_str_set:
                     child.eval = evaluate_individual(toolbox, child)
-                    if parent1.eval > child.eval or (parent1.eval == child.eval and len(parent1) > len(child)):
-                        return child
+                    if False:
+                        if parent1.eval > child.eval or (parent1.eval == child.eval and len(parent1) > len(child)):
+                            return child
                     if best is None or best.eval > child.eval or (best.eval == child.eval and len(best) > len(child)):
                         best = child
     return best
@@ -260,8 +261,9 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
             child.deap_str = str(child)
             if child.deap_str not in toolbox.ind_str_set:
                 child.eval = evaluate_individual(toolbox, child)
-                if parent.eval > child.eval or (parent.eval == child.eval and len(parent) > len(child)):
-                    return child
+                if False:
+                    if parent.eval > child.eval or (parent.eval == child.eval and len(parent) > len(child)):
+                        return child
                 if best is None or best.eval > child.eval or (best.eval == child.eval and len(best) > len(child)):
                     best = child
     return best
@@ -381,6 +383,13 @@ def ga_search_impl(toolbox):
     return best, gen+1
 
 
+def read_config(file_name):
+    with open(file_name, "r") as f:
+        param1 = int(f.readline())
+        param2 = int(f.readline())
+    return param1, param2
+        
+        
 def solve_by_new_function(problem, functions, f, verbose):
     problem_name, params, example_inputs, evaluation_functions, hints, layer = problem
     toolbox = Toolbox(problem, functions)
@@ -395,7 +404,8 @@ def solve_by_new_function(problem, functions, f, verbose):
     toolbox.verbose = 2 # verbose
     toolbox.pcrossover = 0.5
     toolbox.pmutations = 1.0 - toolbox.pcrossover
-    toolbox.pop_size, toolbox.ngen = [1000, 1000], [4, 1000]
+    toolbox.alpha, toolbox.beta = read_config("config.txt")    
+    toolbox.pop_size, toolbox.ngen = [1000, 100], [1, 1000]
     toolbox.nchildren = toolbox.pop_size
     for hop in range(1):
         toolbox.ind_str_set = set()
@@ -403,7 +413,7 @@ def solve_by_new_function(problem, functions, f, verbose):
         toolbox.eval_count = 0
         toolbox.t0 = time.time()
         best, gen = ga_search_impl(toolbox)
-        seconds = time.time() - toolbox.t0
+        seconds = round(time.time() - toolbox.t0)
         if best.eval == 0:
             deap_str = str(best)
             code = interpret.compile_deap(deap_str, toolbox.functions)

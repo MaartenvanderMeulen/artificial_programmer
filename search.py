@@ -62,6 +62,7 @@ def find_new_functions(problems, functions, layer, f, verbose, append_functions_
 
 if __name__ == "__main__":
     seed = int(sys.argv[1]) if len(sys.argv) > 1 else 142
+    print(seed)
     verbose = 0
     random.seed(seed)
     np.random.seed(seed)
