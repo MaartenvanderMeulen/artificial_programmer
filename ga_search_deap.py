@@ -24,7 +24,8 @@ def evaluate_individual(toolbox, individual, debug=0):
     if time.time() >= toolbox.t0 + toolbox.max_seconds:
         toolbox.f.write(f"Stopped after {round(time.time()-toolbox.t0)} seconds\n") 
         exit()
-    deap_str = str(individual)
+    deap_str = individual.deap_str
+    assert deap_str == str(individual)
     if deap_str in toolbox.eval_cache:
         eval, model_output = toolbox.eval_cache[deap_str]
         individual.model_output = model_output
@@ -47,6 +48,7 @@ def evaluate_individual(toolbox, individual, debug=0):
     else:
         weighted_error = 0.0
         model_outputs = []
+        model_evals = []
         prev_model_output, model_reacts_on_input = None, False
         for input in toolbox.example_inputs:
             variables = interpret.bind_params(toolbox.formal_params, input)
@@ -56,8 +58,10 @@ def evaluate_individual(toolbox, individual, debug=0):
                 model_reacts_on_input = True
                 prev_model_output = model_output
             v = evaluate.evaluate(input, model_output, toolbox.evaluation_functions, debug)
+            model_evals.append(v)
             weighted_error += v
         individual.model_output = recursive_tuple(model_outputs)
+        individual.model_evals = model_evals
         if weighted_error > 0 and not model_reacts_on_input:
             # always the same wrong answer, penalize that heavily.
             weighted_error += 10 + 10*weighted_error
@@ -127,10 +131,7 @@ def write_population(toolbox, population, label):
                     toolbox.f.write(f"individual {i} ")
                     write_path(toolbox, ind)
                 if True:
-                    deap_str = str(ind)
-                    #code = interpret.compile_deap(deap_str, toolbox.functions)
-                    #code_str = interpret.convert_code_to_str(code)
-                    toolbox.f.write(f"    ind {i} {ind.eval} {len(ind)} {deap_str}\n")
+                    toolbox.f.write(f"    ind {i} {ind.eval} {len(ind)} {ind.deap_str}\n")
         toolbox.f.write("\n")
         toolbox.f.flush()
 
@@ -139,8 +140,7 @@ def write_path(toolbox, ind, indent=0):
     if toolbox.verbose >= 1:
         indent_str = "".join(['  ' for i in range(indent)])
         operator_str = ["", "mutatie", "crossover"][len(ind.parents)]
-        deap_str = str(ind)
-        code = interpret.compile_deap(deap_str, toolbox.functions)
+        code = interpret.compile_deap(ind.deap_str, toolbox.functions)
         code_str = interpret.convert_code_to_str(code)
         toolbox.f.write(f"{indent_str}{code_str} {ind.eval:.3f} {operator_str}\n")
         for parent in ind.parents:
@@ -179,6 +179,7 @@ def copy_individual(ind):
     copy_ind.parents = [parent for parent in ind.parents]
     copy_ind.eval = ind.eval
     copy_ind.model_output = copy.deepcopy(ind.model_output)
+    copy_ind.model_evals = copy.deepcopy(ind.model_evals)
     copy_ind.id = "copy" + ind.id
     consistency_check_ind(copy_ind)
     return copy_ind
@@ -272,12 +273,50 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
 def select_parents(toolbox, population):
     if not toolbox.inter_family_cx_taboo or len(toolbox.model_outputs_dict) == 1:
         return [best_of_n(population, 2), best_of_n(population, 2)]
-    # The parents must have different model_output
-    group1, group2 = random.sample(list(toolbox.model_outputs_dict), 2) # sample always returns a list
-    group1, group2 = toolbox.model_outputs_dict[group1], toolbox.model_outputs_dict[group2]
-    index1, index2 = random.randrange(0, len(group1)), random.randrange(0, len(group2))
-    parent1, parent2 = group1[index1], group2[index2] # all individuals in the group have the same eval
-    return parent1, parent2
+    if False:        
+        # First attempt with toolbox.inter_family_cx_taboo.  Its just unlikely, not a taboo.
+        group1, group2 = random.sample(list(toolbox.model_outputs_dict), 2) # sample always returns a list
+        group1, group2 = toolbox.model_outputs_dict[group1], toolbox.model_outputs_dict[group2]
+        index1, index2 = random.randrange(0, len(group1)), random.randrange(0, len(group2))
+        parent1, parent2 = group1[index1], group2[index2] # all individuals in the group have the same eval
+        return parent1, parent2
+        
+    # second attempt, hint of Victor:
+    # * hoe beter de evaluatie hoe meer kans.  p_fitness = (1 - eval/max_eval) ** alpha
+    # * hoe verder de outputs uit elkaar liggen hoe meer kans.  p_complementair = verschillende_outputs(parent1, parent2) / aantal_outputs
+    # * p = (p_fitness(parent1) * p_fitness(parent2)) ^ alpha * p_complementair(parent1, parent2) ^ beta
+    best_p = -1
+    max_eval = max([ind.eval for ind in population])
+    for i in range(toolbox.best_of_n_cx):
+        # select two parents
+        group1, group2 = random.sample(list(toolbox.model_outputs_dict), 2) # sample always returns a list
+        group1, group2 = toolbox.model_outputs_dict[group1], toolbox.model_outputs_dict[group2]
+        index1, index2 = random.randrange(0, len(group1)), random.randrange(0, len(group2))
+        parent1, parent2 = group1[index1], group2[index2] # all individuals in the group have the same eval
+        # sort
+        if parent1.eval > parent2.eval or (parent1.eval == parent2.eval and len(parent1) > len(parent2)):
+            parent1, parent2 = parent2, parent1
+        # compute p
+        p_fitness1 = (1 - parent1.eval/(max_eval*1.1))
+        p_fitness2 = (1 - parent2.eval/(max_eval*1.1))
+        estimate_improvement = sum([eval1-eval2 for eval1, eval2 in zip(parent1.model_evals, parent2.model_evals) if eval1 > eval2])
+        p_complementair = estimate_improvement / parent1.eval
+        if False:
+            p = ((p_fitness1 * p_fitness2) ** toolbox.alpha) * (p_complementair ** toolbox.beta)
+        else:
+            p = ((p_fitness1 * p_fitness2) * toolbox.alpha) + (p_complementair * toolbox.beta)
+        if random.random() < 0.0 and count_verschillende_outputs < len(toolbox.example_inputs) :
+            print("fitness", parent1.eval, p_fitness1, parent2.eval, p_fitness2, ((p_fitness1 * p_fitness2) ** toolbox.alpha))
+            print("  complementary", count_verschillende_outputs, p_complementair, (p_complementair ** toolbox.beta))
+            print("  p", p)
+        if best_p < p: # hoe lager p, hoe kleiner de kans dat p_choice nog kleiner is           
+            if best_p > 0 and random.random() < 0.0 and count_verschillende_outputs < len(toolbox.example_inputs):
+                print("improve best_p")
+                print("  fitness", parent1.eval, p_fitness1, parent2.eval, p_fitness2, ((p_fitness1 * p_fitness2) ** toolbox.alpha))
+                print("  complementary", count_verschillende_outputs, p_complementair, (p_complementair ** toolbox.beta))
+                print("  p", p)
+            best_parent1, best_parent2, best_p = parent1, parent2, p
+    return best_parent1, best_parent2
 
 
 def generate_offspring(toolbox, population, nchildren):
@@ -299,7 +338,7 @@ def generate_offspring(toolbox, population, nchildren):
                 cx_count += 1
         else: # Apply mutation
             mutp_count += 1
-            parent = best_of_n(population, 2)
+            parent = best_of_n(population, toolbox.best_of_n_mut)
             if toolbox.parachute_level == 0:
                 child = mutUniform(toolbox, parent, expr=expr_mut, pset=toolbox.pset)
             else:
@@ -318,14 +357,13 @@ def generate_offspring(toolbox, population, nchildren):
         if child.eval == 0.0:
             return None, child
         assert child.deap_str == str(child)
-        assert child.deap_str not in toolbox.ind_str_set
         toolbox.ind_str_set.add(child.deap_str)
         offspring.append(child)
     return offspring, None
 
 
 def refresh_toolbox_from_population(toolbox, population):
-    toolbox.ind_str_set = {str(ind) for ind in population} # refresh set
+    toolbox.ind_str_set = {ind.deap_str for ind in population} # refresh set
     toolbox.model_outputs_dict = dict()
     for ind in population:
         type(ind)
@@ -361,7 +399,7 @@ def ga_search_impl(toolbox):
     gen = 0
     for toolbox.parachute_level in range(len(toolbox.ngen)):
         while gen < toolbox.ngen[toolbox.parachute_level]:
-            code_str = interpret.convert_code_to_str(interpret.compile_deap(str(population[0]), toolbox.functions))
+            code_str = interpret.convert_code_to_str(interpret.compile_deap(population[0].deap_str, toolbox.functions))
             toolbox.f.write(f"start generation {gen:2d} best eval {population[0].eval:.5f} {code_str}\n")
             #evaluate_individual(toolbox, population[0], debug=True)
             write_population(toolbox, population, f"generation {gen}, pop at start")
@@ -385,28 +423,51 @@ def ga_search_impl(toolbox):
 
 def read_config(file_name):
     with open(file_name, "r") as f:
-        param1 = int(f.readline())
-        param2 = int(f.readline())
+        param1 = float(f.readline().strip())
+        param2 = float(f.readline().strip())
     return param1, param2
         
-        
+
+def count_cx_mut(ind):
+    count_cx, count_mut = 0, 0
+    if len(ind.parents) == 2:
+        count_cx += 1
+    elif len(ind.parents) == 1:
+        count_mut += 1
+    for parent in ind.parents:
+        cx, mut = count_cx_mut(parent)
+        count_cx += cx
+        count_mut += mut
+    return count_cx, count_mut
+
+    
+def compute_cx_fraction(best):
+    cx, mut = count_cx_mut(best)
+    return cx / (cx + mut)
+    
+    
 def solve_by_new_function(problem, functions, f, verbose):
     problem_name, params, example_inputs, evaluation_functions, hints, layer = problem
     toolbox = Toolbox(problem, functions)
     toolbox.monkey_mode = False
     toolbox.dynamic_weights = False # not toolbox.monkey_mode
-    toolbox.max_individual_size = 40 # max of len(individual).  Don't make individuals larger than it
-    toolbox.inter_family_cx_taboo = True
     toolbox.child_creation_retries = 99
-    toolbox.max_seconds = 60
-    result = None
     toolbox.f = f
     toolbox.verbose = 2 # verbose
-    toolbox.pcrossover = 0.5
+
+    # tunable params
+    param1, param2 = read_config("config.txt")
+    toolbox.inter_family_cx_taboo = True
+    toolbox.max_individual_size = 40 # max of len(individual).  Don't make individuals larger than it
+    toolbox.max_seconds = 60
+    toolbox.pcrossover = 0.4
     toolbox.pmutations = 1.0 - toolbox.pcrossover
-    toolbox.alpha, toolbox.beta = read_config("config.txt")    
-    toolbox.pop_size, toolbox.ngen = [1000, 100], [1, 1000]
-    toolbox.nchildren = toolbox.pop_size
+    toolbox.alpha, toolbox.beta = 1, 0.3
+    toolbox.best_of_n_cx = 3
+    toolbox.best_of_n_mut = 2
+    toolbox.pop_size, toolbox.nchildren, toolbox.ngen = [1000, 200], [1000, 100], [1, 1000]
+    
+    result = None
     for hop in range(1):
         toolbox.ind_str_set = set()
         toolbox.eval_cache = dict()
@@ -415,12 +476,12 @@ def solve_by_new_function(problem, functions, f, verbose):
         best, gen = ga_search_impl(toolbox)
         seconds = round(time.time() - toolbox.t0)
         if best.eval == 0:
-            deap_str = str(best)
-            code = interpret.compile_deap(deap_str, toolbox.functions)
+            code = interpret.compile_deap(best.deap_str, toolbox.functions)
             code_str = interpret.convert_code_to_str(code)
             result = ["function", problem_name, params, code]
             result_str = interpret.convert_code_to_str(result)
-            f.write(f"problem {problem_name} solved after {toolbox.eval_count} evaluations, {seconds} seconds, by {result_str}\n")
+            cx_perc = round(100*compute_cx_fraction(best))
+            f.write(f"problem {problem_name} solved\t{toolbox.eval_count}\tevals\t{seconds}\tsec\t{cx_perc}\tcx%\t{gen}\tgen\n")
             assert evaluate_individual(toolbox, best, 1) == 0
             write_path(toolbox, best)
             break
