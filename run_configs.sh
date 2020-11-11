@@ -1,4 +1,4 @@
-for nr in 01 02 03
+for nr in 01
 do
     cp tmp_run/tmp_config_$nr.txt config.txt
     ./tmp_run/tmp_core_00.sh &
