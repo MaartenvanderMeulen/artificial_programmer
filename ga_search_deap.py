@@ -6,6 +6,7 @@ import interpret
 import evaluate
 import math
 import time
+import json
 from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull
 
 
@@ -20,16 +21,9 @@ def recursive_tuple(value):
     return tuple([recursive_tuple(v) for v in value])
 
 
-def evaluate_individual(toolbox, individual, debug=0):
-    if time.time() >= toolbox.t0 + toolbox.max_seconds:
-        toolbox.f.write(f"Stopped after {round(time.time()-toolbox.t0)} seconds\n") 
-        exit()
+def evaluate_individual_impl(toolbox, individual, debug=0):
     deap_str = individual.deap_str
     assert deap_str == str(individual)
-    if deap_str in toolbox.eval_cache:
-        eval, model_output = toolbox.eval_cache[deap_str]
-        individual.model_output = model_output
-        return eval
     toolbox.eval_count += 1
     global total_eval_count
     total_eval_count += 1
@@ -49,23 +43,44 @@ def evaluate_individual(toolbox, individual, debug=0):
         weighted_error = 0.0
         model_outputs = []
         model_evals = []
-        prev_model_output, model_reacts_on_input = None, False
+        first_model_output, model_reacts_on_input = None, False
         for input in toolbox.example_inputs:
             variables = interpret.bind_params(toolbox.formal_params, input)
             model_output = interpret.run(code, variables, toolbox.functions)
             model_outputs.append(model_output)
-            if model_output != prev_model_output:
+            if first_model_output is None:
+                first_model_output = model_output
+            elif model_output != first_model_output:
                 model_reacts_on_input = True
-                prev_model_output = model_output
-            v = evaluate.evaluate(input, model_output, toolbox.evaluation_functions, debug)
+            v = evaluate.evaluate(input, model_output, toolbox.evaluation_functions, 0)
+            if toolbox.f and (debug >= 2 or (debug >= 1 and v > 0.0)):
+                toolbox.f.write(f"    evaluation {v:.3f}, input {str(input)}, actual_output {str(model_output)}\n")
             model_evals.append(v)
             weighted_error += v
         individual.model_output = recursive_tuple(model_outputs)
         individual.model_evals = model_evals
-        if weighted_error > 0 and not model_reacts_on_input:
-            # always the same wrong answer, penalize that heavily.
-            weighted_error += 10 + 10*weighted_error
+        if toolbox.penalize_not_reacting_on_input:
+            if weighted_error > 0 and not model_reacts_on_input:
+                # always the same wrong answer, penalize that.
+                if debug >= 2 and toolbox.f:
+                    toolbox.f.write(f"    does not react penalty {len(toolbox.example_inputs)}\n")
+                weighted_error += 10.0
+        if model_reacts_on_input and toolbox.eval_max_react_on_input < weighted_error:
+            toolbox.eval_max_react_on_input = weighted_error
+    return weighted_error
 
+
+def evaluate_individual(toolbox, individual, debug=0):
+    if time.time() >= toolbox.t0 + toolbox.max_seconds:
+        toolbox.f.write(f"Stopped after {round(time.time()-toolbox.t0)} seconds\n") 
+        exit()
+    deap_str = individual.deap_str
+    assert deap_str == str(individual)
+    if deap_str in toolbox.eval_cache:
+        eval, model_output = toolbox.eval_cache[deap_str]
+        individual.model_output = model_output
+        return eval
+    weighted_error = evaluate_individual_impl(toolbox, individual, debug)
     toolbox.eval_cache[deap_str] = weighted_error, individual.model_output
     return weighted_error
 
@@ -126,12 +141,10 @@ def write_population(toolbox, population, label):
     if toolbox.verbose >= 2:
         toolbox.f.write(f"write_population {label}\n")
         for i, ind in enumerate(population):
-            if ind.eval < 2:
-                if False:
-                    toolbox.f.write(f"individual {i} ")
-                    write_path(toolbox, ind)
-                if True:
-                    toolbox.f.write(f"    ind {i} {ind.eval} {len(ind)} {ind.deap_str}\n")
+            if ind.eval < toolbox.eval_max_react_on_input:
+                toolbox.f.write(f"    ind {i} {ind.eval} {len(ind)} {ind.deap_str}\n")
+                if toolbox.gen == 0:
+                    evaluate_individual_impl(toolbox, ind, toolbox.verbose)
         toolbox.f.write("\n")
         toolbox.f.flush()
 
@@ -143,6 +156,7 @@ def write_path(toolbox, ind, indent=0):
         code = interpret.compile_deap(ind.deap_str, toolbox.functions)
         code_str = interpret.convert_code_to_str(code)
         toolbox.f.write(f"{indent_str}{code_str} {ind.eval:.3f} {operator_str}\n")
+        evaluate_individual_impl(toolbox, ind, toolbox.verbose)
         for parent in ind.parents:
             write_path(toolbox, parent, indent+1)
 
@@ -301,10 +315,10 @@ def select_parents(toolbox, population):
         p_fitness2 = (1 - parent2.eval/(max_eval*1.1))
         estimate_improvement = sum([eval1-eval2 for eval1, eval2 in zip(parent1.model_evals, parent2.model_evals) if eval1 > eval2])
         p_complementair = estimate_improvement / parent1.eval
-        if False:
-            p = ((p_fitness1 * p_fitness2) ** toolbox.alpha) * (p_complementair ** toolbox.beta)
+        if toolbox.p_parents_additief:
+            p = ((p_fitness1 * p_fitness2)) + (p_complementair * toolbox.beta)
         else:
-            p = ((p_fitness1 * p_fitness2) * toolbox.alpha) + (p_complementair * toolbox.beta)
+            p = ((p_fitness1 * p_fitness2) ** toolbox.alpha) * (p_complementair ** toolbox.beta)
         if random.random() < 0.0 and count_verschillende_outputs < len(toolbox.example_inputs) :
             print("fitness", parent1.eval, p_fitness1, parent2.eval, p_fitness2, ((p_fitness1 * p_fitness2) ** toolbox.alpha))
             print("  complementary", count_verschillende_outputs, p_complementair, (p_complementair ** toolbox.beta))
@@ -396,16 +410,16 @@ def ga_search_impl(toolbox):
     update_dynamic_weighted_evaluation(toolbox, population)
     population.sort(key=lambda item: item.eval)
     refresh_toolbox_from_population(toolbox, population)
-    gen = 0
+    toolbox.gen = 0
     for toolbox.parachute_level in range(len(toolbox.ngen)):
-        while gen < toolbox.ngen[toolbox.parachute_level]:
+        while toolbox.gen < toolbox.ngen[toolbox.parachute_level]:
             code_str = interpret.convert_code_to_str(interpret.compile_deap(population[0].deap_str, toolbox.functions))
-            toolbox.f.write(f"start generation {gen:2d} best eval {population[0].eval:.5f} {code_str}\n")
+            toolbox.f.write(f"start generation {toolbox.gen:2d} best eval {population[0].eval:.5f} {code_str}\n")
             #evaluate_individual(toolbox, population[0], debug=True)
-            write_population(toolbox, population, f"generation {gen}, pop at start")
+            write_population(toolbox, population, f"generation {toolbox.gen}, pop at start")
             offspring, solution = generate_offspring(toolbox, population, toolbox.nchildren[toolbox.parachute_level])
             if solution:
-                return solution, gen+1
+                return solution, toolbox.gen+1
             consistency_check(offspring)
             if len(offspring) != toolbox.nchildren[toolbox.parachute_level]:
                 toolbox.f.write(f"{len(offspring)} offspring\n")
@@ -415,18 +429,11 @@ def ga_search_impl(toolbox):
             consistency_check(population)
             update_dynamic_weighted_evaluation(toolbox, population)
             refresh_toolbox_from_population(toolbox, population)
-            gen += 1
+            toolbox.gen += 1
     write_population(toolbox, population, "pop final")
     best = population[0]
-    return best, gen+1
+    return best, toolbox.gen+1
 
-
-def read_config(file_name):
-    with open(file_name, "r") as f:
-        param1 = float(f.readline().strip())
-        param2 = float(f.readline().strip())
-    return param1, param2
-        
 
 def count_cx_mut(ind):
     count_cx, count_mut = 0, 0
@@ -446,26 +453,30 @@ def compute_cx_fraction(best):
     return cx / (cx + mut)
     
     
-def solve_by_new_function(problem, functions, f, verbose):
-    problem_name, params, example_inputs, evaluation_functions, hints, layer = problem
+def solve_by_new_function(problem, functions, f, params):
+    problem_name, problem_params, example_inputs, evaluation_functions, hints, layer = problem
     toolbox = Toolbox(problem, functions)
     toolbox.monkey_mode = False
     toolbox.dynamic_weights = False # not toolbox.monkey_mode
     toolbox.child_creation_retries = 99
     toolbox.f = f
-    toolbox.verbose = 2 # verbose
+    toolbox.eval_max_react_on_input = 0
 
     # tunable params
-    param1, param2 = read_config("config.txt")
-    toolbox.inter_family_cx_taboo = True
-    toolbox.max_individual_size = 40 # max of len(individual).  Don't make individuals larger than it
-    toolbox.max_seconds = 60
-    toolbox.pcrossover = 0.4
+    toolbox.inter_family_cx_taboo = params["inter_family_cx_taboo"]
+    toolbox.max_individual_size = params["max_individual_size"]
+    toolbox.max_seconds = params["max_seconds"]
+    toolbox.pcrossover = params["pcrossover"]
     toolbox.pmutations = 1.0 - toolbox.pcrossover
-    toolbox.alpha, toolbox.beta = 1, 0.3
-    toolbox.best_of_n_cx = 3
-    toolbox.best_of_n_mut = 2
-    toolbox.pop_size, toolbox.nchildren, toolbox.ngen = [1000, 200], [1000, 100], [1, 1000]
+    toolbox.beta = params["weight_complementairity"]
+    toolbox.best_of_n_cx = params["best_of_n_cx"]
+    toolbox.best_of_n_mut = params["best_of_n_mut"]
+    toolbox.pop_size = params["pop_size"]
+    toolbox.nchildren = params["nchildren"]
+    toolbox.ngen = params["ngen"]
+    toolbox.penalize_not_reacting_on_input = params["penalize_not_reacting_on_input"]
+    toolbox.verbose = params["verbose"]
+    toolbox.p_parents_additief = params["p_parents_additief"]
     
     result = None
     for hop in range(1):
@@ -478,7 +489,7 @@ def solve_by_new_function(problem, functions, f, verbose):
         if best.eval == 0:
             code = interpret.compile_deap(best.deap_str, toolbox.functions)
             code_str = interpret.convert_code_to_str(code)
-            result = ["function", problem_name, params, code]
+            result = ["function", problem_name, problem_params, code]
             result_str = interpret.convert_code_to_str(result)
             cx_perc = round(100*compute_cx_fraction(best))
             f.write(f"problem {problem_name} solved\t{toolbox.eval_count}\tevals\t{seconds}\tsec\t{cx_perc}\tcx%\t{gen}\tgen\n")

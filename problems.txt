@@ -174,7 +174,8 @@
 
             # Using only level 1 functions, AND NO GET_ROW_SUMS
             (i)
-            (add for sum len list1 are_all_equal get_col get_diag1 get_row_sums get_col_sums get_diag_sums)
+            (add for sum len list1 are_all_equal get_col get_diag1 get_row_sums get_col_sums get_diag_sums
+                div lt le eq ne ge gt add sub mul and or assign if list2 kast2 at2 list3 last3 at3)                       
             # (are_all_equal (add (for i board (sum i)) (add (for i (len board) (sum (get_col board i))) (list1 (sum (get_diag1 board))))))
             # are_all_equal (for i (add board (add (for i (len board) (sum (get_col i))) (list1 (get_diag1 board)))) (sum i)))
             (are_all_equal (add (get_row_sums board) (add (get_col_sums board) (get_diag_sums board))))

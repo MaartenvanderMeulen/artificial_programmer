@@ -274,8 +274,8 @@ def eval_are_all_equal_to(input, actual, extra_function_params):
 def eval_is_magic(inputs, actual, extra_function_params):
     error = 0.0
     if type(actual) != type(1):
-        error += 2.0
-    if type(actual) == type(1):
+        error += 0.64
+    elif type(actual) == type(1):
         if actual not in [0, 1]:
             error += 0.1
     model_says_its_magic = bool(actual)
@@ -413,13 +413,7 @@ def evaluate(input, actual_output, evaluation_functions, debug):
     result = float(np.sum(weighted_errors))
     assert type(result) == type(1.0)
     if debug >= 2 or (debug >= 1 and result > 0.0):
-        print("    evaluate")
-        print("      input", input)
-        print("      actual_output", actual_output)
-        print("      individual errors", errors)
-        print("      evaluation", np.sum(weighted_errors))
-        #print("      sums errors this hop", sum_errors)
-        #print("      sums weighted errors this hop", sum_errors * weights)
+        print(f"    evaluation {result:.3f}, input {str(input)}, actual_output {str(actual_output)}")
     return result
     
     
