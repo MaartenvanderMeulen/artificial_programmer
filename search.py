@@ -13,25 +13,26 @@ import ga_search_deap
 import evaluate
 
 
-def is_solved_by_function(example_inputs, evaluation_functions, fname, functions):
+def is_solved_by_function(example_inputs, evaluation_function, fname, functions):
+    actual_outputs = []
     for input in example_inputs:
         code = [fname] + input
         variables = dict()
         actual_output = interpret.run(code, variables, functions)
-        if evaluate.evaluate(input, actual_output, evaluation_functions, False) > 0.0:
-            return False
-    return True
+        actual_outputs.append(actual_output)
+    error, _ = evaluate.evaluate_all(example_inputs, actual_outputs, evaluation_function, None, 0)
+    return error <= 0.0
 
 
 def solve_by_existing_function(problem, functions):
-    problem_label, params, example_inputs, evaluation_functions, hints, layer = problem
+    problem_label, params, example_inputs, evaluation_function, hints, layer = problem
     build_in_functions = interpret.get_build_in_functions()
     for fname in build_in_functions:
         layer0_no_functions = dict()
-        if is_solved_by_function(example_inputs, evaluation_functions, fname, layer0_no_functions):
+        if is_solved_by_function(example_inputs, evaluation_function, fname, layer0_no_functions):
             return fname
     for fname, (params, code) in functions.items():
-        if is_solved_by_function(example_inputs, evaluation_functions, fname, functions):
+        if is_solved_by_function(example_inputs, evaluation_function, fname, functions):
             return fname
     return None
 

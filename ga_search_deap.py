@@ -21,9 +21,9 @@ def recursive_tuple(value):
     return tuple([recursive_tuple(v) for v in value])
 
 
-def evaluate_individual_impl(toolbox, individual, debug=0):
-    deap_str = individual.deap_str
-    assert deap_str == str(individual)
+def evaluate_individual_impl(toolbox, ind, debug=0):
+    deap_str = ind.deap_str
+    assert deap_str == str(ind)
     toolbox.eval_count += 1
     global total_eval_count
     total_eval_count += 1
@@ -31,42 +31,24 @@ def evaluate_individual_impl(toolbox, individual, debug=0):
     if toolbox.monkey_mode: # if the solution can be found in monkey mode, the real search could in theory find it also
         code_str = interpret.convert_code_to_str(code)
         weighted_error = evaluate.evaluate_code(code_str, toolbox.solution_code_str)
-        individual.model_output = ()
+        ind.model_outputs = ()
         if weighted_error == 0.0:
+            # now check that this also evaluates 
             sum_v = 0
             for input in toolbox.example_inputs:
                 variables = interpret.bind_params(toolbox.formal_params, input)
                 model_output = interpret.run(code, variables, toolbox.functions)
-                sum_v += evaluate.evaluate(input, model_output, toolbox.evaluation_functions, 1)
+                sum_v += evaluate.evaluate(input, model_output, toolbox.evaluation_function, 1)
             assert sum_v == 0
     else:
-        weighted_error = 0.0
-        model_outputs = []
-        model_evals = []
+        ind.model_outputs = []
         first_model_output, model_reacts_on_input = None, False
         for input in toolbox.example_inputs:
             variables = interpret.bind_params(toolbox.formal_params, input)
             model_output = interpret.run(code, variables, toolbox.functions)
-            model_outputs.append(model_output)
-            if first_model_output is None:
-                first_model_output = model_output
-            elif model_output != first_model_output:
-                model_reacts_on_input = True
-            v = evaluate.evaluate(input, model_output, toolbox.evaluation_functions, 0)
-            if toolbox.f and (debug >= 2 or (debug >= 1 and v > 0.0)):
-                toolbox.f.write(f"    evaluation {v:.3f}, input {str(input)}, actual_output {str(model_output)}\n")
-            model_evals.append(v)
-            weighted_error += v
-        individual.model_output = recursive_tuple(model_outputs)
-        individual.model_evals = model_evals
-        if toolbox.penalize_not_reacting_on_input:
-            if weighted_error > 0 and not model_reacts_on_input:
-                # always the same wrong answer, penalize that.
-                if debug >= 2 and toolbox.f:
-                    toolbox.f.write(f"    does not react penalty {len(toolbox.example_inputs)}\n")
-                weighted_error += 10.0
-        if model_reacts_on_input and toolbox.eval_max_react_on_input < weighted_error:
-            toolbox.eval_max_react_on_input = weighted_error
+            ind.model_outputs.append(model_output)
+        weighted_error, ind.model_evals = evaluate.evaluate_all(toolbox.example_inputs, ind.model_outputs, toolbox.evaluation_function, toolbox.f, debug)
+        ind.model_outputs = recursive_tuple(ind.model_outputs)
     return weighted_error
 
 
@@ -77,11 +59,10 @@ def evaluate_individual(toolbox, individual, debug=0):
     deap_str = individual.deap_str
     assert deap_str == str(individual)
     if deap_str in toolbox.eval_cache:
-        eval, model_output = toolbox.eval_cache[deap_str]
-        individual.model_output = model_output
+        eval, individual.model_outputs = toolbox.eval_cache[deap_str]
         return eval
     weighted_error = evaluate_individual_impl(toolbox, individual, debug)
-    toolbox.eval_cache[deap_str] = weighted_error, individual.model_output
+    toolbox.eval_cache[deap_str] = weighted_error, individual.model_outputs
     return weighted_error
 
 
@@ -92,7 +73,7 @@ def f():
 
 class Toolbox(object):
     def __init__(self, problem, functions):
-        problem_name, formal_params, example_inputs, evaluation_functions, hints, layer = problem
+        problem_name, formal_params, example_inputs, evaluation_function, hints, layer = problem
         int_hints, var_hints, func_hints, solution_hints = hints
         pset = gp.PrimitiveSet("MAIN", len(formal_params))
         for i, param in enumerate(formal_params):
@@ -115,7 +96,7 @@ class Toolbox(object):
         # toolbox = base.Toolbox()
         self.formal_params = formal_params
         self.example_inputs = example_inputs
-        self.evaluation_functions = evaluation_functions
+        self.evaluation_function = evaluation_function
         self.functions = functions
         self.pset = pset
         self.solution_code_str = interpret.convert_code_to_str(solution_hints)
@@ -141,7 +122,9 @@ def write_population(toolbox, population, label):
     if toolbox.verbose >= 2:
         toolbox.f.write(f"write_population {label}\n")
         for i, ind in enumerate(population):
-            if ind.eval < toolbox.eval_max_react_on_input:
+            # eval > 0.875 : individuals die niet reageren op de input.
+            # Daar zijn verschillende gradaties van, maar ze zijn niet interessant om weg te schrijven.
+            if ind.eval <= 0.875:
                 toolbox.f.write(f"    ind {i} {ind.eval} {len(ind)} {ind.deap_str}\n")
                 if toolbox.gen == 0:
                     evaluate_individual_impl(toolbox, ind, toolbox.verbose)
@@ -192,7 +175,7 @@ def copy_individual(ind):
     copy_ind.deap_str = copy.deepcopy(ind.deap_str)
     copy_ind.parents = [parent for parent in ind.parents]
     copy_ind.eval = ind.eval
-    copy_ind.model_output = copy.deepcopy(ind.model_output)
+    copy_ind.model_outputs = copy.deepcopy(ind.model_outputs)
     copy_ind.model_evals = copy.deepcopy(ind.model_evals)
     copy_ind.id = "copy" + ind.id
     consistency_check_ind(copy_ind)
@@ -380,11 +363,9 @@ def refresh_toolbox_from_population(toolbox, population):
     toolbox.ind_str_set = {ind.deap_str for ind in population} # refresh set
     toolbox.model_outputs_dict = dict()
     for ind in population:
-        type(ind)
-        if ind.model_output not in toolbox.model_outputs_dict:
-            toolbox.model_outputs_dict[ind.model_output] = []
-        toolbox.model_outputs_dict[ind.model_output].append(ind)
-        type(toolbox.model_outputs_dict[ind.model_output][-1])
+        if ind.model_outputs not in toolbox.model_outputs_dict:
+            toolbox.model_outputs_dict[ind.model_outputs] = []
+        toolbox.model_outputs_dict[ind.model_outputs].append(ind)
 
 
 def consistency_check_ind(ind):
@@ -392,7 +373,7 @@ def consistency_check_ind(ind):
         assert hasattr(ind, "deap_str")
         assert hasattr(ind, "parents")
         assert hasattr(ind, "eval")
-        assert hasattr(ind, "model_output")
+        assert hasattr(ind, "model_outputs")
         assert ind.deap_str == str(ind)
         assert ind.eval is not None
 
@@ -404,15 +385,16 @@ def consistency_check(inds):
 
 def ga_search_impl(toolbox):
     population, solution = generate_initial_population(toolbox)
-    consistency_check(population)
     if solution:
         return solution, 0
+    consistency_check(population)
     update_dynamic_weighted_evaluation(toolbox, population)
     population.sort(key=lambda item: item.eval)
     refresh_toolbox_from_population(toolbox, population)
     toolbox.gen = 0
     for toolbox.parachute_level in range(len(toolbox.ngen)):
         while toolbox.gen < toolbox.ngen[toolbox.parachute_level]:
+            #print(toolbox.gen, population[0].eval, population[0].deap_str)
             code_str = interpret.convert_code_to_str(interpret.compile_deap(population[0].deap_str, toolbox.functions))
             toolbox.f.write(f"start generation {toolbox.gen:2d} best eval {population[0].eval:.5f} {code_str}\n")
             #evaluate_individual(toolbox, population[0], debug=True)
@@ -450,17 +432,16 @@ def count_cx_mut(ind):
     
 def compute_cx_fraction(best):
     cx, mut = count_cx_mut(best)
-    return cx / (cx + mut)
+    return cx / (cx + mut) if cx + mut > 0 else 0.0
     
     
 def solve_by_new_function(problem, functions, f, params):
-    problem_name, problem_params, example_inputs, evaluation_functions, hints, layer = problem
+    problem_name, problem_params, example_inputs, evaluation_function, hints, layer = problem
     toolbox = Toolbox(problem, functions)
     toolbox.monkey_mode = False
     toolbox.dynamic_weights = False # not toolbox.monkey_mode
     toolbox.child_creation_retries = 99
     toolbox.f = f
-    toolbox.eval_max_react_on_input = 0
 
     # tunable params
     toolbox.inter_family_cx_taboo = params["inter_family_cx_taboo"]
@@ -493,7 +474,8 @@ def solve_by_new_function(problem, functions, f, params):
             result_str = interpret.convert_code_to_str(result)
             cx_perc = round(100*compute_cx_fraction(best))
             f.write(f"problem {problem_name} solved\t{toolbox.eval_count}\tevals\t{seconds}\tsec\t{cx_perc}\tcx%\t{gen}\tgen\n")
-            assert evaluate_individual(toolbox, best, 1) == 0
+            f.write(f"{best.deap_str}\n")
+            assert evaluate_individual_impl(toolbox, best, 2) == 0
             write_path(toolbox, best)
             break
         else:
