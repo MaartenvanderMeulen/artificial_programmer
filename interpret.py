@@ -268,6 +268,8 @@ def _run(program, variables, functions, debug, depth):
                         result = _run(program[2], variables, functions, debug, depth+1)
                     elif len(program) >= 4:
                         result = _run(program[3], variables, functions, debug, depth+1)
+                    #else:
+                    #    result = 0
         elif program[0] == "for": # example (for i n i))
             if len(program) < 4:
                 return []

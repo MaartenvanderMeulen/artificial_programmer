@@ -11,6 +11,7 @@
 /c/Users/Maarten/Miniconda3/python -O search.py 140 tmp/$1  experimenten/params_$1.txt
 /c/Users/Maarten/Miniconda3/python -O search.py 144 tmp/$1  experimenten/params_$1.txt
 /c/Users/Maarten/Miniconda3/python -O search.py 148 tmp/$1  experimenten/params_$1.txt
+exit 0
 /c/Users/Maarten/Miniconda3/python -O search.py 152 tmp/$1  experimenten/params_$1.txt
 /c/Users/Maarten/Miniconda3/python -O search.py 156 tmp/$1  experimenten/params_$1.txt
 /c/Users/Maarten/Miniconda3/python -O search.py 160 tmp/$1  experimenten/params_$1.txt
