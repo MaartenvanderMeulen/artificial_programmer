@@ -1,5 +1,17 @@
 params_01.txt, level-2, maar met grotere zoekruimte.  3%.  
 params_02.txt, als 01, maar "penalize_not_reacting_on_input": true, 0%.  Theorie : komt doordat getuned is op "false".
 params_03.txt, als 01.  Maar met nieuwe "puzzel-specifieke" evaluatie voor combinatie van inputs
+    0% (op 50 samples)
+    plan :
+        (1) zoekruimte A
+            100%
+        (2) zoekruimte A+B
+            0%
+params_04.txt, als 03,
+    maar met 10x meer parachuten, en daarna pop ook 10x zo groot, en dubbele tijd (240 seconden)
+        0%
+    en dan ook inter_family_cx_taboo == 1
+        
 
+        
   

@@ -1,0 +1,23 @@
+{
+    "verbose": 2,
+    "max_seconds": 60,
+    "pop_size": [
+        1000,
+        200
+    ],
+    "nchildren": [
+        1000,
+        100
+    ],
+    "ngen": [
+        1,
+        1000
+    ],
+    "max_individual_size": 40,
+    "pcrossover": 0.4,
+    "best_of_n_mut": 2,
+    "inter_family_cx_taboo": 2,
+    "best_of_n_cx": 3,
+    "p_parents_additief": true,
+    "weight_complementairity": 0.3
+}

@@ -10,9 +10,6 @@ import json
 from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull
 
 
-global total_eval_count
-total_eval_count = 0
-
 
 def recursive_tuple(value):
     if type(value) == type(1):
@@ -25,8 +22,6 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
     deap_str = ind.deap_str
     assert deap_str == str(ind)
     toolbox.eval_count += 1
-    global total_eval_count
-    total_eval_count += 1
     code = interpret.compile_deap(deap_str, toolbox.functions)
     if toolbox.monkey_mode: # if the solution can be found in monkey mode, the real search could in theory find it also
         code_str = interpret.convert_code_to_str(code)
@@ -54,7 +49,8 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
 
 def evaluate_individual(toolbox, individual, debug=0):
     if time.time() >= toolbox.t0 + toolbox.max_seconds:
-        toolbox.f.write(f"Stopped after {round(time.time()-toolbox.t0)} seconds\n") 
+        print("stopped")
+        toolbox.f.write(f"Stopped after {round(time.time()-toolbox.t0)} seconds, {toolbox.eval_count} evaluations\n") 
         exit()
     deap_str = individual.deap_str
     assert deap_str == str(individual)
@@ -270,7 +266,7 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
 def select_parents(toolbox, population):
     if not toolbox.inter_family_cx_taboo or len(toolbox.model_outputs_dict) == 1:
         return [best_of_n(population, 2), best_of_n(population, 2)]
-    if False:        
+    if toolbox.inter_family_cx_taboo == 1:        
         # First attempt with toolbox.inter_family_cx_taboo.  Its just unlikely, not a taboo.
         group1, group2 = random.sample(list(toolbox.model_outputs_dict), 2) # sample always returns a list
         group1, group2 = toolbox.model_outputs_dict[group1], toolbox.model_outputs_dict[group2]
@@ -279,11 +275,10 @@ def select_parents(toolbox, population):
         return parent1, parent2
         
     # second attempt, hint of Victor:
-    # * hoe beter de evaluatie hoe meer kans.  p_fitness = (1 - eval/max_eval) ** alpha
+    # * hoe beter de evaluatie hoe meer kans.  p_fitness = (1 - eval) ** alpha
     # * hoe verder de outputs uit elkaar liggen hoe meer kans.  p_complementair = verschillende_outputs(parent1, parent2) / aantal_outputs
     # * p = (p_fitness(parent1) * p_fitness(parent2)) ^ alpha * p_complementair(parent1, parent2) ^ beta
     best_p = -1
-    max_eval = max([ind.eval for ind in population])
     for i in range(toolbox.best_of_n_cx):
         # select two parents
         group1, group2 = random.sample(list(toolbox.model_outputs_dict), 2) # sample always returns a list
@@ -294,8 +289,8 @@ def select_parents(toolbox, population):
         if parent1.eval > parent2.eval or (parent1.eval == parent2.eval and len(parent1) > len(parent2)):
             parent1, parent2 = parent2, parent1
         # compute p
-        p_fitness1 = (1 - parent1.eval/(max_eval*1.1))
-        p_fitness2 = (1 - parent2.eval/(max_eval*1.1))
+        p_fitness1 = (1 - parent1.eval/1.1)
+        p_fitness2 = (1 - parent2.eval/1.1)
         estimate_improvement = sum([eval1-eval2 for eval1, eval2 in zip(parent1.model_evals, parent2.model_evals) if eval1 > eval2])
         p_complementair = estimate_improvement / parent1.eval
         if toolbox.p_parents_additief:
@@ -394,10 +389,9 @@ def ga_search_impl(toolbox):
     toolbox.gen = 0
     for toolbox.parachute_level in range(len(toolbox.ngen)):
         while toolbox.gen < toolbox.ngen[toolbox.parachute_level]:
-            #print(toolbox.gen, population[0].eval, population[0].deap_str)
             code_str = interpret.convert_code_to_str(interpret.compile_deap(population[0].deap_str, toolbox.functions))
-            toolbox.f.write(f"start generation {toolbox.gen:2d} best eval {population[0].eval:.5f} {code_str}\n")
-            #evaluate_individual(toolbox, population[0], debug=True)
+            if toolbox.f and toolbox.verbose >= 1:
+                toolbox.f.write(f"start generation {toolbox.gen:2d} best eval {population[0].eval:.5f} {code_str}\n")
             write_population(toolbox, population, f"generation {toolbox.gen}, pop at start")
             offspring, solution = generate_offspring(toolbox, population, toolbox.nchildren[toolbox.parachute_level])
             if solution:
@@ -455,9 +449,14 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.pop_size = params["pop_size"]
     toolbox.nchildren = params["nchildren"]
     toolbox.ngen = params["ngen"]
-    toolbox.penalize_not_reacting_on_input = params["penalize_not_reacting_on_input"]
-    toolbox.verbose = params["verbose"]
     toolbox.p_parents_additief = params["p_parents_additief"]
+    # verbose 0 : solution with one line of statistics
+    # verbose 1 : solution path, and one line of statistics per generation
+    # verbose 2 :
+    #             population at each generation
+    #             evaluation details of each individual at generation 0
+    #             evaluation details of each individual in the solution path
+    toolbox.verbose = params["verbose"]
     
     result = None
     for hop in range(1):
@@ -475,8 +474,9 @@ def solve_by_new_function(problem, functions, f, params):
             cx_perc = round(100*compute_cx_fraction(best))
             f.write(f"problem {problem_name} solved\t{toolbox.eval_count}\tevals\t{seconds}\tsec\t{cx_perc}\tcx%\t{gen}\tgen\n")
             f.write(f"{best.deap_str}\n")
-            assert evaluate_individual_impl(toolbox, best, 2) == 0
+            assert evaluate_individual_impl(toolbox, best, toolbox.verbose) == 0
             write_path(toolbox, best)
+            print("solved")
             break
         else:
             f.write(f"problem {problem_name} failed after {toolbox.eval_count} evaluations, {seconds} seconds\n")
