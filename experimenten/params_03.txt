@@ -13,13 +13,11 @@
         1000
     ],
     "pcrossover": 0.4,
-    "penalize_not_reacting_on_input": true,
-    "pmutations": 0.6,
     "pop_size": [
         1000,
         200
     ],
     "p_parents_additief": true,
-    "verbose": 0,
+    "verbose": 1,
     "weight_complementairity": 0.3
 }

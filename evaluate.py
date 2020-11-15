@@ -355,20 +355,16 @@ global eval_is_magic_all_context
 eval_is_magic_all_context = None
 
 
-def eval_is_magic_all(example_inputs, actual_outputs, extra_function_params, f, debug):
+def eval_is_magic_all_impl(example_inputs, actual_outputs, domain_outputs):
     first_time = True
     first_actual_output, first_domain_output, output_depends_on_input, domain_output_depends_on_input = None, None, False, False
     all_correct_domain, all_correct_type = True, True
     # kijk eerst of de individual er iets van begrepen heeft
-    if f and debug >= 2:
-        f.write(f"actual_outputs {str(actual_outputs)}\n")
-    for example_input, actual_output in zip(example_inputs, actual_outputs):
+    for example_input, actual_output, domain_output in zip(example_inputs, actual_outputs, domain_outputs):
         if type(actual_output) != type(1):
             all_correct_type = False
         elif actual_output not in [0, 1]:
             all_correct_domain = False
-        domain_output = int(bool(actual_output))
-        assert domain_output in [0, 1]
         if first_time:
             first_actual_output = actual_output
             first_domain_output = domain_output
@@ -381,27 +377,9 @@ def eval_is_magic_all(example_inputs, actual_outputs, extra_function_params, f, 
     if output_depends_on_input and domain_output_depends_on_input:
         # de individual heeft er iets van begrepen
         global eval_is_magic_all_context
-        if not eval_is_magic_all_context:
-            # eval_is_magic_all wordt duizenden keren aangeroepen, maar onderstaande blijft constant
-            count_negatives, count_postives, sum_count_non_magic, is_magic_list = 0, 0, 0, []            
-            count_non_magic_list, fraction_non_magic_list = [], []
-            for example_input in example_inputs:
-                count_non_magic, fraction_non_magic = compute_count_non_magic(example_input[0])
-                is_magic = int(count_non_magic == 0)
-                is_magic_list.append(is_magic)
-                count_non_magic_list.append(count_non_magic)
-                fraction_non_magic_list.append(fraction_non_magic)
-                if is_magic:
-                    count_postives += 1
-                else:
-                    count_negatives += 1
-                    sum_count_non_magic += count_non_magic
-            eval_is_magic_all_context = count_negatives, count_postives, sum_count_non_magic, is_magic_list, count_non_magic_list, fraction_non_magic_list
-        else:
-            count_negatives, count_postives, sum_count_non_magic, is_magic_list, count_non_magic_list, fraction_non_magic_list = eval_is_magic_all_context        
+        count_negatives, count_postives, sum_count_non_magic, is_magic_list, count_non_magic_list, fraction_non_magic_list, domain_outputs_dict = eval_is_magic_all_context        
         model_evals = []
         count_false_negatives, count_false_positives, sum_count_non_magic_in_false_positives = 0, 0, 0
-        # print("DEBUG 403", actual_outputs, is_magic_list, count_non_magic_list, fraction_non_magic_list)
         for actual_output, is_magic, count_non_magic, fraction_non_magic in zip(actual_outputs, is_magic_list, count_non_magic_list, fraction_non_magic_list):
             model_says_is_magic = bool(actual_output)
             if is_magic:
@@ -436,11 +414,55 @@ def eval_is_magic_all(example_inputs, actual_outputs, extra_function_params, f, 
             else:
                 weighted_error -= 0.03
         model_evals = [weighted_error for _ in example_inputs]
-    assert weighted_error <= 1.0
+    return weighted_error, model_evals
+
+
+def eval_is_magic_all(example_inputs, actual_outputs, extra_function_params, f, debug):
+    global eval_is_magic_all_context
+    if not eval_is_magic_all_context:
+        # eval_is_magic_all wordt duizenden keren aangeroepen.  Reken slechts 1x uit wat de verwachte output is
+        count_negatives, count_postives, sum_count_non_magic, is_magic_list = 0, 0, 0, []            
+        count_non_magic_list, fraction_non_magic_list = [], []
+        for example_input in example_inputs:
+            count_non_magic, fraction_non_magic = compute_count_non_magic(example_input[0])
+            is_magic = int(count_non_magic == 0)
+            is_magic_list.append(is_magic)
+            count_non_magic_list.append(count_non_magic)
+            fraction_non_magic_list.append(fraction_non_magic)
+            if is_magic:
+                count_postives += 1
+            else:
+                count_negatives += 1
+                sum_count_non_magic += count_non_magic
+        domain_outputs_dict = dict()
+        eval_is_magic_all_context = count_negatives, count_postives, sum_count_non_magic, is_magic_list, count_non_magic_list, fraction_non_magic_list, domain_outputs_dict        
+    else:
+        count_negatives, count_postives, sum_count_non_magic, is_magic_list, count_non_magic_list, fraction_non_magic_list, domain_outputs_dict = eval_is_magic_all_context        
+        
+    # Is evaluatie voor deze outputs al bekend?
+    domain_outputs = (int(bool(actual_output)) for actual_output in actual_outputs)
+    if domain_outputs in domain_outputs_dict:
+        weighted_error, model_evals = domain_outputs_dict[domain_outputs]
+    else:        
+        # Nog niet bekend. Bereken evaluatie.
+        weighted_error, model_evals = eval_is_magic_all_impl(example_inputs, actual_outputs, domain_outputs)
+        domain_outputs_dict[domain_outputs] = weighted_error, model_evals
+    
     if f and debug >= 2:
-        f.write(f" is_magic_list {str(is_magic_list)}\n")
+        if debug >= 3:
+            f.write(f"actual_outputs {str(actual_outputs)}\n")
+            f.write(f" is_magic_list {str(is_magic_list)}\n")
         model_evals_str = " ".join([f"{v:.3f}" for v in model_evals])
-        f.write(f"eval_per_output {model_evals_str} overall_eval {weighted_error:.3f}\n")
+        f.write(f"      eval_per_output {model_evals_str} overall_eval {weighted_error:.3f}\n")
+    return weighted_error, model_evals
+
+
+def eval_is_magic_all_old(example_inputs, actual_outputs, extra_function_params, f, debug):
+    weighted_error, model_evals = 0.0, []
+    for example_input, actual_output in zip(example_inputs, actual_outputs):
+        v = eval_is_magic(example_input, actual_output, extra_function_params)[0]
+        weighted_error += v
+        model_evals.append(v)        
     return weighted_error, model_evals
 
 
@@ -534,11 +556,7 @@ def evaluate(input, actual_output, evaluation_functions, debug):
 def evaluate_all(inputs, actual_outputs, evaluation_function, f, debug):
     function_name, extra_function_params = evaluation_function
     f_all = eval(function_name)
-    error, model_evals = f_all(inputs, actual_outputs, extra_function_params, f, debug)
-    assert type(error) == type(1.0)
-    if f and (debug >= 2 or (debug >= 1 and error > 0.0)):
-        f.write(f"    evaluation {error:.3f}, inputs {str(input)}, actual_outputs {str(actual_outputs)}\n")
-    return error, model_evals
+    return f_all(inputs, actual_outputs, extra_function_params, f, debug)
 
     
 def init_dynamic_error_weight_adjustment():

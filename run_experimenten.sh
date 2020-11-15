@@ -1,4 +1,5 @@
-for id in 02
+#!/usr/bin/bash
+for id in $*
 do
     mkdir -p tmp/$id
     ./experimenten/core_00.sh $id &
@@ -7,6 +8,6 @@ do
     ./experimenten/core_03.sh $id &
     echo waiting $id ...
     wait
-    echo done $id
     grep solved tmp/$id/log*.txt | wc --lines > tmp/$id/resultaat_$id.txt
+    echo score $id is `cat tmp/$id/resultaat_$id.txt`
 done
