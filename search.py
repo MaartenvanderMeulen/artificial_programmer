@@ -87,5 +87,3 @@ if __name__ == "__main__":
         for layer in range(1, max_layer+1):
             find_new_functions(problems, functions, layer, f, params, append_functions_to_file=None)
         t1 = time.time()
-        if params["verbose"] > 0:
-            f.write(f"total execution time {int(t1 - t0)} seconds, total evaluations {ga_search_deap.total_eval_count}\n")
