@@ -165,7 +165,7 @@
             # variables that may be used
             (i)
             # functions that may be used
-            (add are_all_equal get_row_sums get_col_sums get_diag_sums get_col get_diag1 get_diag2 for sum len list1 eq and if)
+            (add are_all_equal get_row_sums get_col_sums get_diag_sums get_col get_diag1 get_diag2 for sum len list1 eq and if list2 last2 at2 list3 last3 at3 )
             
             # list2 last2 at2 list3 last3 at3
             # div lt le ne ge gt sub mul or assign
