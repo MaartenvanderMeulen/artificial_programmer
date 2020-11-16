@@ -44,4 +44,8 @@ problems.txt, 11''
 params_04.txt
     63%
 problems.txt : + eq and if. params_04.txt
-    
+    94%
+problems.txt : + list2 last2 at2. params_04.txt
+    88%
+problems.txt : + list2 last2 at2. params_04.txt
+    88%
