@@ -1,9 +1,10 @@
 {
-    "best_of_n_cx": 3,
-    "best_of_n_mut": 2,
-    "inter_family_cx_taboo": true,
-    "max_individual_size": 40,
-    "max_seconds": 120,
+    "verbose": 1,
+    "max_seconds": 80,
+    "pop_size": [
+        1000,
+        200
+    ],
     "nchildren": [
         1000,
         100
@@ -12,12 +13,11 @@
         1,
         1000
     ],
+    "max_individual_size": 40,
     "pcrossover": 0.4,
-    "pop_size": [
-        1000,
-        200
-    ],
+    "best_of_n_mut": 2,
+    "best_of_n_cx": 3,
+    "inter_family_cx_taboo": true,
     "p_parents_additief": true,
-    "verbose": 1,
     "weight_complementairity": 0.3
 }

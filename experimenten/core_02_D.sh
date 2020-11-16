@@ -1,0 +1,13 @@
+/c/Users/vdmeulem/Miniconda3/python -O search.py 150 tmp/$1 experimenten/params_$1.txt
+/c/Users/vdmeulem/Miniconda3/python -O search.py 154 tmp/$1 experimenten/params_$1.txt
+/c/Users/vdmeulem/Miniconda3/python -O search.py 158 tmp/$1 experimenten/params_$1.txt
+/c/Users/vdmeulem/Miniconda3/python -O search.py 162 tmp/$1 experimenten/params_$1.txt
+/c/Users/vdmeulem/Miniconda3/python -O search.py 166 tmp/$1 experimenten/params_$1.txt
+/c/Users/vdmeulem/Miniconda3/python -O search.py 170 tmp/$1 experimenten/params_$1.txt
+/c/Users/vdmeulem/Miniconda3/python -O search.py 174 tmp/$1 experimenten/params_$1.txt
+/c/Users/vdmeulem/Miniconda3/python -O search.py 178 tmp/$1 experimenten/params_$1.txt
+/c/Users/vdmeulem/Miniconda3/python -O search.py 182 tmp/$1 experimenten/params_$1.txt
+/c/Users/vdmeulem/Miniconda3/python -O search.py 186 tmp/$1 experimenten/params_$1.txt
+/c/Users/vdmeulem/Miniconda3/python -O search.py 190 tmp/$1 experimenten/params_$1.txt
+/c/Users/vdmeulem/Miniconda3/python -O search.py 194 tmp/$1 experimenten/params_$1.txt
+/c/Users/vdmeulem/Miniconda3/python -O search.py 198 tmp/$1 experimenten/params_$1.txt
