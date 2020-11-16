@@ -275,12 +275,11 @@ def eval_is_magic(inputs, actual, extra_function_params):
     error = 0.0
     if type(actual) != type(1):
         error += 0.64
-    elif type(actual) == type(1):
+    else:
         if actual not in [0, 1]:
             error += 0.1
     model_says_its_magic = bool(actual)
     board = inputs[0]
-    assert len(board) == len(board[0]) and type(board[0][0]) == type(1)
     n = len(board)
     magic_number = (n * (n * n + 1)) // 2
     count_magic_rows, count_magic_cols, count_magic_diags, sum_board, sum_diag1, sum_diag2 = 0, 0, 0, 0, 0, 0
@@ -300,33 +299,16 @@ def eval_is_magic(inputs, actual, extra_function_params):
         count_magic_diags += 1
     if sum_diag2 == magic_number:
         count_magic_diags += 1
-    check_rows = bool(extra_function_params[0])
-    check_cols = bool(extra_function_params[1])
-    check_diags = bool(extra_function_params[2])
     if model_says_its_magic:
         if sum_board != n * magic_number:
-            error += 0.1
-        if check_rows:
-            error += 0.425 * (n - count_magic_rows) / n
-        if check_cols:
-            error += 0.325 * (n - count_magic_cols) / n
-        if check_diags:
-            error += 0.25 * (2 - count_magic_diags) / 2
+            print("sum_board != n * magic_number")
+        error += 0.425 * (n - count_magic_rows) / n
+        error += 0.325 * (n - count_magic_cols) / n
+        error += 0.25 * (2 - count_magic_diags) / 2
     else:
-        is_magic = True
-        if check_rows and count_magic_rows < n:
-            is_magic = False
-        if check_cols and count_magic_cols < n:
-            is_magic = False
-        if check_diags and count_magic_diags < 2:
-            is_magic = False
+        is_magic = count_magic_rows == n and count_magic_cols == n and count_magic_diags == 2
         if is_magic:
-            if check_rows:
-                error += 0.45
-            if check_cols:
-                error += 0.35
-            if check_diags:
-                error += 0.2
+            error += 1.0
     return error,
 
     
@@ -459,10 +441,11 @@ def eval_is_magic_all(example_inputs, actual_outputs, extra_function_params, f, 
 
 def eval_is_magic_all_old(example_inputs, actual_outputs, extra_function_params, f, debug):
     weighted_error, model_evals = 0.0, []
+    assert len(example_inputs) == len (actual_outputs)
     for example_input, actual_output in zip(example_inputs, actual_outputs):
         v = eval_is_magic(example_input, actual_output, extra_function_params)[0]
         weighted_error += v
-        model_evals.append(v)        
+        model_evals.append(v)
     return weighted_error, model_evals
 
 

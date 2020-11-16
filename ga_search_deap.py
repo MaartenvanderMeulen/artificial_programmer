@@ -38,27 +38,33 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
     else:
         ind.model_outputs = []
         first_model_output, model_reacts_on_input = None, False
+        t0 = time.time()
         for input in toolbox.example_inputs:
             variables = interpret.bind_params(toolbox.formal_params, input)
             model_output = interpret.run(code, variables, toolbox.functions)
-            ind.model_outputs.append(model_output)
+            ind.model_outputs.append(model_output)        
+        toolbox.t_interpret += time.time() - t0
+        t0 = time.time()
         weighted_error, ind.model_evals = evaluate.evaluate_all(toolbox.example_inputs, ind.model_outputs, toolbox.evaluation_function, toolbox.f, debug)
+        assert math.isclose(weighted_error, sum(ind.model_evals))
+        toolbox.t_eval += time.time() - t0
         ind.model_outputs = recursive_tuple(ind.model_outputs)
     return weighted_error
 
 
 def evaluate_individual(toolbox, individual, debug=0):
     if time.time() >= toolbox.t0 + toolbox.max_seconds:
-        print("stopped")
+        #print("stopped", round(time.time() - toolbox.t0), "t_interpret", round(toolbox.t_interpret), "t_eval", round(toolbox.t_eval))
         toolbox.f.write(f"Stopped after {round(time.time()-toolbox.t0)} seconds, {toolbox.eval_count} evaluations\n") 
         exit()
     deap_str = individual.deap_str
     assert deap_str == str(individual)
     if deap_str in toolbox.eval_cache:
-        eval, individual.model_outputs = toolbox.eval_cache[deap_str]
+        eval, individual.model_outputs, individual.model_evals = toolbox.eval_cache[deap_str]
+        assert math.isclose(eval, sum(individual.model_evals))
         return eval
     weighted_error = evaluate_individual_impl(toolbox, individual, debug)
-    toolbox.eval_cache[deap_str] = weighted_error, individual.model_outputs
+    toolbox.eval_cache[deap_str] = weighted_error, individual.model_outputs, individual.model_evals
     return weighted_error
 
 
@@ -148,7 +154,6 @@ def generate_initial_population(toolbox):
     while len(population) < toolbox.pop_size[0]:
         ind = gp.PrimitiveTree(gp.genHalfAndHalf(pset=toolbox.pset, min_=2, max_=4))
         ind.deap_str = str(ind)
-        ind.id = f"init{len(population)}"
         if ind.deap_str in toolbox.ind_str_set:
             if retry_count < toolbox.child_creation_retries:
                 retry_count += 1
@@ -173,7 +178,6 @@ def copy_individual(ind):
     copy_ind.eval = ind.eval
     copy_ind.model_outputs = copy.deepcopy(ind.model_outputs)
     copy_ind.model_evals = copy.deepcopy(ind.model_evals)
-    copy_ind.id = "copy" + ind.id
     consistency_check_ind(copy_ind)
     return copy_ind
 
@@ -184,7 +188,6 @@ def cxOnePoint(toolbox, parent1, parent2):
         return None
     child = copy_individual(parent1)
     child.parents = [parent1, parent2]
-    child.id = "cx" + parent1.id + "," + parent2.id
     index1 = random.randrange(0, len(parent1))
     index2 = random.randrange(0, len(parent2))
     slice1 = parent1.searchSubtree(index1)
@@ -264,9 +267,9 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
 
 
 def select_parents(toolbox, population):
-    if not toolbox.inter_family_cx_taboo or len(toolbox.model_outputs_dict) == 1:
+    if toolbox.parent_selection_strategy == 0 or len(toolbox.model_outputs_dict) == 1:
         return [best_of_n(population, 2), best_of_n(population, 2)]
-    if toolbox.inter_family_cx_taboo == 1:        
+    if toolbox.parent_selection_strategy == 1:        
         # First attempt with toolbox.inter_family_cx_taboo.  Its just unlikely, not a taboo.
         group1, group2 = random.sample(list(toolbox.model_outputs_dict), 2) # sample always returns a list
         group1, group2 = toolbox.model_outputs_dict[group1], toolbox.model_outputs_dict[group2]
@@ -279,6 +282,8 @@ def select_parents(toolbox, population):
     # * hoe verder de outputs uit elkaar liggen hoe meer kans.  p_complementair = verschillende_outputs(parent1, parent2) / aantal_outputs
     # * p = (p_fitness(parent1) * p_fitness(parent2)) ^ alpha * p_complementair(parent1, parent2) ^ beta
     best_p = -1
+    assert toolbox.best_of_n_cx > 0
+    max_eval = max([ind.eval for ind in population])
     for i in range(toolbox.best_of_n_cx):
         # select two parents
         group1, group2 = random.sample(list(toolbox.model_outputs_dict), 2) # sample always returns a list
@@ -288,25 +293,20 @@ def select_parents(toolbox, population):
         # sort
         if parent1.eval > parent2.eval or (parent1.eval == parent2.eval and len(parent1) > len(parent2)):
             parent1, parent2 = parent2, parent1
-        # compute p
-        p_fitness1 = (1 - parent1.eval/1.1)
-        p_fitness2 = (1 - parent2.eval/1.1)
+        # compute p        
+        assert math.isclose(parent1.eval, sum(parent1.model_evals))
+        assert math.isclose(parent2.eval, sum(parent2.model_evals))
+        p_fitness1 = (1 - parent1.eval/(max_eval*1.1))
+        p_fitness2 = (1 - parent2.eval/(max_eval*1.1))
+        assert 0 <= p_fitness1 and p_fitness1 <= 1
+        assert 0 <= p_fitness2 and p_fitness2 <= 1
         estimate_improvement = sum([eval1-eval2 for eval1, eval2 in zip(parent1.model_evals, parent2.model_evals) if eval1 > eval2])
+        assert estimate_improvement >= 0
         p_complementair = estimate_improvement / parent1.eval
-        if toolbox.p_parents_additief:
-            p = ((p_fitness1 * p_fitness2)) + (p_complementair * toolbox.beta)
-        else:
-            p = ((p_fitness1 * p_fitness2) ** toolbox.alpha) * (p_complementair ** toolbox.beta)
-        if random.random() < 0.0 and count_verschillende_outputs < len(toolbox.example_inputs) :
-            print("fitness", parent1.eval, p_fitness1, parent2.eval, p_fitness2, ((p_fitness1 * p_fitness2) ** toolbox.alpha))
-            print("  complementary", count_verschillende_outputs, p_complementair, (p_complementair ** toolbox.beta))
-            print("  p", p)
-        if best_p < p: # hoe lager p, hoe kleiner de kans dat p_choice nog kleiner is           
-            if best_p > 0 and random.random() < 0.0 and count_verschillende_outputs < len(toolbox.example_inputs):
-                print("improve best_p")
-                print("  fitness", parent1.eval, p_fitness1, parent2.eval, p_fitness2, ((p_fitness1 * p_fitness2) ** toolbox.alpha))
-                print("  complementary", count_verschillende_outputs, p_complementair, (p_complementair ** toolbox.beta))
-                print("  p", p)
+        assert 0 <= p_complementair and p_complementair <= 1
+        p = ((p_fitness1 * p_fitness2)) + (p_complementair * toolbox.beta)
+        assert p >= 0
+        if best_p < p:
             best_parent1, best_parent2, best_p = parent1, parent2, p
     return best_parent1, best_parent2
 
@@ -438,25 +438,19 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.f = f
 
     # tunable params
-    toolbox.inter_family_cx_taboo = params["inter_family_cx_taboo"]
-    toolbox.max_individual_size = params["max_individual_size"]
+    toolbox.verbose = params["verbose"]
     toolbox.max_seconds = params["max_seconds"]
-    toolbox.pcrossover = params["pcrossover"]
-    toolbox.pmutations = 1.0 - toolbox.pcrossover
-    toolbox.beta = params["weight_complementairity"]
-    toolbox.best_of_n_cx = params["best_of_n_cx"]
-    toolbox.best_of_n_mut = params["best_of_n_mut"]
     toolbox.pop_size = params["pop_size"]
     toolbox.nchildren = params["nchildren"]
     toolbox.ngen = params["ngen"]
+    toolbox.max_individual_size = params["max_individual_size"]
+    toolbox.pcrossover = params["pcrossover"]
+    toolbox.pmutations = 1.0 - toolbox.pcrossover
+    toolbox.best_of_n_mut = params["best_of_n_mut"]
+    toolbox.best_of_n_cx = params["best_of_n_cx"]
+    toolbox.parent_selection_strategy = params["parent_selection_strategy"]
+    toolbox.beta = params["weight_complementairity"]
     toolbox.p_parents_additief = params["p_parents_additief"]
-    # verbose 0 : solution with one line of statistics
-    # verbose 1 : solution path, and one line of statistics per generation
-    # verbose 2 :
-    #             population at each generation
-    #             evaluation details of each individual at generation 0
-    #             evaluation details of each individual in the solution path
-    toolbox.verbose = params["verbose"]
     
     result = None
     for hop in range(1):
@@ -464,6 +458,9 @@ def solve_by_new_function(problem, functions, f, params):
         toolbox.eval_cache = dict()
         toolbox.eval_count = 0
         toolbox.t0 = time.time()
+        toolbox.t_interpret = 0
+        toolbox.t_eval = 0
+
         best, gen = ga_search_impl(toolbox)
         seconds = round(time.time() - toolbox.t0)
         if best.eval == 0:
@@ -476,7 +473,7 @@ def solve_by_new_function(problem, functions, f, params):
             f.write(f"{best.deap_str}\n")
             assert evaluate_individual_impl(toolbox, best, toolbox.verbose) == 0
             write_path(toolbox, best)
-            print("solved")
+            #print("solved", "t_total", seconds, "t_interpret", round(toolbox.t_interpret), "t_eval", round(toolbox.t_eval))
             break
         else:
             f.write(f"problem {problem_name} failed after {toolbox.eval_count} evaluations, {seconds} seconds\n")
