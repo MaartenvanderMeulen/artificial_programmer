@@ -1,5 +1,5 @@
 {
-    "verbose": 2,
+    "verbose": 1,
     "max_seconds": 60,
     "pop_size": [
         1000,
@@ -16,8 +16,8 @@
     "max_individual_size": 40,
     "pcrossover": 0.4,
     "best_of_n_mut": 2,
-    "inter_family_cx_taboo": 2,
     "best_of_n_cx": 3,
+    "parent_selection_strategy": 2,
     "p_parents_additief": true,
     "weight_complementairity": 0.3
 }

@@ -28,3 +28,20 @@ params_03.txt
 problems.txt : eval_is_magic_all_old, AB, 11', seconds=80
 params_03.txt
     1/3
+    
+======================= over naar de NUC (i7, 3.1 GHz, 2 cores, 4 threads)
+
+params_03.txt
+    2/4, 8/12, 33/48, 61/100
+    
+params_04.txt : = param_03 met {"seconds": 60}
+
+======================= bugfix "eval, individual.model_outputs, individual.model_evals = toolbox.eval_cache[deap_str]"
+======================= bugfix "p_fitness1 = (1 - parent1.eval/(max_eval*1.1))"
+problems.txt, 11''
+.sh's met allen -O (behave seed 100)
+
+params_04.txt
+    63%
+problems.txt : + eq and if. params_04.txt
+    

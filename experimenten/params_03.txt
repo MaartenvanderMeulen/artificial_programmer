@@ -17,7 +17,7 @@
     "pcrossover": 0.4,
     "best_of_n_mut": 2,
     "best_of_n_cx": 3,
-    "inter_family_cx_taboo": true,
+    "parent_selection_strategy": 2,
     "p_parents_additief": true,
     "weight_complementairity": 0.3
 }
