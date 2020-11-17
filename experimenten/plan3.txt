@@ -47,5 +47,11 @@ problems.txt : + eq and if. params_04.txt
     94%
 problems.txt : + list2 last2 at2. params_04.txt
     88%
-problems.txt : + list2 last2 at2. params_04.txt
-    88%
+problems.txt : + list3 last3 at3. params_04.txt
+    69%
+problems.txt : + rest functions. params_04.txt
+    ??%
+problems.txt : + more variables (j, k, n). params_04.txt
+    ??%
+problems.txt : + more constants (0, 1, 2). params_04.txt
+    ??%
