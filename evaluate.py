@@ -440,13 +440,19 @@ def eval_is_magic_all(example_inputs, actual_outputs, extra_function_params, f, 
 
 
 def eval_is_magic_all_old(example_inputs, actual_outputs, extra_function_params, f, debug):
-    weighted_error, model_evals = 0.0, []
+    model_evals = []
     assert len(example_inputs) == len (actual_outputs)
+    domain_output_set = set()
     for example_input, actual_output in zip(example_inputs, actual_outputs):
+        domain_output_set.add(bool(actual_output))
         v = eval_is_magic(example_input, actual_output, extra_function_params)[0]
-        weighted_error += v
         model_evals.append(v)
-    return weighted_error, model_evals
+    if False:
+        # penalise non reacting models
+        if len(domain_output_set) == 1:
+            max_eval = max(model_evals)
+            model_evals = [max_eval for _ in model_evals]
+    return sum(model_evals), model_evals
 
 
 def eval_is_sorted(input, actual, extra_function_params):
