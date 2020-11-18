@@ -50,8 +50,47 @@ problems.txt : + list2 last2 at2. params_04.txt
 problems.txt : + list3 last3 at3. params_04.txt
     69%
 problems.txt : + rest functions. params_04.txt
-    ??%
-problems.txt : + more variables (j, k, n). params_04.txt
-    ??%
-problems.txt : + more constants (0, 1, 2). params_04.txt
-    ??%
+    64%
+    
+problems.txt : + more variables (j, k, n).
+
+params_05.txt : parachute size 1000, pop_size[1] = 200
+    22%
+params_05.txt : parachute size 500
+    17%
+params_05.txt : parachute size 2000
+    22%
+params_05.txt : parachute size 4000
+    15%
+params_05.txt : parachute size 1000 was ok. pop_size[1] = 300
+    21%
+params_05.txt : parachute size 1000 was ok. pop_size[1] = 150
+    15%
+params_05.txt : parachute size 1000 was ok. pop_size[1] = 200 was ok. nchildren = 75
+    15%
+params_05.txt : parachute size 1000 was ok. pop_size[1] = 200 was ok. nchildren = 125
+    15%
+params_05.txt : parachute size 1000 was ok. pop_size[1] = 200 was ok. nchildren = 100 was ok. pcrossover 0.5
+    18%
+params_05.txt : parachute size 1000 was ok. pop_size[1] = 200 was ok. nchildren = 100 was ok. pcrossover 0.4 houden we, want 24% is niet veel beter en 0.3 is zo raar.
+    22%
+params_05.txt : parachute size 1000 was ok. pop_size[1] = 200 was ok. nchildren = 100 was ok. pcrossover 0.3
+    24%
+params_05.txt : parachute size 1000 was ok. pop_size[1] = 200 was ok. nchildren = 100 was ok. pcrossover 0.2
+    17%
+params_05.txt : pop ok, pcx ok.  "best_of_n_mut": 3
+    19%
+params_05.txt : pop ok, pcx ok, best_of_n_mut ok, "best_of_n_cx": 4
+    22%
+params_05.txt : pop ok, pcx ok, best_of_n_mut ok, "best_of_n_cx": 2
+    16%
+params_05.txt : pop ok, pcx ok, best_of_n_mut ok, "best_of_n_cx": 3 houden we.  "weight_complementairity": 0.3 baseline
+    22%
+params_05.txt : pop ok, pcx ok, best_of_n_mut ok, "best_of_n_cx": 3 houden we.  "weight_complementairity": 0.4, is volgens paradigit test beter
+    21%
+
+dus params_05.txt == params_04.txt is OK.
+    22%
+
+problems.txt : variables (i j), constants (0 1)
+    29%

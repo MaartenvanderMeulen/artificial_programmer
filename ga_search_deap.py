@@ -268,7 +268,7 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
 
 def select_parents(toolbox, population):
     if toolbox.parent_selection_strategy == 0 or len(toolbox.model_outputs_dict) == 1:
-        return [best_of_n(population, 2), best_of_n(population, 2)]
+        return [best_of_n(population, toolbox.best_of_n_cx), best_of_n(population, toolbox.best_of_n_cx)]
     if toolbox.parent_selection_strategy == 1:        
         # First attempt with toolbox.inter_family_cx_taboo.  Its just unlikely, not a taboo.
         group1, group2 = random.sample(list(toolbox.model_outputs_dict), 2) # sample always returns a list
@@ -450,7 +450,6 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.best_of_n_cx = params["best_of_n_cx"]
     toolbox.parent_selection_strategy = params["parent_selection_strategy"]
     toolbox.beta = params["weight_complementairity"]
-    toolbox.p_parents_additief = params["p_parents_additief"]
     
     result = None
     for hop in range(1):
