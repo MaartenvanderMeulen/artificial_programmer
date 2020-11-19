@@ -1,46 +1,17 @@
-#!/usr/bin/bash
+#!/bin/bash
 for id in $*
 do
     rm -rf tmp/$id
     mkdir -p tmp/$id
-    ./experimenten/core_00_A.sh $id &
-    ./experimenten/core_01_A.sh $id &
-    ./experimenten/core_02_A.sh $id &
-    ./experimenten/core_03_A.sh $id &
-    wait
-    grep solved tmp/$id/log*.txt | wc --lines > tmp/$id/resultaat_$id.txt
-    echo $id scores `cat tmp/$id/resultaat_$id.txt`
-done
-echo
-for id in $*
-do
-    ./experimenten/core_00_B.sh $id &
-    ./experimenten/core_01_B.sh $id &
-    ./experimenten/core_02_B.sh $id &
-    ./experimenten/core_03_B.sh $id &
-    wait
-    grep solved tmp/$id/log*.txt | wc --lines > tmp/$id/resultaat_$id.txt
-    echo $id scores `cat tmp/$id/resultaat_$id.txt`
-done
-echo
-for id in $*
-do
-    ./experimenten/core_00_C.sh $id &
-    ./experimenten/core_01_C.sh $id &
-    ./experimenten/core_02_C.sh $id &
-    ./experimenten/core_03_C.sh $id &
-    wait
-    grep solved tmp/$id/log*.txt | wc --lines > tmp/$id/resultaat_$id.txt
-    echo $id scores `cat tmp/$id/resultaat_$id.txt`
-done
-echo
-for id in $*
-do
-    ./experimenten/core_00_D.sh $id &
-    ./experimenten/core_01_D.sh $id &
-    ./experimenten/core_02_D.sh $id &
-    ./experimenten/core_03_D.sh $id &
-    wait
-    grep solved tmp/$id/log*.txt | wc --lines > tmp/$id/resultaat_$id.txt
-    echo $id scores `cat tmp/$id/resultaat_$id.txt`
+    for part in A B C D
+    do
+        ./experimenten/core_00_$part.sh $id &
+        ./experimenten/core_01_$part.sh $id &
+        ./experimenten/core_02_$part.sh $id &
+        ./experimenten/core_03_$part.sh $id &
+        wait
+        echo $id part $part `date` `grep solved tmp/$id/log*.txt | wc --lines` >> tmp/$id/resultaat_$part.$id.txt
+        cat tmp/$id/resultaat_$part.$id.txt        
+    done
+    cat tmp/$id/resultaat_D.$id.txt >> experimenten/resultaat_$id.txt
 done

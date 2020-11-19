@@ -65,14 +65,19 @@ def find_new_functions(problems, functions, layer, f, params, append_functions_t
 
 
 def main(seed, param_file):
-    with open(param_file, "r") as f:
-        params = json.load(f)
-    output_folder = params["output_folder"]
+    if param_file[:len("experimenten/params_")] != "experimenten/params_" or param_file[-len(".txt"):] != ".txt":
+        exit("param file must have format 'experimenten/params_id.txt'")
+    id = param_file[len("experimenten/params_"):-len(".txt")]    
+    output_folder = f"tmp/{id}"
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
+
+    with open(param_file, "r") as f:
+        params = json.load(f)
     with open(f"{output_folder}/params.txt", "w") as f:
         # write a copy to the output folder
         json.dump(params, f, sort_keys=True, indent=4)
+
     seed += params["seed_prefix"]
     random.seed(seed)
     np.random.seed(seed)

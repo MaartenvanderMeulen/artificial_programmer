@@ -154,7 +154,7 @@ def generate_initial_population(toolbox):
     while len(population) < toolbox.pop_size[0]:
         ind = gp.PrimitiveTree(gp.genHalfAndHalf(pset=toolbox.pset, min_=2, max_=4))
         ind.deap_str = str(ind)
-        if ind.deap_str in toolbox.ind_str_set or len(ind) > toolbox.max_individual_size:
+        if ind.deap_str in toolbox.ind_str_set: # or len(ind) > toolbox.max_individual_size:
             if retry_count < toolbox.child_creation_retries:
                 retry_count += 1
                 continue
@@ -194,7 +194,7 @@ def cxOnePoint(toolbox, parent1, parent2):
     slice2 = parent2.searchSubtree(index2)
     child[slice1] = parent2[slice2]
     child.deap_str = str(child)
-    if child.deap_str in toolbox.ind_str_set or len(child) > toolbox.max_individual_size:
+    if child.deap_str in toolbox.ind_str_set: # or len(child) > toolbox.max_individual_size:
         return None
     child.eval = evaluate_individual(toolbox, child)
     return child
@@ -239,7 +239,7 @@ def mutUniform(toolbox, parent, expr, pset):
     type_ = child[index].ret
     child[slice_] = expr(pset=pset, type_=type_)
     child.deap_str = str(child)
-    if child.deap_str in toolbox.ind_str_set or len(child) > toolbox.max_individual_size:
+    if child.deap_str in toolbox.ind_str_set: # or len(child) > toolbox.max_individual_size:
         return None
     child.eval = evaluate_individual(toolbox, child)
     return child

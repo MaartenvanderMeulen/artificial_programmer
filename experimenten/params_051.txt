@@ -1,5 +1,5 @@
 {
-    "problems_file": "experimenten/problems_ims_manh_L2.txt",
+    "problems_file": "experimenten/problems_ims_L3.txt",
     "functions_file": "experimenten/functions.txt",
     "seed_prefix": 100,
     "verbose": 1,
