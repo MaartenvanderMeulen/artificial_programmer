@@ -1,8 +1,7 @@
 {
-    "output_folder": "tmp/05",
     "problems_file": "experimenten/problems_ims_L3.txt",
     "functions_file": "experimenten/functions.txt",
-    "seed_prefix": 100,
+    "seed_prefix": 200,
     "verbose": 1,
     "max_seconds": 60,
     "pop_size": [
