@@ -154,7 +154,7 @@ def generate_initial_population(toolbox):
     while len(population) < toolbox.pop_size[0]:
         ind = gp.PrimitiveTree(gp.genHalfAndHalf(pset=toolbox.pset, min_=2, max_=4))
         ind.deap_str = str(ind)
-        if ind.deap_str in toolbox.ind_str_set:
+        if ind.deap_str in toolbox.ind_str_set or len(ind) > toolbox.max_individual_size:
             if retry_count < toolbox.child_creation_retries:
                 retry_count += 1
                 continue
@@ -194,7 +194,7 @@ def cxOnePoint(toolbox, parent1, parent2):
     slice2 = parent2.searchSubtree(index2)
     child[slice1] = parent2[slice2]
     child.deap_str = str(child)
-    if child.deap_str in toolbox.ind_str_set:
+    if child.deap_str in toolbox.ind_str_set or len(child) > toolbox.max_individual_size:
         return None
     child.eval = evaluate_individual(toolbox, child)
     return child
@@ -239,7 +239,7 @@ def mutUniform(toolbox, parent, expr, pset):
     type_ = child[index].ret
     child[slice_] = expr(pset=pset, type_=type_)
     child.deap_str = str(child)
-    if child.deap_str in toolbox.ind_str_set:
+    if child.deap_str in toolbox.ind_str_set or len(child) > toolbox.max_individual_size:
         return None
     child.eval = evaluate_individual(toolbox, child)
     return child
@@ -389,6 +389,7 @@ def ga_search_impl(toolbox):
     toolbox.gen = 0
     for toolbox.parachute_level in range(len(toolbox.ngen)):
         while toolbox.gen < toolbox.ngen[toolbox.parachute_level]:
+            # print("gen", toolbox.gen, "len", len(population[0]))
             code_str = interpret.convert_code_to_str(interpret.compile_deap(population[0].deap_str, toolbox.functions))
             if toolbox.f and toolbox.verbose >= 1:
                 toolbox.f.write(f"start generation {toolbox.gen:2d} best eval {population[0].eval:.5f} {code_str}\n")
@@ -472,7 +473,7 @@ def solve_by_new_function(problem, functions, f, params):
             f.write(f"{best.deap_str}\n")
             assert evaluate_individual_impl(toolbox, best, toolbox.verbose) == 0
             write_path(toolbox, best)
-            #print("solved", "t_total", seconds, "t_interpret", round(toolbox.t_interpret), "t_eval", round(toolbox.t_eval))
+            # print("solved", "t_total", seconds, "t_interpret", round(toolbox.t_interpret), "t_eval", round(toolbox.t_eval), "len", len(best))
             break
         else:
             f.write(f"problem {problem_name} failed after {toolbox.eval_count} evaluations, {seconds} seconds\n")
