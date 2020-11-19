@@ -64,22 +64,21 @@ def find_new_functions(problems, functions, layer, f, params, append_functions_t
     return len(new_functions) > 0
 
 
-if __name__ == "__main__":
-    seed = int(sys.argv[1]) if len(sys.argv) > 1 else 142
-    output_folder = sys.argv[2] if len(sys.argv) > 2 else "tmp"
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
-    param_file = sys.argv[3] if len(sys.argv) > 3 else "params.txt"
+def main(seed, param_file):
     with open(param_file, "r") as f:
         params = json.load(f)
+    output_folder = params["output_folder"]
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
     with open(f"{output_folder}/params.txt", "w") as f:
         # write a copy to the output folder
         json.dump(params, f, sort_keys=True, indent=4)
+    seed += params["seed_prefix"]
     random.seed(seed)
     np.random.seed(seed)
     with open(f"{output_folder}/log_{seed}.txt", "w") as f:
-        functions_file_name = sys.argv[4] if len(sys.argv) > 4 else "functions.txt"
-        problems_file_name = sys.argv[5] if len(sys.argv) > 5 else "problems.txt"
+        functions_file_name = params["functions_file"]
+        problems_file_name = params["problems_file"]
         functions = interpret.get_functions(functions_file_name)
         problems = interpret.compile(interpret.load(problems_file_name))
         t0 = time.time()
@@ -87,3 +86,11 @@ if __name__ == "__main__":
         for layer in range(1, max_layer+1):
             find_new_functions(problems, functions, layer, f, params, append_functions_to_file=None)
         t1 = time.time()
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        exit(f"Usage: python search.py seed paramsfile")
+    seed = int(sys.argv[1])
+    param_file = sys.argv[2]
+    main(seed, param_file)

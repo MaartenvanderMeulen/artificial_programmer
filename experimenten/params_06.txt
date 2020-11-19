@@ -1,4 +1,8 @@
 {
+    "output_folder": "tmp/06",
+    "problems_file": "experimenten/problems_ims_manh_L2.txt",
+    "functions_file": "experimenten/functions.txt",
+    "seed_prefix": 100,
     "verbose": 1,
     "max_seconds": 60,
     "pop_size": [
@@ -18,6 +22,5 @@
     "best_of_n_mut": 2,
     "best_of_n_cx": 3,
     "parent_selection_strategy": 2,
-    "p_parents_additief": true,
-    "weight_complementairity": 0.2
+    "weight_complementairity": 0.3
 }

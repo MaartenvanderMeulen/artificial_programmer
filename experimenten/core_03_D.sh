@@ -1,13 +1,13 @@
-/c/Users/Maarten/Miniconda3/python -O search.py 151 tmp/$1 experimenten/params_$1.txt
-/c/Users/Maarten/Miniconda3/python -O search.py 155 tmp/$1 experimenten/params_$1.txt
-/c/Users/Maarten/Miniconda3/python -O search.py 159 tmp/$1 experimenten/params_$1.txt
-/c/Users/Maarten/Miniconda3/python -O search.py 163 tmp/$1 experimenten/params_$1.txt
-/c/Users/Maarten/Miniconda3/python -O search.py 167 tmp/$1 experimenten/params_$1.txt
-/c/Users/Maarten/Miniconda3/python -O search.py 171 tmp/$1 experimenten/params_$1.txt
-/c/Users/Maarten/Miniconda3/python -O search.py 175 tmp/$1 experimenten/params_$1.txt
-/c/Users/Maarten/Miniconda3/python -O search.py 179 tmp/$1 experimenten/params_$1.txt
-/c/Users/Maarten/Miniconda3/python -O search.py 183 tmp/$1 experimenten/params_$1.txt
-/c/Users/Maarten/Miniconda3/python -O search.py 187 tmp/$1 experimenten/params_$1.txt
-/c/Users/Maarten/Miniconda3/python -O search.py 191 tmp/$1 experimenten/params_$1.txt
-/c/Users/Maarten/Miniconda3/python -O search.py 195 tmp/$1 experimenten/params_$1.txt
-/c/Users/Maarten/Miniconda3/python -O search.py 199 tmp/$1 experimenten/params_$1.txt
+/c/Users/Maarten/Miniconda3/python -O search.py 151 experimenten/params_$1.txt
+/c/Users/Maarten/Miniconda3/python -O search.py 155 experimenten/params_$1.txt
+/c/Users/Maarten/Miniconda3/python -O search.py 159 experimenten/params_$1.txt
+/c/Users/Maarten/Miniconda3/python -O search.py 163 experimenten/params_$1.txt
+/c/Users/Maarten/Miniconda3/python -O search.py 167 experimenten/params_$1.txt
+/c/Users/Maarten/Miniconda3/python -O search.py 171 experimenten/params_$1.txt
+/c/Users/Maarten/Miniconda3/python -O search.py 175 experimenten/params_$1.txt
+/c/Users/Maarten/Miniconda3/python -O search.py 179 experimenten/params_$1.txt
+/c/Users/Maarten/Miniconda3/python -O search.py 183 experimenten/params_$1.txt
+/c/Users/Maarten/Miniconda3/python -O search.py 187 experimenten/params_$1.txt
+/c/Users/Maarten/Miniconda3/python -O search.py 191 experimenten/params_$1.txt
+/c/Users/Maarten/Miniconda3/python -O search.py 195 experimenten/params_$1.txt
+/c/Users/Maarten/Miniconda3/python -O search.py 199 experimenten/params_$1.txt
