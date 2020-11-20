@@ -3,7 +3,8 @@
     "functions_file": "experimenten/functions.txt",
     "seed_prefix": 0,
     "verbose": 1,
-    "max_seconds": 300,
+    "max_seconds": 3600,
+    "do_not_overwrite_logfile": true,
     "pop_size": [
         1000,
         200
