@@ -68,14 +68,20 @@ def main(seed, param_file):
     output_folder = f"tmp/{id}"
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
-
     with open(param_file, "r") as f:
         params = json.load(f)
+    seed += params["seed_prefix"]
+    log_file = f"{output_folder}/log_{seed}.txt" 
+    if params["do_not_overwrite_logfile"]:
+        if os.path.exists(log_file):
+            exit(0)
+        else:
+            print(f"incremental search on {seed}")
+
     with open(f"{output_folder}/params.txt", "w") as f:
         # write a copy to the output folder
         json.dump(params, f, sort_keys=True, indent=4)
 
-    seed += params["seed_prefix"]
     random.seed(seed)
     np.random.seed(seed)
     with open(f"{output_folder}/log_{seed}.txt", "w") as f:
