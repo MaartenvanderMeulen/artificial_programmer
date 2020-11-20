@@ -1,6 +1,3 @@
-'''Search for new functions.  Usage:
-python search.py [functions.txt [problems.txt]]
-'''
 import os
 import sys
 import time
@@ -86,11 +83,9 @@ def main(seed, param_file):
         problems_file_name = params["problems_file"]
         functions = interpret.get_functions(functions_file_name)
         problems = interpret.compile(interpret.load(problems_file_name))
-        t0 = time.time()
         max_layer = max([problem[-1] for problem in problems])
         for layer in range(1, max_layer+1):
             find_new_functions(problems, functions, layer, f, params, append_functions_to_file=None)
-        t1 = time.time()
 
 
 if __name__ == "__main__":
