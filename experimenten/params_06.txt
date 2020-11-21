@@ -1,19 +1,19 @@
 {
-    "problems_file": "experimenten/problems_ims_manh_L2.txt",
+    "problems_file": "experimenten/problems_ims_L3.txt",
     "functions_file": "experimenten/functions.txt",
-    "seed_prefix": 100,
+    "seed_prefix": 0,
     "verbose": 1,
     "max_seconds": 60,
     "pop_size": [
-        1000,
-        200
+        4000,
+        1000
     ],
     "nchildren": [
-        1000,
-        100
+        4000,
+        500
     ],
     "ngen": [
-        1,
+        3,
         1000
     ],
     "max_individual_size": 40,

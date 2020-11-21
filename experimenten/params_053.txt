@@ -1,7 +1,7 @@
 {
     "problems_file": "experimenten/problems_ims_L3.txt",
     "functions_file": "experimenten/functions.txt",
-    "seed_prefix": 300,
+    "seed_prefix": 3000,
     "verbose": 1,
     "max_seconds": 60,
     "pop_size": [
