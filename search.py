@@ -72,11 +72,9 @@ def main(seed, param_file):
         params = json.load(f)
     seed += params["seed_prefix"]
     log_file = f"{output_folder}/log_{seed}.txt" 
-    if params["do_not_overwrite_logfile"]:
+    if params.get("do_not_overwrite_logfile", False):
         if os.path.exists(log_file):
             exit(0)
-        else:
-            print(f"incremental search on {seed}")
 
     with open(f"{output_folder}/params.txt", "w") as f:
         # write a copy to the output folder
