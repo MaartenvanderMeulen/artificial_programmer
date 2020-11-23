@@ -1,6 +1,6 @@
 {
-    "problems_file": "experimenten/problems_ims_L3.txt",
-    "functions_file": "experimenten/functions.txt",
+    "problems_file": "experimenten/problems_ims_all.txt",
+    "functions_file": "experimenten/functions_leeg.txt",
     "seed_prefix": 0,
     "verbose": 1,
     "max_seconds": 60,
