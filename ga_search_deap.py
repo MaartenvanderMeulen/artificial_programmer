@@ -29,16 +29,16 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
         ind.model_outputs = ()
         if weighted_error == 0.0:
             # now check that this also evaluates 
-            sum_v = 0
+            ind.model_outputs = []
             for input in toolbox.example_inputs:
                 variables = interpret.bind_params(toolbox.formal_params, input)
                 model_output = interpret.run(code, variables, toolbox.functions)
-                sum_v += evaluate.evaluate(input, model_output, toolbox.evaluation_function, 1)
-            assert sum_v == 0
+                ind.model_outputs.append(model_output)        
+            weighted_error, ind.model_evals = evaluate.evaluate_all(toolbox.example_inputs, ind.model_outputs, toolbox.evaluation_function, toolbox.f, debug)
+            assert weighted_error == 0
     else:
-        ind.model_outputs = []
-        first_model_output, model_reacts_on_input = None, False
         t0 = time.time()
+        ind.model_outputs = []
         for input in toolbox.example_inputs:
             variables = interpret.bind_params(toolbox.formal_params, input)
             model_output = interpret.run(code, variables, toolbox.functions)
@@ -56,10 +56,10 @@ def evaluate_individual(toolbox, individual, debug=0):
     if time.time() >= toolbox.t0 + toolbox.max_seconds:
         #print("stopped", round(time.time() - toolbox.t0), "t_interpret", round(toolbox.t_interpret), "t_eval", round(toolbox.t_eval))
         toolbox.f.write(f"Stopped after {round(time.time()-toolbox.t0)} seconds, {toolbox.eval_count} evaluations\n") 
-        exit()
+        raise RuntimeWarning("out of time")
     deap_str = individual.deap_str
     assert deap_str == str(individual)
-    if deap_str in toolbox.eval_cache:
+    if deap_str in toolbox.eval_cache: #  TODO handle dynamic weighting that changes the evaluation
         eval, individual.model_outputs, individual.model_evals = toolbox.eval_cache[deap_str]
         assert math.isclose(eval, sum(individual.model_evals))
         return eval
@@ -75,7 +75,7 @@ def f():
 
 class Toolbox(object):
     def __init__(self, problem, functions):
-        problem_name, formal_params, example_inputs, evaluation_function, hints, layer = problem
+        _, formal_params, example_inputs, evaluation_function, hints, _ = problem
         int_hints, var_hints, func_hints, solution_hints = hints
         pset = gp.PrimitiveSet("MAIN", len(formal_params))
         for i, param in enumerate(formal_params):
@@ -91,7 +91,7 @@ class Toolbox(object):
                 param_types = interpret.get_build_in_function_param_types(function)
                 arity = sum([1 for t in param_types if t in [1, "v", []]])
                 pset.addPrimitive(f, arity, name=function)
-        for function, (params, code) in functions.items():
+        for function, (params, _) in functions.items():
             if function in func_hints:
                 arity = len(params)
                 pset.addPrimitive(f, arity, name=function)
@@ -115,7 +115,7 @@ def best_of_n(population, n):
 
 def update_dynamic_weighted_evaluation(toolbox, individuals):
     if toolbox.dynamic_weights:
-        evaluate.dynamic_error_weight_adjustment()
+        evaluate.dynamic_error_weight_adjustment(toolbox.f, toolbox.verbose)
         for ind in individuals:
             ind.eval = evaluate_individual(toolbox, ind)
 
@@ -124,12 +124,11 @@ def write_population(toolbox, population, label):
     if toolbox.verbose >= 2:
         toolbox.f.write(f"write_population {label}\n")
         for i, ind in enumerate(population):
-            # eval > 0.875 : individuals die niet reageren op de input.
-            # Daar zijn verschillende gradaties van, maar ze zijn niet interessant om weg te schrijven.
-            if ind.eval <= 0.875:
-                toolbox.f.write(f"    ind {i} {ind.eval} {len(ind)} {ind.deap_str}\n")
-                if toolbox.gen == 0:
-                    evaluate_individual_impl(toolbox, ind, toolbox.verbose)
+            toolbox.f.write(f"    ind {i} {ind.eval} {len(ind)} {ind.deap_str}\n")
+            if toolbox.gen == 0:
+                evaluate_individual_impl(toolbox, ind, toolbox.verbose)
+            if toolbox.verbose == 2 and i >= 10:
+                break
         toolbox.f.write("\n")
         toolbox.f.flush()
 
@@ -284,7 +283,7 @@ def select_parents(toolbox, population):
     best_p = -1
     assert toolbox.best_of_n_cx > 0
     max_eval = max([ind.eval for ind in population])
-    for i in range(toolbox.best_of_n_cx):
+    for _ in range(toolbox.best_of_n_cx):
         # select two parents
         group1, group2 = random.sample(list(toolbox.model_outputs_dict), 2) # sample always returns a list
         group1, group2 = toolbox.model_outputs_dict[group1], toolbox.model_outputs_dict[group2]
@@ -379,34 +378,37 @@ def consistency_check(inds):
 
 
 def ga_search_impl(toolbox):
-    population, solution = generate_initial_population(toolbox)
-    if solution:
-        return solution, 0
-    consistency_check(population)
-    update_dynamic_weighted_evaluation(toolbox, population)
-    population.sort(key=lambda item: item.eval)
-    refresh_toolbox_from_population(toolbox, population)
-    toolbox.gen = 0
-    for toolbox.parachute_level in range(len(toolbox.ngen)):
-        while toolbox.gen < toolbox.ngen[toolbox.parachute_level]:
-            # print("gen", toolbox.gen, "len", len(population[0]))
-            code_str = interpret.convert_code_to_str(interpret.compile_deap(population[0].deap_str, toolbox.functions))
-            if toolbox.f and toolbox.verbose >= 1:
-                toolbox.f.write(f"start generation {toolbox.gen:2d} best eval {population[0].eval:.5f} {code_str}\n")
-            write_population(toolbox, population, f"generation {toolbox.gen}, pop at start")
-            offspring, solution = generate_offspring(toolbox, population, toolbox.nchildren[toolbox.parachute_level])
-            if solution:
-                return solution, toolbox.gen+1
-            consistency_check(offspring)
-            if len(offspring) != toolbox.nchildren[toolbox.parachute_level]:
-                toolbox.f.write(f"{len(offspring)} offspring\n")
-            population += offspring
-            population.sort(key=lambda item: item.eval)
-            population[:] = population[:toolbox.pop_size[toolbox.parachute_level]]
-            consistency_check(population)
-            update_dynamic_weighted_evaluation(toolbox, population)
-            refresh_toolbox_from_population(toolbox, population)
-            toolbox.gen += 1
+    try:
+        population, solution = generate_initial_population(toolbox)
+        if solution:
+            return solution, 0
+        consistency_check(population)
+        update_dynamic_weighted_evaluation(toolbox, population)
+        population.sort(key=lambda item: item.eval)
+        refresh_toolbox_from_population(toolbox, population)
+        toolbox.gen = 0
+        for toolbox.parachute_level in range(len(toolbox.ngen)):
+            while toolbox.gen < toolbox.ngen[toolbox.parachute_level]:
+                # print("gen", toolbox.gen, "len", len(population[0]))
+                code_str = interpret.convert_code_to_str(interpret.compile_deap(population[0].deap_str, toolbox.functions))
+                if toolbox.f and toolbox.verbose >= 1:
+                    toolbox.f.write(f"start generation {toolbox.gen:2d} best eval {population[0].eval:.5f} {code_str}\n")
+                write_population(toolbox, population, f"generation {toolbox.gen}, pop at start")
+                offspring, solution = generate_offspring(toolbox, population, toolbox.nchildren[toolbox.parachute_level])
+                if solution:
+                    return solution, toolbox.gen+1
+                consistency_check(offspring)
+                if len(offspring) != toolbox.nchildren[toolbox.parachute_level]:
+                    toolbox.f.write(f"{len(offspring)} offspring\n")
+                population += offspring
+                population.sort(key=lambda item: item.eval)
+                population[:] = population[:toolbox.pop_size[toolbox.parachute_level]]
+                consistency_check(population)
+                update_dynamic_weighted_evaluation(toolbox, population)
+                refresh_toolbox_from_population(toolbox, population)
+                toolbox.gen += 1
+    except RuntimeWarning:
+        pass
     write_population(toolbox, population, "pop final")
     best = population[0]
     return best, toolbox.gen+1
@@ -431,7 +433,7 @@ def compute_cx_fraction(best):
     
     
 def solve_by_new_function(problem, functions, f, params):
-    problem_name, problem_params, example_inputs, evaluation_function, hints, layer = problem
+    problem_name, problem_params, _, _, _, _ = problem
     toolbox = Toolbox(problem, functions)
     toolbox.monkey_mode = False
     toolbox.dynamic_weights = False # not toolbox.monkey_mode
@@ -453,7 +455,7 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.beta = params["weight_complementairity"]
     
     result = None
-    for hop in range(1):
+    for _ in range(20):
         toolbox.ind_str_set = set()
         toolbox.eval_cache = dict()
         toolbox.eval_count = 0
@@ -465,14 +467,13 @@ def solve_by_new_function(problem, functions, f, params):
         seconds = round(time.time() - toolbox.t0)
         if best.eval == 0:
             code = interpret.compile_deap(best.deap_str, toolbox.functions)
-            code_str = interpret.convert_code_to_str(code)
             result = ["function", problem_name, problem_params, code]
-            result_str = interpret.convert_code_to_str(result)
             cx_perc = round(100*compute_cx_fraction(best))
             f.write(f"problem {problem_name} solved\t{toolbox.eval_count}\tevals\t{seconds}\tsec\t{cx_perc}\tcx%\t{gen}\tgen\n")
             f.write(f"{best.deap_str}\n")
             assert evaluate_individual_impl(toolbox, best, toolbox.verbose) == 0
-            write_path(toolbox, best)
+            if toolbox.verbose >= 1:
+                write_path(toolbox, best)
             # print("solved", "t_total", seconds, "t_interpret", round(toolbox.t_interpret), "t_eval", round(toolbox.t_eval), "len", len(best))
             break
         else:
