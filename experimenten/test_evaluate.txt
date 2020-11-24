@@ -1,7 +1,0 @@
-(
-    # input actual_output (evaluation_function extra_params) debug
-    #((1) (1) ((evaluate_list_of_ints ())) 1)
-    #((1 2) (1) ((evaluate_list_of_ints ())) 1)
-    #((1) (1 2) ((evaluate_list_of_ints ())) 1)
-    (((2 9 4) (7 5 3) (6 1 8)) 0 ((eval_is_magic_rows ())) 1)
-)

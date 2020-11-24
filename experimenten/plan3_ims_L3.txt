@@ -94,3 +94,36 @@ dus params_05.txt == params_04.txt is OK.
 
 problems.txt : variables (i j), constants (0 1)
     29%
+
+
+=======================
+sync; python search.py 100 experimenten/params_07.txt
+
+resultaat di 24 Nov (na fix bug "interpret clear loop variable value after for loop")
+solved	30	sec	9742	evals	get_col	for(board, for(col, board, col), at2(board, col))
+solved	4	sec	3615	evals	get_diag1	for('i', len(board), at3(board, 'i', 'i'))
+timeout	60	sec	50116	evals	get_diag2	
+timeout	60	sec	55969	evals	get_diag2	
+timeout	60	sec	53333	evals	get_diag2	
+timeout	60	sec	52661	evals	get_diag2	
+solved	31	sec	30159	evals	get_diag2	for('i', for(board, len(for('i', sub(len(board), board), sub(sub('i', 1), for(board, 1, 1)))), board), at3(board, 'i', sub(1, sub('i', 1))))
+solved	43	sec	51590	evals	get_magic_number_n	add(div(mul(n, 2), mul(mul(2, 1), div(n, div(add(1, n), 2)))), add(mul(div(n, 2), mul(mul(div(add(n, 1), 2), mul(2, 1)), n)), mul(div(1, 2), mul(2, 1))))
+timeout	60	sec	60950	evals	are_all_equal	
+timeout	60	sec	60524	evals	are_all_equal	
+timeout	60	sec	67015	evals	are_all_equal	
+timeout	60	sec	74468	evals	are_all_equal	
+solved	10	sec	15194	evals	are_all_equal	eq(for(eq(values, 'v'), len(values), at2(values, values)), values)
+solved	6	sec	3685	evals	get_row_sums	for('row', board, sum('row'))
+timeout	60	sec	8279	evals	get_col_sums	
+solved	18	sec	6363	evals	get_col_sums	for('i', len(for(board, board, board)), sum(get_col(board, 'i')))
+solved	0	sec	198	evals	get_diag_sums	list2(sum(get_diag1(board)), sum(get_diag2(board)))
+timeout	60	sec	42342	evals	is_magic_square	
+timeout	60	sec	24003	evals	is_magic_square	
+timeout	60	sec	22351	evals	is_magic_square	
+timeout	60	sec	25531	evals	is_magic_square	
+timeout	60	sec	20028	evals	is_magic_square	
+timeout	60	sec	23904	evals	is_magic_square	
+solved	33	sec	18921	evals	is_magic_square	if(are_all_equal(get_diag_sums(board)), if(are_all_equal(get_row_sums(board)), are_all_equal(get_col_sums(board))))
+
+TODO:
+* verkorten van de oplossingen

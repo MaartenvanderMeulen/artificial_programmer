@@ -2,7 +2,7 @@
     "problems_file": "experimenten/problems_ims_all.txt",
     "functions_file": "experimenten/functions_leeg.txt",
     "seed_prefix": 0,
-    "verbose": 1,
+    "verbose": 0,
     "max_seconds": 60,
     "pop_size": [
         1000,

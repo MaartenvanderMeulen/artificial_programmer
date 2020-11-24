@@ -1,1 +1,8 @@
 laagjes.
+
+Maar eerst de seconden:
+* werkt meten van verwachte oplostijd door zeg 100x 25 seconden runs te doen? net zolang tot een oplossing gevonden wordt?
+    verwachting 180 seconde voor een oplossing, 100 * 180 = 5 uur, /4 = 1:!5
+    2500 runs van 1 minuut / 4 = 60 * 2500 / 4 = 150 000 / 4 = 37500 seconden = 10 uur
+
+* als we 06 in twee stukken van 1250 runs verdelen, hoe sterk liken die op elkaar
