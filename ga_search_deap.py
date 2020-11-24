@@ -54,8 +54,6 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
 
 def evaluate_individual(toolbox, individual, debug=0):
     if time.time() >= toolbox.t0 + toolbox.max_seconds:
-        #print("stopped", round(time.time() - toolbox.t0), "t_interpret", round(toolbox.t_interpret), "t_eval", round(toolbox.t_eval))
-        toolbox.f.write(f"Stopped after {round(time.time()-toolbox.t0)} seconds, {toolbox.eval_count} evaluations\n") 
         raise RuntimeWarning("out of time")
     deap_str = individual.deap_str
     assert deap_str == str(individual)
@@ -454,7 +452,6 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.parent_selection_strategy = params["parent_selection_strategy"]
     toolbox.beta = params["weight_complementairity"]
     
-    result = None
     for _ in range(20):
         toolbox.ind_str_set = set()
         toolbox.eval_cache = dict()
@@ -463,20 +460,19 @@ def solve_by_new_function(problem, functions, f, params):
         toolbox.t_interpret = 0
         toolbox.t_eval = 0
 
-        best, gen = ga_search_impl(toolbox)
+        best, _ = ga_search_impl(toolbox)
         seconds = round(time.time() - toolbox.t0)
         if best.eval == 0:
             code = interpret.compile_deap(best.deap_str, toolbox.functions)
             result = ["function", problem_name, problem_params, code]
-            cx_perc = round(100*compute_cx_fraction(best))
-            f.write(f"problem {problem_name} solved\t{toolbox.eval_count}\tevals\t{seconds}\tsec\t{cx_perc}\tcx%\t{gen}\tgen\n")
-            f.write(f"{best.deap_str}\n")
+            # cx_perc = round(100*compute_cx_fraction(best))
+            f.write(f"solved\t{seconds}\tsec\t{toolbox.eval_count}\tevals\t{problem_name}\t{best.deap_str}\n")
             assert evaluate_individual_impl(toolbox, best, toolbox.verbose) == 0
             if toolbox.verbose >= 1:
                 write_path(toolbox, best)
-            # print("solved", "t_total", seconds, "t_interpret", round(toolbox.t_interpret), "t_eval", round(toolbox.t_eval), "len", len(best))
-            break
+            return result
         else:
-            f.write(f"problem {problem_name} failed after {toolbox.eval_count} evaluations, {seconds} seconds\n")
+            f.write(f"timeout\t{seconds}\tsec\t{toolbox.eval_count}\tevals\t{problem_name}\t\n")
         
-    return result
+    f.write(f"failed\t\tsec\t\tevals\t{problem_name}\t\n")
+    return None

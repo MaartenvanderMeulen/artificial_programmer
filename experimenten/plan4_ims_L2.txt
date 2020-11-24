@@ -1,5 +1,0 @@
-problems.txt : constants (0 1), variables (i j), alle functies.  params_05.txt
-    29%
-
-problems.txt : level 2 (dus ex get_row_sums, get_col_sums, get_diag_sums)
-    0%

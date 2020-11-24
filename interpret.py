@@ -289,8 +289,11 @@ def _run(program, variables, functions, debug, depth):
                 if type(loop_variable) == type(""):
                     variables[loop_variable] = i
                 result.append(_run(program[3], variables, functions, debug, depth+1))
-            if type(loop_variable) == type("") and old_value is not None:
-                variables[loop_variable] = old_value
+            if type(loop_variable) == type(""):
+                if old_value is not None:
+                    variables[loop_variable] = old_value
+                else:
+                    variables[loop_variable] = 0 # identical effect to value of unknown variable
         elif program[0] == "print":
             result = 0
             for p in program[1:]:

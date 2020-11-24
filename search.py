@@ -41,33 +41,38 @@ def solve_by_existing_function(problem, functions, log_file, verbose):
     return None
 
 
-def find_new_functions(problems, functions, layer, log_file, params, append_functions_to_file=None):
+def solve_problems(problems, functions, log_file, params, append_functions_to_file=None):
     '''If append_functions_to_file is a string, the new functions will be appended to that file'''
     verbose = params["verbose"]
-    if verbose >= 1:
-        log_file.write(f"Solving problems, layer {layer} ...\n")
     new_functions = []
+    current_layer = -1
     for problem in problems:
         problem_label = problem[0]
         problem_layer = problem[-1]
-        if problem_layer <= layer:
-            function_str = solve_by_existing_function(problem, functions, log_file, verbose)
-            if function_str:
-                if verbose >= 1:
-                    log_file.write(f"problem  {problem_label} is solved by existing function {function_str}\n")
-                pass
-            else:
-                if verbose >= 1:
-                    log_file.write(f"problem  {problem_label} ...\n")
-                function_code = ga_search_deap.solve_by_new_function(problem, functions, log_file, params)
-                if function_code:
-                    function_str = interpret.convert_code_to_str(function_code)
-                    new_functions.append(function_code)
-        else:
+        if problem_layer > current_layer:
+            for function_code in new_functions:
+                interpret.add_function(function_code, functions, append_functions_to_file)
+            new_functions = []
+            current_layer = problem_layer
+            if verbose >= 1:
+                log_file.write(f"Solving problems, layer {current_layer} ...\n")
+        elif problem_layer < current_layer:
+            raise RuntimeError("Problems must be specified with nondecreasing layer number")
+        function_str = solve_by_existing_function(problem, functions, log_file, verbose)
+        if function_str:
+            if verbose >= 1:
+                log_file.write(f"problem  {problem_label} is solved by existing function {function_str}\n")
             pass
-    for function_code in new_functions:
-        interpret.add_function(function_code, functions, append_functions_to_file)
-    return len(new_functions) > 0
+        else:
+            if verbose >= 1:
+                log_file.write(f"problem  {problem_label} ...\n")
+            function_code = ga_search_deap.solve_by_new_function(problem, functions, log_file, params)
+            if function_code:
+                function_str = interpret.convert_code_to_str(function_code)
+                new_functions.append(function_code)
+            else:
+                return False
+    return True
 
 
 def main(seed, param_file):
@@ -91,15 +96,14 @@ def main(seed, param_file):
 
     random.seed(seed)
     np.random.seed(seed)
-    with open(f"{output_folder}/log_{seed}.txt", "w") as f:
-        f.reconfigure(line_buffering=True)
+    with open(f"{output_folder}/log_{seed}.txt", "w") as log_file:
+        log_file.reconfigure(line_buffering=True)
         functions_file_name = params["functions_file"]
         problems_file_name = params["problems_file"]
         functions = interpret.get_functions(functions_file_name)
         problems = interpret.compile(interpret.load(problems_file_name))
-        max_layer = max([problem[-1] for problem in problems])
-        for layer in range(1, max_layer+1):
-            find_new_functions(problems, functions, layer, f, params, append_functions_to_file=None)
+        solved_all = solve_problems(problems, functions, log_file, params, append_functions_to_file=None)
+        return 0 if solved_all else 1
 
 
 if __name__ == "__main__":
@@ -107,4 +111,4 @@ if __name__ == "__main__":
         exit(f"Usage: python search.py seed paramsfile")
     seed = int(sys.argv[1])
     param_file = sys.argv[2]
-    main(seed, param_file)
+    exit(main(seed, param_file))
