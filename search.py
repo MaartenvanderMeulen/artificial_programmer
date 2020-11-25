@@ -4,7 +4,6 @@ import time
 import interpret
 import evaluate
 import random
-import numpy as np
 import json
 import ga_search_deap
 import evaluate
@@ -95,7 +94,6 @@ def main(seed, param_file):
         json.dump(params, f, sort_keys=True, indent=4)
 
     random.seed(seed)
-    np.random.seed(seed)
     with open(f"{output_folder}/log_{seed}.txt", "w") as log_file:
         log_file.reconfigure(line_buffering=True)
         functions_file_name = params["functions_file"]

@@ -128,5 +128,8 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# Visual code
+.vscode
+
 # ignore everything that starts with tmp
 **/tmp*
