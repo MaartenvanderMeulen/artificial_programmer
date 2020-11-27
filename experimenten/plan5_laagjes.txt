@@ -1,8 +1,23 @@
 laagjes.
 
-Maar eerst de seconden:
-* werkt meten van verwachte oplostijd door zeg 100x 25 seconden runs te doen? net zolang tot een oplossing gevonden wordt?
-    verwachting 180 seconde voor een oplossing, 100 * 180 = 5 uur, /4 = 1:!5
-    2500 runs van 1 minuut / 4 = 60 * 2500 / 4 = 150 000 / 4 = 37500 seconden = 10 uur
-
-* als we 06 in twee stukken van 1250 runs verdelen, hoe sterk liken die op elkaar
+TODO
+* track set of "free variables"
+* constante expressies
+    vervangen door hun waarde = eenvoudigste
+* expressies met alleen "param0":
+    kunnen ook doorgerekend worden voor alle voorbeeldinputs,
+    indelen in families op grond van hun uitvoer
+    en alleen de eenvoudigste familielid behouden
+    * eenvoudigste = kleinste aantal knopen
+* Wat te doen bij code snippets met vrije variabele "i",?
+    * als die reageren misschien wel niet op de input voorbeelden, maar misschien wel op de output van andere code snippets.  Niets doen dus?
+    * Niet wegschrijven in layeroutput
+    
+Verifieren aantal outputs in result_LA.txt
+    depath 1 : 4
+    depth 2 :
+        len : 4
+        for : 1 x 4 x 4 = 16
+        at3 : 4 x 4 x 4 = 64    
+    totaal 88.  Klopt.
+    

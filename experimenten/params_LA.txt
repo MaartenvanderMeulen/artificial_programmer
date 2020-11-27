@@ -1,7 +1,7 @@
 {
     "problems_file": "experimenten/problems_get_diag1.txt",
     "functions_file": "experimenten/functions_leeg.txt",
-    "layer_output_file_name": "experimenten/result_LA.txt",
+    "layer_output_file_name": "tmp/LA/result_LA.txt",
     "seed_prefix": 0,
     "verbose": 0,
     

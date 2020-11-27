@@ -21,29 +21,36 @@ class LayerBuilder(object):
     def _generate_all_code_trees_of_depth(self, depth):
         '''Using self.code_trees, which contains all code trees <= depth-1'''
         for fname,(params,_) in self.snippets.items():
-            if len(params) == 0 and depth == 1:
-                self.new_code_trees.append([fname, 1])
-            elif len(params) == 1:
-                for code_tree, code_tree_depth in self.code_trees:
+            if len(params) == 0 and depth == 1: # constants and variables
+                tree_size, free_variables = 1, (set([fname]) if type(fname) == type("") else set())
+                self.new_code_trees.append([fname, depth, tree_size, free_variables ])
+            elif len(params) == 1: # functions like "len", 
+                for code_tree, code_tree_depth, code_tree_size, free_variables in self.code_trees:
                     if 1+code_tree_depth == depth:
-                        self.new_code_trees.append([[fname, code_tree], depth])
+                        self.new_code_trees.append([[fname, code_tree], depth, 1 + code_tree_size, free_variables])
             elif len(params) == 2:
-                for code_tree1, code_tree_depth1 in self.code_trees:
-                    for code_tree2, code_tree_depth2 in self.code_trees:
+                for code_tree1, code_tree_depth1, code_tree_size1, free_variables1 in self.code_trees:
+                    for code_tree2, code_tree_depth2, code_tree_size2, free_variables2 in self.code_trees:
                         if 1+code_tree_depth1 == depth or 1+code_tree_depth2 == depth:
-                            self.new_code_trees.append([[fname, code_tree1, code_tree2], depth])
+                            code_tree_size = 1 + code_tree_size1 + code_tree_size2
+                            free_variables = free_variables1.union(free_variables2)
+                            self.new_code_trees.append([[fname, code_tree1, code_tree2], depth, code_tree_size, free_variables])
             elif fname == "for":
                 for id in self.loop_variables:
-                    for code_tree1, code_tree_depth1 in self.code_trees:
-                        for code_tree2, code_tree_depth2 in self.code_trees:
+                    for code_tree1, code_tree_depth1, code_tree_size1, free_variables1 in self.code_trees:
+                        for code_tree2, code_tree_depth2, code_tree_size2, free_variables2 in self.code_trees:
                             if 1+code_tree_depth1 == depth or 1+code_tree_depth2 == depth:
-                                self.new_code_trees.append([[fname, id, code_tree1, code_tree2], depth])
+                                code_tree_size = 1 + 1 + code_tree_size1 + code_tree_size2
+                                free_variables = free_variables1.union(free_variables2.difference(set([id])))
+                                self.new_code_trees.append([[fname, id, code_tree1, code_tree2], depth, code_tree_size, free_variables])
             elif fname == "at3":
-                for code_tree1, code_tree_depth1 in self.code_trees:
-                    for code_tree2, code_tree_depth2 in self.code_trees:
-                        for code_tree3, code_tree_depth3 in self.code_trees:
+                for code_tree1, code_tree_depth1, code_tree_size1, free_variables1 in self.code_trees:
+                    for code_tree2, code_tree_depth2, code_tree_size2, free_variables2 in self.code_trees:
+                        for code_tree3, code_tree_depth3, code_tree_size3, free_variables3 in self.code_trees:
                             if 1+code_tree_depth1 == depth or 1+code_tree_depth2 == depth or 1+code_tree_depth3 == depth:
-                                self.new_code_trees.append([[fname, code_tree1, code_tree2, code_tree2], depth])
+                                code_tree_size = 1 + code_tree_size1 + code_tree_size2 + code_tree_size3
+                                free_variables = free_variables1.union(free_variables2).union(free_variables3)
+                                self.new_code_trees.append([[fname, code_tree1, code_tree2, code_tree3], depth, code_tree_size, free_variables])
             
     def build_layer(self, max_depth):
         self.constants = [0, 1, ]
@@ -63,9 +70,10 @@ class LayerBuilder(object):
             self._generate_all_code_trees_of_depth(depth)
             self.code_trees += self.new_code_trees
         new_functions = dict()
-        for code_tree, _ in self.code_trees:
-            fname = f"f{len(new_functions)}"
-            new_functions[fname] = (self.parameters, code_tree)
+        for code_tree, _, _, free_variables in self.code_trees:
+            if free_variables.isdisjoint(set(self.loop_variables)):
+                fname = f"f{len(new_functions)}"
+                new_functions[fname] = (self.parameters, code_tree)
         return new_functions
 
 
@@ -114,10 +122,14 @@ def main(param_file):
         layer_builder = LayerBuilder(old_functions, example_inputs, log_file, verbose)
         new_functions = layer_builder.build_layer(max_depth=3)
         all_functions = old_functions
-        for fname, (params, code) in new_functions.items():
-            function = ["function", fname, params, code]
-            interpret.add_function(function, all_functions, layer_output_file_name)        
+        print("writing output file ...")
+        with open(layer_output_file_name, "w") as f:
+            for fname, (params, code) in new_functions.items():
+                interpret.add_function(["function", fname, params, code], all_functions)
+                f.write(f"#    (function {fname} {interpret.convert_code_to_str(params)} {interpret.convert_code_to_str(code)})\n")
+        print("writing output file done")
         solved = is_solved_by_new_functions(problems[0], all_functions, new_functions, log_file, verbose)
+        print("problem solved", bool(solved))
         return 0 if solved else 1
 
 

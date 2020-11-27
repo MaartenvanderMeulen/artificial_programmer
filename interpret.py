@@ -462,7 +462,7 @@ def convert_code_to_deap_str(code, toolbox):
     return result
 
     
-def add_function(function, functions, append_functions_to_file=None):
+def add_function(function, functions, write_functions_to_file=None, mode="a"):
     # print("DEBUG 405", function)
     keyword, fname, params, code = function
     if keyword != "function":
@@ -470,8 +470,17 @@ def add_function(function, functions, append_functions_to_file=None):
     if type(fname) != type(""):
         raise RuntimeError(f"interpret.add_function : fname expected")
     functions[fname] = [params, code]
-    if append_functions_to_file is not None:
-        with open(append_functions_to_file, "a") as f:
+    if write_functions_to_file is not None:
+        with open(write_functions_to_file, mode) as f:
+            params = convert_code_to_str(params)
+            code = convert_code_to_str(code)
+            f.write(f"#    (function {fname} {params} {code})\n")
+
+
+def write_functions(functions, mode="w"):
+    with open(write_functions_to_file, mode) as f:
+        for function in functions:
+            keyword, fname, params, code = function
             params = convert_code_to_str(params)
             code = convert_code_to_str(code)
             f.write(f"#    (function {fname} {params} {code})\n")
