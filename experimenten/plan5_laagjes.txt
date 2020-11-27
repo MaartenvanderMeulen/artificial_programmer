@@ -1,17 +1,11 @@
 laagjes.
 
 TODO
-* track set of "free variables"
-* constante expressies
-    vervangen door hun waarde = eenvoudigste
 * expressies met alleen "param0":
     kunnen ook doorgerekend worden voor alle voorbeeldinputs,
     indelen in families op grond van hun uitvoer
     en alleen de eenvoudigste familielid behouden
     * eenvoudigste = kleinste aantal knopen
-* Wat te doen bij code snippets met vrije variabele "i",?
-    * als die reageren misschien wel niet op de input voorbeelden, maar misschien wel op de output van andere code snippets.  Niets doen dus?
-    * Niet wegschrijven in layeroutput
     
 Verifieren aantal outputs in result_LA.txt
     depath 1 : 4
@@ -20,4 +14,18 @@ Verifieren aantal outputs in result_LA.txt
         for : 1 x 4 x 4 = 16
         at3 : 4 x 4 x 4 = 64    
     totaal 88.  Klopt.
+        
+    na verwijderen code met vrije loopvariabelen
+    depth 1 : 3
+    depth 2 : 44
+    depth 3 : 95133
+    (solved in 2 seconds, terwijl GA daar 4 seconden over deed)
+    
+    na collapsen van constant extressions
+    depth 1 : 3
+    depth 2 : 32
+    depth 3 : 34914
+    (solved in 1 second, met 8 constant expressions)
+    
+    
     
