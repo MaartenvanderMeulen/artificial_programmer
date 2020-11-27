@@ -27,5 +27,11 @@ Verifieren aantal outputs in result_LA.txt
     depth 3 : 34914
     (solved in 1 second, met 8 constant expressions)
     
+    na collapsen van families
+    depth 1 : 3
+    depth 2 : 14
+    depth 3 : 160
     
+    nu met alle functies (ex last3 en list3):
+    depth 3 : 2122
     

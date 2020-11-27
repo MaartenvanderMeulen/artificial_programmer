@@ -57,7 +57,8 @@ class LayerBuilder(object):
             if model_output_tuple not in self.constant_expressions:
                 self.constant_expressions.add(model_output_tuple)
                 tree_depth, tree_size = self._compute_tree_depth_and_size(model_output)
-                print("new constant expression", model_output_tuple, "depth", tree_depth, "size", tree_size)
+                if tree_size == 1:
+                    print("new constant value", model_output_tuple, "depth", tree_depth, "size", tree_size)
                 self.new_code_trees.append([model_output, tree_depth, tree_size, set()])
             
     def _generate_all_code_trees_of_depth(self, depth):
@@ -100,14 +101,15 @@ class LayerBuilder(object):
                                     self._append([fname, code_tree1, code_tree2, code_tree3], depth, code_tree_size, free_variables)
             
     def build_layer(self, max_depth):
-        self.constants = [0, 1, ]
+        self.constants = [0, 1, 2]
         self.constant_expressions = set()
         self.loop_variables = ["i",]
         self.parameters = ["param0",]
         self.families = dict()
         self.snippets = {fname:(params,code) for fname,(params,code) in self.old_functions.items()}
         for fname in interpret.get_build_in_functions():
-            if fname in ["for", "len", "at3"]:
+            # if fname in ["for", "len", "at3"]:
+            if fname not in ["list3", "last3",]:
                 count_params = len(interpret.get_build_in_function_param_types(fname))
                 formal_params = [f"param{i}" for i in range(count_params)]
                 self.snippets[fname] = (formal_params, [fname] + formal_params)    
@@ -170,7 +172,7 @@ def main(param_file):
         _, _, example_inputs, _, _, _ = problems[0]
         start_time = time.time()
         layer_builder = LayerBuilder(old_functions, example_inputs, log_file, verbose)
-        new_functions = layer_builder.build_layer(max_depth=3)
+        new_functions = layer_builder.build_layer(max_depth=4)
         all_functions = old_functions
         for fname, (params, code) in new_functions.items():
             interpret.add_function(["function", fname, params, code], all_functions)
