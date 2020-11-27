@@ -1,0 +1,14 @@
+numpy eruit:
+    np.ones((n)) --> [1] * n
+    np.zeros((n)) --> [0] * n
+    np.sum(a) --> sum(a)
+    weights /= np.sum(weights) --> s = sum(weights); weights = [w/s for w in weights]
+    weighted_error = [e*w for e, w in zip(errors, weihts)]
+
+deap eruit
+    gp.PrimitiveSet : de taal : functies met hun arity, en de terminale symbolen. 
+    gp.genHalfAndHalf : initiele individuals : gp.genHalfAndHalf(pset=toolbox.pset, min_=2, max_=4)
+    gp.PrimitiveTree : datastructuur van individual = lijst + __str__ functie member
+    gp.genFull : mutation : gp.genFull(pset=pset, min_=0, max_=2
+    
+Als alles eruit, dan wordt herinstallatie of port naar C++ makkelijker

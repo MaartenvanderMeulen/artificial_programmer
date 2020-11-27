@@ -1,12 +1,12 @@
 import os
 import sys
 import time
-import interpret
-import evaluate
 import random
 import json
-import ga_search_deap
+
+import interpret
 import evaluate
+import find_new_function
 
 
 def is_solved_by_function(example_inputs, evaluation_function, fname, functions, log_file, verbose):
@@ -65,7 +65,7 @@ def solve_problems(problems, functions, log_file, params, append_functions_to_fi
         else:
             if verbose >= 1:
                 log_file.write(f"problem  {problem_label} ...\n")
-            function_code = ga_search_deap.solve_by_new_function(problem, functions, log_file, params)
+            function_code = find_new_function.solve_by_new_function(problem, functions, log_file, params)
             if function_code:
                 function_str = interpret.convert_code_to_str(function_code)
                 new_functions.append(function_code)
@@ -95,7 +95,8 @@ def main(seed, param_file):
 
     random.seed(seed)
     with open(f"{output_folder}/log_{seed}.txt", "w") as log_file:
-        log_file.reconfigure(line_buffering=True)
+        if hasattr(log_file, "reconfigure"):
+            log_file.reconfigure(line_buffering=True)
         functions_file_name = params["functions_file"]
         problems_file_name = params["problems_file"]
         functions = interpret.get_functions(functions_file_name)

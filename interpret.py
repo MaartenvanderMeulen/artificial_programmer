@@ -469,8 +469,6 @@ def add_function(function, functions, append_functions_to_file=None):
         raise RuntimeError(f"interpret.add_function : keyword 'function' expected")
     if type(fname) != type(""):
         raise RuntimeError(f"interpret.add_function : fname expected")
-    if type(code) != type([]):
-        raise RuntimeError(f"interpret.add_function : code of type list expected")
     functions[fname] = [params, code]
     if append_functions_to_file is not None:
         with open(append_functions_to_file, "a") as f:
