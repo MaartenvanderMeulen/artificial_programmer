@@ -6,7 +6,7 @@
             (((2 9 4) (7 5 3) (6 1 8)))
         )
         (eval_board_diag1 ())
-        (() (i) (for len at3) (for i (len board) (at3 board i i)))
+        (() (i) (for len at3) (for i (len board) (at2 (at2 board i) i)))
         1
     )
 )

@@ -6,7 +6,10 @@
             (((2 9 4) (7 5 3) (6 1 8)))
         )
         (eval_board_diag2 ())
-        ((1) (i) (for len at3 sub) (for i (len board) (at3 board i (sub (sub (len board) 1) i))))
+        ((1) (i) (for len at3 sub) 
+            #(var last_col (sub (len board) 1) (for i (len board) (at2 (at2 board i) (sub last_col i))))
+            (for i (len board) (at2 (at2 board i) (sub 2 i)))
+        )
         1
     )
 )

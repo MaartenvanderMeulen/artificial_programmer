@@ -234,20 +234,33 @@ def _run(program, variables, functions, debug, depth):
             result = []
             for p in program[1:]:
                 result.append(_run(p, variables, functions, debug, depth+1))
-        elif program[0] in ["last", "last1", "last2", "last3"]: # example (last (assign n 3) (for i n i)) --> (0 1 2)
+        elif program[0] in ["last", "last1", "last2", "last3"]: # example (last (for i 1 i) (for i 3 i)) --> (0 1 2)
             result = 0
             for p in program[1:]:
                 result = _run(p, variables, functions, debug, depth+1)
-        elif program[0] == "assign": # example (assign x 5)
-            if len(program) < 2:
+        elif program[0] == "var": # syntax : "var" local_variable expression code_using_local_variable
+            # [for id [value] id] --> [value]
+            # [var id value id] --> value
+            if len(program) < 4:
                 return 0
-            variable_name = program[1]
-            if type(variable_name) != type(""):
-                return 0
-            result = _run(program[2], variables, functions, debug, depth+1) if len(program) >= 3 else 0
-            variables[variable_name] = result
+            local_variable = program[1]
+            if type(local_variable) == type(""):
+                expr = _run(program[2], variables, functions, debug, depth+1)
+                if local_variable in variables:
+                    old_value = variables[local_variable]
+                else:
+                    old_value = None
+                variables[local_variable] = expr
+                result = _run(program[3], variables, functions, debug, depth+1)
+                if old_value is not None:
+                    variables[local_variable] = old_value
+                else:
+                    del variables[local_variable]
+            else:
+                if False: # set to True if expr may have side effects
+                    expr = _run(program[2], variables, functions, debug, depth+1)
+                result = _run(program[3], variables, functions, debug, depth+1)
         elif program[0] == "function":
-            # example (function fac n (last (assign result 1) (for1 i n (assign result (mul n i)))))
             result = 0
             if len(program) >= 4:
                 function_name = program[1]
@@ -328,7 +341,7 @@ def _run(program, variables, functions, debug, depth):
     elif type(program) == type(""):
         identifyer = program
         # NOTE : the copy.deepcopy is mandatory here to prevent self-referential loops with
-        # (last (assign n (1)) (add n (n)))
+        # (var n (1) (add n (n))
         result = copy.deepcopy(variables[identifyer]) if identifyer in variables else 0
     elif type(program) == type(1):
         result = program
@@ -412,13 +425,13 @@ def get_build_in_functions():
         "len", "sum", # arity 1
         "div", "lt", "le", "eq", "ne", "ge", "gt", # arity 2
         "add", "sub", "mul", "and", "or", # arity 2
-        "assign", # artity 2, but 1st operand must be a variable name
         "if", # arity 2 or 3
         "for", # artity 3, but 1st operand must be a variable name
+        "var", # artity 3, but 1st operand must be a variable name
         
         "list1", # arity 1
         "list2", "last2", "at2", # arity 2
-        "list3", "last3", "at3", # arity 3
+        # "list3", "last3", "at3", # arity 3
         ]
 
 
@@ -427,18 +440,23 @@ def get_build_in_function_param_types(fname):
     # type-indications : 1=numeric; "*"=zero or more numeric; "?"=0 or 1 numeric; "v"=variable; []=list
     arity_dict = {        
         "len":(1,), "sum":([],), # arity 1
-        "div":(1,1), "lt":(1,1), "le":(1,1), "eq":(1,1), "ne":(1,1), "ge":(1,1), "gt":(1,1), # arity 2
-        "add":(1,1), "sub":(1,1), "mul":(1,1), "and":(1,1), "or":(1,1), # arity 2
-        "assign":("v",1), # artity 2, but 1st operand must be a variable name
+        "eq":(1,1), "ne":(1,1), # arity 2
+        "div":(1,1), "lt":(1,1), "le":(1,1), "ge":(1,1), "gt":(1,1), "sub":(1,1), "mul":(1,1), # arity 2, numeric
+        "add":(1,1), "and":(1,1), "or":(1,1), # arity 2
         "if":(1,1), # arity 2
         "for":("v",1,1), # artity 3, but 1st operand must be a variable name
+        "var":("v",1,1), # artity 3, but 1st operand must be a variable name
 
         "list1":(1,), # arity 1
         "list2":(1,1,), "last2":(1,1,), "at2":(1,1,), # arity 2
-        "list3":(1,1,1,), "last3":(1,1,1,), "at3":(1,1,1,), # arity 3
+        # "list3":(1,1,1,), "last3":(1,1,1,), "at3":(1,1,1,), # arity 3
         }
     return arity_dict[fname]
 
+
+def is_pure_numeric(fname):
+    return fname in ["div", "lt", "le", "ge", "gt", "sub", "mul"]
+    
 
 def convert_code_to_str(code):
     if type(code) == type([]):

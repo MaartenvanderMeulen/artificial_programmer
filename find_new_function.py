@@ -12,7 +12,7 @@ from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.
 
 
 def recursive_tuple(value):
-    if type(value) == type(1):
+    if type(value) == type(1) or type(value) == type(""):
         return value
     assert type(value) == type([])
     return tuple([recursive_tuple(v) for v in value])

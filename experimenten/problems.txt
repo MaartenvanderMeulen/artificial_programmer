@@ -157,7 +157,7 @@
             # functions
             (add for sum len list1 are_all_equal get_col get_diag1)
             # reserved for monkey testing
-            ()
+            (are_all_equal (add (get_row_sums board) (add (get_col_sums board) (get_diag_sums board))))
             # maximum length for a solution
             18
         )            

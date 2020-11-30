@@ -1,11 +1,5 @@
 laagjes.
 
-TODO
-* expressies met alleen "param0":
-    kunnen ook doorgerekend worden voor alle voorbeeldinputs,
-    indelen in families op grond van hun uitvoer
-    en alleen de eenvoudigste familielid behouden
-    * eenvoudigste = kleinste aantal knopen
     
 Verifieren aantal outputs in result_LA.txt
     depath 1 : 4
@@ -34,4 +28,41 @@ Verifieren aantal outputs in result_LA.txt
     
     nu met alle functies (ex last3 en list3):
     depth 3 : 2122
+        28 Nov : met constanten 0 en 1, params_LA.txt : 6 seconden, solved
+        28 Nov : met constanten 0 en 1, params_LB.txt : 7 seconden, failed
     
+    28 NOV
+    depth 4 :
+        out of memory
+    
+    L=Level, D=Depth
+        L1, D3 get_col = (for row board (at row col))
+        L1, D3 get_diag1 = (for i (len board) (at board i i))
+        L1, D3 get_row_sums = (for row board (sum row ))
+        L1, D4 get_diag2 = (for i (len board) (at board i (sub 2 i)))
+        L1, D4 are_all_equal = (eq values (for _ values (at values 0)))
+        L2, D4 get_col_sums = (for i (len board) (sum (get_col board i)))
+        L2, D4 get_diag_sums = (list2 (sum (get_diag1 board)) (sum (get_diag2 board)))
+        L3, D4 get_all_sums = (add (get_row_sums board) (add (get_col_sums board) (get_diag_sums board)))
+        L4, D3 is_magic_square  = (are_all_equal (get_all_sums board))
+        
+python build_layers.py experimenten/params_LB.txt
+    
+
+====================== 30 Nov =====================================
+
+TODO
+* statistieken depth 3:
+    * hoeveel constanten (#families & #familiegrootte);
+    * hoeveel met alleen parameters (#families & #familiegrootte);
+    * hoeveel met alleen local variables (idem)
+    * hoeveel 
+* get_col (2 parameters)
+    # params spec
+* layer_inputs.txt
+    * 3x3 bordjes : get_diag1, get_row_sums, get_col_sums, get_diag_sums, is_magic_square, 
+    * 3x3 bordje + nummer : get_col
+    * lijsten getallen : are_all_equal
+* alles aan elkaar plakken
+    * alle inputs inlezen
+    * hoe om te gaan met families bij meerdere inputs?
