@@ -52,17 +52,13 @@ python build_layers.py experimenten/params_LB.txt
 ====================== 30 Nov =====================================
 
 TODO
-* statistieken depth 3:
-    * hoeveel constanten (#families & #familiegrootte);
-    * hoeveel met alleen parameters (#families & #familiegrootte);
-    * hoeveel met alleen local variables (idem)
-    * hoeveel 
 * get_col (2 parameters)
     # params spec
-* layer_inputs.txt
-    * 3x3 bordjes : get_diag1, get_row_sums, get_col_sums, get_diag_sums, is_magic_square, 
-    * 3x3 bordje + nummer : get_col
-    * lijsten getallen : are_all_equal
 * alles aan elkaar plakken
     * alle inputs inlezen
-    * hoe om te gaan met families bij meerdere inputs?
+    * familie : outputs over alle inputs
+    * aantal params afleiden uit de input.  Functies met alleen param1 zonder param0 overslaan.
+    * laten zien welke evals OK gaan (en welke niet)
+    * L1, L2, L3, L4
+
+python build_layers.py experimenten/params_LB.txt

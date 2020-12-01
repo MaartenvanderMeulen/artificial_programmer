@@ -7,7 +7,7 @@ import json
 
 import interpret
 import evaluate
-import find_new_function
+from find_new_function import recursive_tuple
 import solve_problems
 
 
@@ -29,207 +29,161 @@ class LayerBuilder(object):
         return tree_depth, tree_size
         
     def _compute_free_variables(self, code_tree):
-        free_variables = set()
+        params, locals = set(), set()
         if type(code_tree) == type([]):
             if len(code_tree) > 0:
                 if code_tree[0] in ["for", "var"]:
                     id = code_tree[1]
-                    free_variables.update(self._compute_free_variables(code_tree[2]))
-                    body_variables = self._compute_free_variables(code_tree[3])
-                    free_variables.update(body_variables.difference(set([id])))
+                    params2, locals2 = self._compute_free_variables(code_tree[2])
+                    params3, locals3 = self._compute_free_variables(code_tree[3])
+                    params.update(params2)
+                    params.update(params3)
+                    locals.update(locals2)
+                    locals.update(locals3.difference(set([id])))
                 else:
                     for item in code_tree:
-                        free_variables.update(self._compute_free_variables(item))
+                        params2, locals2 = self._compute_free_variables(item)
+                        params.update(params2)
+                        locals.update(locals2)
         elif type(code_tree) == type(""):
-            if code_tree in (self.parameters + self.local_variables):
-                free_variables.add(code_tree)
-        return free_variables
+            if code_tree in self.parameters:
+                params.add(code_tree)
+            if code_tree in self.local_variables:
+                locals.add(code_tree)
+        return params, locals
         
-    def _contains_local_variables(self, free_variables):
-        if False:
-            for local_variable in self.local_variables:
-                if local_variable in free_variables:
-                    return True
-            return False
-        return not self.local_variables_set.isdisjoint(free_variables)
-        
-    def _contains_no_local_variables(self, free_variables):
-        if False:
-            for local_variable in self.local_variables:
-                if local_variable in free_variables:
-                    return False
-            return True
-        return self.local_variables_set.isdisjoint(free_variables)
-        
-    def _acceptable_for_var_body(self, free_variables, local_id):
-        for local_variable in self.local_variables:
-            if local_variable != local_id:
-                if local_variable in free_variables:
-                    return False
-        return True
-
-    def _check_consistency(self, code_tree, tree_depth, tree_size, free_variables):
+    def _check_consistency(self, code_tree, tree_depth, tree_size, params, unassigned_locals):
         tree_depth2, tree_size2 = self._compute_tree_depth_and_size(code_tree)
         assert tree_depth == tree_depth2
         if tree_size != tree_size2:
             print("code_tree", code_tree, "tree_size", tree_size, "tree_size2", tree_size2)
         assert tree_size == tree_size2
-        free_variables2 = self._compute_free_variables(code_tree)
-        if free_variables2 != free_variables:
-            print("code_tree", code_tree, "free_variables", free_variables, "recomputed free variables", free_variables2)
-        assert free_variables2 == free_variables
+        params2, unassigned_locals2 = self._compute_free_variables(code_tree)
+        if params != params2:
+            print("code_tree", code_tree, "params", params, "params2", params2)
+        assert params == params2
+        if unassigned_locals != unassigned_locals2:
+            print("code_tree", code_tree, "unassigned_locals", unassigned_locals, "unassigned_locals2 free variables", unassigned_locals2)
+        assert unassigned_locals == unassigned_locals2
 
-    def _append(self, code_tree, tree_depth, tree_size, free_variables):
-        # print("_append", "code_tree", code_tree, "tree_depth", tree_depth)
-        # self._check_consistency(code_tree, tree_depth, tree_size, free_variables)
-        if len(free_variables) > 0:
-            if self._contains_no_local_variables(free_variables):
+    def _append(self, code_tree, tree_depth, tree_size, params, unassigned_locals):
+        #print("_append", code_tree)
+        if len(unassigned_locals) == 0:
+            if len(params) == 0 and tree_depth > 1:
+                # skip constant code
+                pass
+            else:
+                # We can run this code, do family optimization
                 model_outputs = []
                 for input in self.example_inputs:
-                    variables = interpret.bind_params(self.parameters, input)
+                    variables = interpret.bind_params(self.parameters[:len(input)], input)
                     model_output = interpret.run(code_tree, variables, self.old_functions)
                     model_outputs.append(model_output)        
-                model_outputs_tuple = find_new_function.recursive_tuple(model_outputs)
+                model_outputs_tuple = recursive_tuple(model_outputs)
+                if model_outputs_tuple not in self.family_size:
+                    self.family_size[model_outputs_tuple] = 0
+                self.family_size[model_outputs_tuple] += 1
+                #print("    family size", self.family_size[model_outputs_tuple])
                 if model_outputs_tuple in self.old_families:
                     pass
                 else:
+                    #print("    new family")
                     if model_outputs_tuple not in self.new_families:
-                        self.new_families[model_outputs_tuple] = (code_tree, tree_depth, tree_size, free_variables)
+                        self.new_families[model_outputs_tuple] = (code_tree, tree_depth, tree_size, params, unassigned_locals)
                     else:
-                        stored_code_tree, stored_tree_depth, stored_tree_size, free_variables = self.new_families[model_outputs_tuple]
+                        stored_code_tree, stored_tree_depth, stored_tree_size, params, unassigned_locals = self.new_families[model_outputs_tuple]
                         if stored_tree_size > tree_size:
-                            self.new_families[model_outputs_tuple] = (code_tree, tree_depth, tree_size, free_variables)
-            else:
-                code_tree_tuple = find_new_function.recursive_tuple(code_tree)
-                if code_tree_tuple not in self.code_tree_tuples:
-                    self.code_tree_tuples.add(code_tree_tuple)
-                    self.new_code_trees.append([code_tree, tree_depth, tree_size, free_variables])
+                            self.new_families[model_outputs_tuple] = (code_tree, tree_depth, tree_size, params, unassigned_locals)
+                            # print("    found family improvement")
         else:
-            variables = dict()
-            model_output = interpret.run(code_tree, variables, self.old_functions)
-            model_output_tuple = find_new_function.recursive_tuple(model_output)
-            if model_output_tuple not in self.constant_expressions:
-                self.constant_expressions.add(model_output_tuple)
-                tree_depth, tree_size = self._compute_tree_depth_and_size(model_output)
-                if tree_size == 1:
-                    print("new constant value", model_output_tuple, "depth", tree_depth, "size", tree_size)
-                if model_output_tuple not in self.code_tree_tuples:
-                    self.code_tree_tuples.add(model_output_tuple)
-                    self.new_code_trees.append([model_output, tree_depth, tree_size, set()])
+            # We cannot run this code, no family optimization possible
+            self.new_code_trees.append([code_tree, tree_depth, tree_size, params, unassigned_locals])
+            # print("    append to new_code_trees because of unassigned_locals: ", unassigned_locals)
             
-    def _generate_all_code_trees_of_depth(self, depth, max_depth):
-        '''Using self.code_trees, which contains all code trees <= depth-1'''
-        if depth == 1:
-            for variable in self.local_variables + self.parameters:
-                tree_size, free_variables = 1, set([variable])
-                self._append(variable, depth, tree_size, free_variables)
-            for constant in self.constants:
-                tree_size, free_variables = 1, set()
-                self._append(constant, depth, tree_size, free_variables)
-        else:
-            i = 0
-            n = len(self.snippets)
-            for fname,(params,_) in self.snippets.items():
-                i += 1
-                print("depth", depth, "fname", fname)
-                
-                if len(params) == 1: # functions like "len", 
-                    for code_tree, code_tree_depth1, code_tree_size1, free_variables in self.code_trees:
-                        if depth < max_depth or self._contains_no_local_variables(free_variables):
-                            tree_depth = 1 + max(1, code_tree_depth1)
-                            code_tree_size = 1 + 1 + code_tree_size1
-                            self._append([fname, code_tree], tree_depth, code_tree_size, free_variables)
-                elif len(params) == 2:
-                    print("double for over ", len(self.code_trees), "*", len(self.code_trees))
-                    count = 0
-                    for code_tree1, code_tree_depth1, code_tree_size1, free_variables1 in self.code_trees:
-                        if depth < max_depth or self._contains_no_local_variables(free_variables1):
-                            for code_tree2, code_tree_depth2, code_tree_size2, free_variables2 in self.code_trees:
-                                if depth < max_depth or self._contains_no_local_variables(free_variables2):
-                                    count += 1
-                                    tree_depth = 1 + max(1, code_tree_depth1, code_tree_depth2)
-                                    code_tree_size = 1 + 1 + code_tree_size1 + code_tree_size2
-                                    free_variables = free_variables1.union(free_variables2)
-                                    self._append([fname, code_tree1, code_tree2], tree_depth, code_tree_size, free_variables)
-                    print("count", count)
-                elif fname in ["for", "var"]:
-                    for id in self.local_variables:
-                        for code_tree1, code_tree_depth1, code_tree_size1, free_variables1 in self.code_trees:
-                            if depth < max_depth or self._contains_no_local_variables(free_variables1):
-                                for code_tree2, code_tree_depth2, code_tree_size2, free_variables2 in self.code_trees:
-                                    if depth < max_depth or self._acceptable_for_var_body(free_variables2, id):
-                                        tree_depth = 1 + max(1, 1, code_tree_depth1, code_tree_depth2)
-                                        code_tree_size = 1 + 1 + 1 + code_tree_size1 + code_tree_size2
-                                        free_variables = free_variables1.union(free_variables2.difference(set([id])))
-                                        self._append([fname, id, code_tree1, code_tree2], tree_depth, code_tree_size, free_variables)
-                elif fname == "at3":
-                    for code_tree1, code_tree_depth1, code_tree_size1, free_variables1 in self.code_trees:
-                        if depth < max_depth or self._contains_no_local_variables(free_variables1):
-                            for code_tree2, code_tree_depth2, code_tree_size2, free_variables2 in self.code_trees:
-                                if depth < max_depth or self._contains_no_local_variables(free_variables2):
-                                    for code_tree3, code_tree_depth3, code_tree_size3, free_variables3 in self.code_trees:
-                                        if depth < max_depth or self._contains_no_local_variables(free_variables3):
-                                            tree_depth = 1 + max(1, code_tree_depth1, code_tree_depth2, code_tree_depth3)
-                                            code_tree_size = 1 + 1 + code_tree_size1 + code_tree_size2 + code_tree_size3
-                                            free_variables = free_variables1.union(free_variables2).union(free_variables3)
-                                            self._append([fname, code_tree1, code_tree2, code_tree3], tree_depth, code_tree_size, free_variables)
+    def _generate_all_code_trees_of_depth1(self):
+        for constant in self.constants:
+            self._append(constant, 1, 1, set(), set())
+        for param in self.parameters:
+            self._append(param, 1, 1, set([param]), set())
+        for variable in self.local_variables:
+            self._append(variable, 1, 1, set(), set([variable]))
+        
+    def _generate_all_code_trees_of_depth(self, depth):
+        for fname,(params,_) in self.snippets.items():
+            if len(params) == 1: # functions like "len", but also lower layer functions with one param
+                for code_tree, code_tree_depth1, code_tree_size1, params, unassigned_locals in self.old_code_trees:
+                    tree_depth = 1 + max(1, code_tree_depth1)
+                    code_tree_size = 1 + 1 + code_tree_size1
+                    self._append([fname, code_tree], tree_depth, code_tree_size, params, unassigned_locals)
+            elif len(params) == 2:
+                for code_tree1, code_tree_depth1, code_tree_size1, params1, unassigned_locals1 in self.old_code_trees:
+                    for code_tree2, code_tree_depth2, code_tree_size2, params2, unassigned_locals2 in self.old_code_trees:
+                        tree_depth = 1 + max(1, code_tree_depth1, code_tree_depth2)
+                        code_tree_size = 1 + 1 + code_tree_size1 + code_tree_size2
+                        params =params1.union(params2)
+                        unassigned_locals = unassigned_locals1.union(unassigned_locals2)
+                        self._append([fname, code_tree1, code_tree2], tree_depth, code_tree_size, params, unassigned_locals)
+            elif fname in ["for", "var"]:
+                for id in self.local_variables:
+                    for code_tree1, code_tree_depth1, code_tree_size1, params1, unassigned_locals1 in self.old_code_trees:
+                        for code_tree2, code_tree_depth2, code_tree_size2, params2, unassigned_locals2 in self.old_code_trees:
+                            tree_depth = 1 + max(1, 1, code_tree_depth1, code_tree_depth2)
+                            code_tree_size = 1 + 1 + 1 + code_tree_size1 + code_tree_size2
+                            params =params1.union(params2)
+                            unassigned_locals = unassigned_locals1.union(unassigned_locals2.difference(set([id])))
+                            self._append([fname, id, code_tree1, code_tree2], tree_depth, code_tree_size, params, unassigned_locals)
                                             
     def _generate_all_code_trees_of_max_depth(self, max_depth):
         for fname,(params,_) in self.snippets.items():
-            print("max_depth", max_depth, "fname", fname)
-            
-            if len(params) == 1: # functions like "len", 
-                for code_tree, code_tree_depth1, code_tree_size1, free_variables in self.code_trees_no_local_variables:
-                    tree_depth = 1 + max(1, code_tree_depth1)
-                    code_tree_size = 1 + 1 + code_tree_size1
-                    self._append([fname, code_tree], tree_depth, code_tree_size, free_variables)
-            elif len(params) == 2:
-                print("double for over ", len(self.code_trees_no_local_variables), "*", len(self.code_trees_no_local_variables))
-                count1, count2 = 0, 0
+            if False and len(params) == 1: # functions like "len", 
+                for code_tree, code_tree_depth1, code_tree_size1, params, unassigned_locals in self.old_code_trees_no_local_variables:
+                    if len(params) > 0:
+                        tree_depth = 1 + max(1, code_tree_depth1)
+                        code_tree_size = 1 + 1 + code_tree_size1
+                        self._append([fname, code_tree], tree_depth, code_tree_size, params, unassigned_locals)
+            elif False and len(params) == 2:
                 if interpret.is_pure_numeric(fname):
-                    print("optimalisation for numeric functions", len(self.code_trees_for_numeric_functions), "*", len(self.code_trees_for_numeric_functions))
-                    for code_tree1, code_tree_depth1, code_tree_size1, free_variables1 in self.code_trees_for_numeric_functions:
-                        count1 += 1
-                        assert len(free_variables1) != 0 or type(code_tree1) == type(1)
-                        for code_tree2, code_tree_depth2, code_tree_size2, free_variables2 in self.code_trees_for_numeric_functions:
-                            assert len(free_variables2) != 0 or type(code_tree2) == type(1)
-                            count2 += 1
-                            tree_depth = 1 + max(1, code_tree_depth1, code_tree_depth2)
-                            code_tree_size = 1 + 1 + code_tree_size1 + code_tree_size2
-                            free_variables = free_variables1.union(free_variables2)
-                            self._append([fname, code_tree1, code_tree2], tree_depth, code_tree_size, free_variables)
+                    for code_tree1, code_tree_depth1, code_tree_size1, params1, unassigned_locals1 in self.old_code_trees_for_numeric_functions:
+                        for code_tree2, code_tree_depth2, code_tree_size2, params2, unassigned_locals2 in self.old_code_trees_for_numeric_functions:
+                            if len(params1) > 0 or len(params2) > 0:
+                                tree_depth = 1 + max(1, code_tree_depth1, code_tree_depth2)
+                                code_tree_size = 1 + 1 + code_tree_size1 + code_tree_size2
+                                params =params1.union(params2)
+                                unassigned_locals = unassigned_locals1.union(unassigned_locals2)
+                                self._append([fname, code_tree1, code_tree2], tree_depth, code_tree_size, params, unassigned_locals)
                 else:
-                    for code_tree1, code_tree_depth1, code_tree_size1, free_variables1 in self.code_trees_no_local_variables:
-                        count1 += 1
-                        for code_tree2, code_tree_depth2, code_tree_size2, free_variables2 in self.code_trees_no_local_variables:
-                            count2 += 1
-                            tree_depth = 1 + max(1, code_tree_depth1, code_tree_depth2)
-                            code_tree_size = 1 + 1 + code_tree_size1 + code_tree_size2
-                            free_variables = free_variables1.union(free_variables2)
-                            self._append([fname, code_tree1, code_tree2], tree_depth, code_tree_size, free_variables)
-                print("count2", count2)
-            elif fname in ["for", "var"]:
-                print("double for over ", len(self.code_trees_no_local_variables), "*", len(self.code_trees))
-                count = 0
+                    for code_tree1, code_tree_depth1, code_tree_size1, params1, unassigned_locals1 in self.old_code_trees_no_local_variables:
+                        for code_tree2, code_tree_depth2, code_tree_size2, params2, unassigned_locals2 in self.old_code_trees_no_local_variables:
+                            if len(params1) > 0 or len(params2) > 0:
+                                tree_depth = 1 + max(1, code_tree_depth1, code_tree_depth2)
+                                code_tree_size = 1 + 1 + code_tree_size1 + code_tree_size2
+                                params =params1.union(params2)
+                                unassigned_locals = unassigned_locals1.union(unassigned_locals2)
+                                self._append([fname, code_tree1, code_tree2], tree_depth, code_tree_size, params, unassigned_locals)
+            elif False and fname in ["for",]:
+                next_time = time.time() + 3
+                # loop over all loop variables
                 for id in self.local_variables:
-                    for code_tree1, code_tree_depth1, code_tree_size1, free_variables1 in self.code_trees_no_local_variables:
-                        for code_tree2, code_tree_depth2, code_tree_size2, free_variables2 in self.code_trees:
-                            if self._acceptable_for_var_body(free_variables2, id):
-                                count += 1
+                    # simplification : loop over all parameters
+                    for code_tree1 in self.parameters:
+                        code_tree_depth1, code_tree_size1, unassigned_locals1 = 1, 1, set()
+                        # simplification : loop over all bodies which use 'id'
+                        for i, (code_tree2, code_tree_depth2, code_tree_size2, params2, unassigned_locals2) in enumerate(self.old_code_trees):
+                            if time.time() >= next_time:
+                                next_time = time.time() + 3
+                                print(i, len(self.old_code_trees))
+                            if set([id]) == unassigned_locals2:                                
+                                params1 = set([code_tree1])
                                 tree_depth = 1 + max(1, 1, code_tree_depth1, code_tree_depth2)
                                 code_tree_size = 1 + 1 + 1 + code_tree_size1 + code_tree_size2
-                                free_variables = free_variables1.union(free_variables2.difference(set([id])))
-                                self._append([fname, id, code_tree1, code_tree2], tree_depth, code_tree_size, free_variables)
-                print("count", count)
+                                params =params1.union(params2)
+                                unassigned_locals = unassigned_locals1
+                                self._append([fname, id, code_tree1, code_tree2], tree_depth, code_tree_size, params, unassigned_locals)
             
     def build_layer(self, max_depth):
-        self.constants = [0, 1,]
-        self.constant_expressions = set()
+        self.constants = [0, 1, []]
         self.local_variables = ["i",]
-        self.local_variables_set = set(self.local_variables)
         self.parameters = ["param0",]
-        self.code_tree_tuples = set()
-        self.families = dict()
         self.snippets = {fname:(params,code) for fname,(params,code) in self.old_functions.items()}
         for fname in interpret.get_build_in_functions():
             # if fname in ["for", "len", "at3"]:
@@ -238,33 +192,55 @@ class LayerBuilder(object):
                 count_params = len(interpret.get_build_in_function_param_types(fname))
                 formal_params = [f"param{i}" for i in range(count_params)]
                 self.snippets[fname] = (formal_params, [fname] + formal_params)    
-        for terminal in self.constants + self.local_variables + self.parameters:
-            self.snippets[terminal] = ((), terminal)    
-        self.code_trees = []
+        self.old_code_trees = []
         self.old_families = dict()
+        self.family_size = dict()
         for depth in range(1, max_depth+1):
+            #print("depth", depth)
+            #print("#old_code_trees", len(self.old_code_trees))
+            #for item in self.old_code_trees:
+            #    print("    ", item)
+            #print("#old_families", len(self.old_families))
+            #for key, value in self.old_families.items():
+            #    print("    ", key, value)
+            #print("generate")
             self.new_code_trees = []
             self.new_families = dict()
+            if depth == 1:
+                self._generate_all_code_trees_of_depth1()
             if depth < max_depth:
-                self._generate_all_code_trees_of_depth(depth, max_depth)
-            else:
-                self.code_trees_no_local_variables = []
-                self.code_trees_for_numeric_functions = []
-                for item in self.code_trees:
-                    code_tree, _, _, free_variables = item
-                    if self._contains_no_local_variables(free_variables):
-                        self.code_trees_no_local_variables.append(item)
-                        if len(free_variables) != 0 or type(code_tree) == type(1):
-                            self.code_trees_for_numeric_functions.append(item)
+                self._generate_all_code_trees_of_depth(depth)
+            else: # depth == max_depth
+                self.old_code_trees_no_local_variables = []
+                self.old_code_trees_for_numeric_functions = []
+                for item in self.old_code_trees:
+                    code_tree, _, _, params, unassigned_locals = item
+                    if len(unassigned_locals) == 0:
+                        self.old_code_trees_no_local_variables.append(item)
+                        if len(params) > 0 or type(code_tree) == type(1):
+                            self.old_code_trees_for_numeric_functions.append(item)
+                #print("old_code_trees_no_local_variables", self.old_code_trees_no_local_variables)
+                #print("old_code_trees_for_numeric_functions", self.old_code_trees_for_numeric_functions)
+                #print("#old_families", len(self.old_families))
                 self._generate_all_code_trees_of_max_depth(max_depth)
-            self.code_trees += self.new_code_trees
+            #print("#old_code_trees", len(self.old_code_trees))
+            #print("#old_families", len(self.old_families))
+            #print("#new_code_trees", len(self.new_code_trees))
+            #for item in self.new_code_trees:
+            #    print("    ", item)
+            #print("#new_families", len(self.new_families))
+            #for key, value in self.new_families.items():
+            #    print("    ", key, value)
+            self.old_code_trees += self.new_code_trees
             for key, value in self.new_families.items():
                 self.old_families[key] = value
-                self.code_trees.append(value)
+                self.old_code_trees.append(value)
                 
+        self.old_code_trees.sort(key=lambda item: 100*item[1] + item[2] + len(str(item[0]))/100)
         new_functions = dict()
-        for code_tree, _, _, free_variables in self.code_trees:
-            if self._contains_no_local_variables(free_variables):
+        for code_tree, depth, size, params, unassigned_locals in self.old_code_trees:
+            self._check_consistency(code_tree, depth, size, params, unassigned_locals)
+            if len(unassigned_locals) == 0:
                 fname = f"f{len(new_functions)}"
                 new_functions[fname] = (self.parameters, code_tree)
         return new_functions
