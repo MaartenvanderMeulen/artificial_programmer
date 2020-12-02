@@ -27,13 +27,4 @@
             eval_exact_inc_and_add
         )
     )
-    (
-        (
-            (2 3 5)
-            (5 7 11)
-        )
-        (
-            eval_exact_add3
-        )
-    )
 )

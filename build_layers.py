@@ -19,17 +19,19 @@ class LayerBuilder(object):
         self.constants = [0, 1, []]
         self.local_variables = ["i",]
         self.parameters = ["param0", "param1", "param2"]
-        self.root_loop_functions = []
-        for fname in interpret.get_build_in_functions():
-            # if fname in ["for", "len", "at3"]:
-            # if fname not in ["list3", "last3", "at3"]:
-            # if fname in ["add", "sub", "mul", "div"]:
-            if fname in ["add", ]:
-                count_params = len(interpret.get_build_in_function_param_types(fname))
-                self.root_loop_functions.append((fname, count_params))
         self.old_families = dict()
         self.family_size = dict()
         self.is_constant_family = dict()
+        self.old_code_trees = []
+
+    def _generate_all_code_trees_of_depth1(self):
+        for constant in self.constants:
+            self._append(constant, 1, 1, set(), set())
+        for param in self.parameters:
+            self._append(param, 1, 1, set([param]), set())
+        for variable in self.local_variables:
+            self._append(variable, 1, 1, set(), set([variable]))
+
 
     def _compute_tree_depth_and_size(self, model_output):
         tree_depth, tree_size = 1, 1
@@ -84,8 +86,6 @@ class LayerBuilder(object):
         if time.time() > self.last_time + 10:
             self.last_time = time.time()
             print("_append", code_tree, "new_code_trees size", len(self.new_code_trees), "new_families size", len(self.new_families))
-        # self._check_consistency(code_tree, tree_depth, tree_size, params, unassigned_locals)
-        #print("_append", code_tree)
         if len(unassigned_locals) == 0:
             if len(params) == 0 and tree_depth > 1:
                 # skip constant code
@@ -125,15 +125,11 @@ class LayerBuilder(object):
             self.new_code_trees.append([code_tree, tree_depth, tree_size, params, unassigned_locals])
             # print("    append to new_code_trees because of unassigned_locals: ", unassigned_locals)
 
-    def _generate_all_code_trees_of_depth1(self):
-        for constant in self.constants:
-            self._append(constant, 1, 1, set(), set())
-        for param in self.parameters:
-            self._append(param, 1, 1, set([param]), set())
-        for variable in self.local_variables:
-            self._append(variable, 1, 1, set(), set([variable]))
-
     def _generate_all_code_trees_of_depth(self, depth, root_loop_functions, param1_loop, param2_loop, for_bodies, free_locals_allowed, must_use_param):
+        print(f"L{self.L}D{depth} param_loop:")
+        for value in param1_loop:
+            print(f"L{self.L}D{depth}    ", value[0])
+
         for fname, arity in root_loop_functions:
             if arity == 1:
                 for code_tree, code_tree_depth1, code_tree_size1, params, unassigned_locals in param1_loop:
@@ -171,21 +167,35 @@ class LayerBuilder(object):
                                             unassigned_locals = unassigned_locals1.union(unassigned_locals2.difference(set([id])))
                                             self._append([fname, id, code_tree1, code_tree2], tree_depth, code_tree_size, params, unassigned_locals)
 
+    def _update_root_loop_functions(self):
+        self.root_loop_functions = []
+        for fname in interpret.get_build_in_functions():
+            # if fname in ["for", "len", "at3"]:
+            # if fname not in ["list3", "last3", "at3"]:
+            # if fname in ["add", "sub", "mul", "div"]:
+            if fname in ["add", ]:
+                count_params = len(interpret.get_build_in_function_param_types(fname))
+                self.root_loop_functions.append((fname, count_params))
+        for fname, (params, _) in self.old_functions.items():
+            self.root_loop_functions.append((fname, len(params)))
+        print(f"L{self.L} root_loop_functions:")
+        if self.verbose > 0:
+            for fname, arity in self.root_loop_functions:
+                print(f"L{self.L}    ", fname)
+    
     def build_layer(self, max_depth, old_functions, layer_level):
         self.old_functions = old_functions
         self.L = layer_level
-        for fname, (params, _) in self.old_functions.items():
-            self.root_loop_functions.append((fname, len(params)))
-        self.last_time = time.time()
-        self.old_code_trees = []
+        self._update_root_loop_functions()
         self.new_families_this_layer = dict()
+        self.last_time = time.time()
         for depth in range(1, max_depth+1):
             self.D = depth
-            print(f"L{self.L}D{depth}")
             self.new_code_trees = []
             self.new_families = dict()
             if depth == 1:
-                self._generate_all_code_trees_of_depth1()
+                if layer_level == 1:
+                    self._generate_all_code_trees_of_depth1()
             elif depth < max_depth:
                 root_loop_functions = self.root_loop_functions
                 param1_loop = self.old_code_trees
@@ -204,9 +214,10 @@ class LayerBuilder(object):
                 must_use_param = True
                 self._generate_all_code_trees_of_depth(depth, root_loop_functions, param1_loop, param2_loop, for_bodies, free_locals_allowed, must_use_param)
             self.old_code_trees += self.new_code_trees
-            print(f"L{self.L}D{depth} new families:")
-            for key, value in self.new_families.items():
-                print(f"L{self.L}D{depth}    ", key, value[0])
+            if self.verbose > 0:
+                print(f"L{self.L}D{depth} new families:")
+                for key, value in self.new_families.items():
+                    print(f"L{self.L}D{depth}    ", key, value[0])
             print(f"L{self.L}D{depth} new code trees:")
             for value in self.new_code_trees:
                 print(f"L{self.L}D{depth}    ", value[0])
@@ -214,7 +225,6 @@ class LayerBuilder(object):
                 self.old_families[key] = value
                 self.old_code_trees.append(value)
                 self.new_families_this_layer[key] = value
-        print(f"L{self.L} postprocessing new_families_this_layer:")
         new_functions = dict()
         for key, (code_tree, depth, size, params, unassigned_locals) in self.new_families_this_layer.items():
             self._check_consistency(code_tree, depth, size, params, unassigned_locals)
@@ -222,29 +232,28 @@ class LayerBuilder(object):
                 params_list = list(params)
                 params_list.sort()
                 if params_list == self.parameters[:len(params_list)]:
-                    fname = f"f{len(new_functions) + len(old_functions)}"
-                    print(f"L{self.L}    ", code_tree, fname)                    
+                    fname = f"f{len(new_functions)}L{self.L}"
                     new_functions[fname] = (params_list, code_tree)
-            else:
-                print(f"L{self.L}    ", code_tree, "is constant (skipped)")
 
         return new_functions
 
 
-def compute_solved_all(input_chunks, all_functions, new_functions, log_file, verbose):
-    print(f"compute solved_all, # new functions", len(new_functions))
+def compute_solved_all(input_chunks, all_functions, log_file, verbose):
+    print(f"compute solved_all:")
     evaluation_functions_set = set()
     solved = set()
     for example_inputs, evaluation_functions in input_chunks:
         arity = len(example_inputs[0])
         evaluation_functions_set.update(set(evaluation_functions))
-        for fname, (_, _) in new_functions.items():
+        for fname, (_, _) in all_functions.items():
             for evaluation_function in evaluation_functions:
                 if solve_problems.is_solved_by_function(example_inputs, evaluation_function, fname, all_functions, log_file, verbose):
                     solved.add(evaluation_function)
                     log_file.write(f"solved\t{evaluation_function}\tby\t{fname}\n")
                     print(f"    {fname} is evaluated OK by {evaluation_function}")
-    return len(solved) == len(evaluation_functions_set)
+    solved_all = len(solved) == len(evaluation_functions_set)
+    print("    solved all", bool(solved_all))
+    return solved_all
 
 
 def write_layer(layer_output_file_name, new_functions):
@@ -283,7 +292,6 @@ def main(param_file):
             example_inputs += inputs_chunk
         layer_builder = LayerBuilder(example_inputs, log_file, verbose)
         for layer_level in range(1, 3):
-            start_time = time.time()
             print(f"L{layer_level}")
             new_functions = layer_builder.build_layer(max_depth=3, old_functions=all_functions, layer_level=layer_level)
             if len(new_functions) == 0:
@@ -292,8 +300,7 @@ def main(param_file):
             write_layer(f"{output_folder}/L{layer_level}D3.txt", new_functions)
             for fname, (params, code) in new_functions.items():
                 interpret.add_function(["function", fname, params, code], all_functions)
-            solved_all = compute_solved_all(input_chunks, all_functions, new_functions, log_file, verbose)
-            print("solved all", bool(solved_all), "elapsed", round(time.time() - start_time), "seconds")
+            solved_all = compute_solved_all(input_chunks, all_functions, log_file, verbose)
         return 0 if solved_all else 1
 
 
