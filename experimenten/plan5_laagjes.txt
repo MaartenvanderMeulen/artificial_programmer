@@ -181,7 +181,3 @@ OPmerking
 
 python build_layers.py experimenten/params_LD.txt
 
-14:50 L2 lijkt OK
-* tel hoe vaak de L1 functies gebruikt worden door L2
-* schrijf ook de family size weg voor de functies
-* maak scatter
