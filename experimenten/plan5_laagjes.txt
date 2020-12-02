@@ -37,28 +37,142 @@ Verifieren aantal outputs in result_LA.txt
     
     L=Level, D=Depth
         L1, D3 get_col = (for row board (at row col))
-        L1, D3 get_diag1 = (for i (len board) (at board i i))
         L1, D3 get_row_sums = (for row board (sum row ))
+        L1, D3 get_diag1_cell = (at (at board i) i)
+        L1, D3 get_diag2_cell = (at (at board i) (sub 2 i))
+               range = (for 
+        L2, D3 get_diag1 = (for i (len board) (get_diag1_cell board i))
+        L2, D3 get_diag2 = (get_diag1 (transpose board)(for i (len board) (get_diag2_cell board i))
+        L4, D3 is_magic_square  = (are_all_equal (get_all_sums board))
+        
+        
+        L2, D3 transpose = (for i in (len board) (get_col board i))
+        L2, D3 rot90 = (for i in (len board) (get_col board i))
+
+
+        L1, D4 get_diag1 = (for i (len board) (at (at board i) i))
         L1, D4 get_diag2 = (for i (len board) (at board i (sub 2 i)))
         L1, D4 are_all_equal = (eq values (for _ values (at values 0)))
         L2, D4 get_col_sums = (for i (len board) (sum (get_col board i)))
         L2, D4 get_diag_sums = (list2 (sum (get_diag1 board)) (sum (get_diag2 board)))
         L3, D4 get_all_sums = (add (get_row_sums board) (add (get_col_sums board) (get_diag_sums board)))
-        L4, D3 is_magic_square  = (are_all_equal (get_all_sums board))
         
 python build_layers.py experimenten/params_LB.txt
     
 
 ====================== 30 Nov =====================================
 
-TODO
-* get_col (2 parameters)
-    # params spec
-* alles aan elkaar plakken
-    * alle inputs inlezen
-    * familie : outputs over alle inputs
-    * aantal params afleiden uit de input.  Functies met alleen param1 zonder param0 overslaan.
-    * laten zien welke evals OK gaan (en welke niet)
-    * L1, L2, L3, L4
+python build_layers.py experimenten/params_LC.txt
 
-python build_layers.py experimenten/params_LB.txt
+    17:25
+    f155 is evaluated OK by eval_get_row_sums
+    f576 is evaluated OK by eval_board_col
+
+    17:56
+    f155 is evaluated OK by eval_get_row_sums
+    f406 is evaluated OK by eval_get_diag1_cell
+    f576 is evaluated OK by eval_board_col
+
+    18:47
+    Starting layers level 1
+    depth 1
+    depth 2
+    depth 3
+    _append ['eq', ['mul', 'param1', 'param1'], ['add', 'param1', 'param1']] new_code_trees size 225792 new_families size 65
+    _append ['add', ['if', 'i', []], ['var', 'i', 'i', 1]] new_code_trees size 441477 new_families size 127
+    _append ['and', ['at2', 'param0', 'param1'], ['at2', 'i', 'i']] new_code_trees size 638197 new_families size 1974
+    _append ['for', 'i', ['list1', 'param1'], ['and', 1, 'i']] new_code_trees size 801600 new_families size 3226
+    _append ['var', 'i', ['add', 'param0', 'param0'], ['for', 'i', 'i', 'param0']] new_code_trees size 849024 new_families size 3976
+    _append ['list2', ['at2', 'param0', 0], ['for', 'i', 'param0', []]] new_code_trees size 906816 new_families size 6544
+    postprocessing
+    compute solved_all...
+        f155 is evaluated OK by eval_get_row_sums
+        f406 is evaluated OK by eval_get_diag1_cell
+        f576 is evaluated OK by eval_board_col
+    solved all False elapsed 139 seconds
+    writing output file ...
+    writing output file done
+    Starting layers level 2
+    depth 1
+    depth 2
+    _append ['f801', 'param1', 'i'] new_code_trees size 8821 new_families size 1430
+    _append ['f1552', 'param0', 'param0'] new_code_trees size 17082 new_families size 2895
+    _append ['f2241', 'param1', 1] new_code_trees size 24662 new_families size 4806
+    _append ['f2861', 'param0', []] new_code_trees size 31481 new_families size 5823
+    _append ['f3458', 'param0', 'param0'] new_code_trees size 38048 new_families size 6644
+    _append ['f4049', 'param0', 'param1'] new_code_trees size 44549 new_families size 7691
+    _append ['f4600', 'param1', 'param1'] new_code_trees size 50611 new_families size 8434
+    depth 3
+    _append ['f0', 0, ['f518', 'param0', 'param1']] new_code_trees size 118820 new_families size 0
+    _append ['f0', 1, ['f236', 1, 'param1']] new_code_trees size 173792 new_families size 0
+    _append ['f0', [], ['f274', 'param0', 0]] new_code_trees size 228764 new_families size 0
+    _append ['f0', 'param0', ['f293', 'param1', 'param1']] new_code_trees size 283736 new_families size 0
+    _append ['f0', 'param0', ['f4506', 'param0', 'param1']] new_code_trees size 283736 new_families size 0
+    _append ['f0', 'param1', ['f4096', 0, 'param1']] new_code_trees size 338708 new_families size 0
+    _append ['f0', ['f0', 0, 'i'], ['f3704', 'param1', 0]] new_code_trees size 783934 new_families size 0
+    _append ['f0', ['f1', 'i', 'param0'], ['f2722', [], 'i']] new_code_trees size 1326384 new_families size 0
+    _append ['f0', ['f2', 'i', 1], ['f2001', 1, 'i']] new_code_trees size 1893084 new_families size 0
+    _append ['f0', ['f2', 'param1', 'i'], ['f3775', 0, 'i']] new_code_trees size 2423381 new_families size 0
+    _append ['f0', ['f3', 1, 'i'], ['f4041', 'i', 'param0']] new_code_trees size 2937089 new_families size 0
+    _append ['f0', ['f4', 'i', 'param0'], ['f3696', 'i', 1]] new_code_trees size 3444076 new_families size 0
+    _append ['f0', ['f5', 'i', 0], ['f631', 0, 'i']] new_code_trees size 3921149 new_families size 0
+    _append ['f0', ['f5', 'param1', 'i'], ['f3318', 'param1', 0]] new_code_trees size 4550178 new_families size 0
+    _append ['f0', ['f6', 0, 'i'], ['f3470', 1, 'i']] new_code_trees size 4973947 new_families size 0
+    _append ['f0', ['f7', 'i', 'param0'], ['f4788', 'param0', 'i']] new_code_trees size 5563079 new_families size 0
+    _append ['f0', ['f8', 'i', 0], ['f3856', 'i', 'param0']] new_code_trees size 6063606 new_families size 0
+    _append ['f0', ['f9', 'i', 'i'], ['f2915', 'param1', 'i']] new_code_trees size 6691741 new_families size 0
+    _append ['f0', ['f9', 'param1', 'i'], ['f1728', 'i', 'param0']] new_code_trees size 7317158 new_families size 0
+    _append ['f0', ['f10', 'i', 'param0'], ['f2626', 'i', 'param0']] new_code_trees size 7646276 new_families size 0
+    _append ['f0', ['f11', 'i', []], ['f1009', 'i', 0]] new_code_trees size 8266966 new_families size 0
+    KeyboardInterrupt  
+
+TODO & opmerkingen
+* er worden teveel onzinnige stukjes code gegenereerd:
+    Alle aanroepen van f0 zullen 0 als resultaat hebben.  Dat is niet interessant.  De functie f0 is niet interessant.
+    
+TODO:
+* f0.  stukken code die altijd hetzelfde retourneren (dus constant) niet omzetten in een functie
+* de optimalisaties die voor D4 bedoeld waren op D3 doen.
+* ['f4049', 'param0', 'param1'] kan nooit iets nieuws opleveren
+
+19:44
+Opmerkingen
+* (function f2 (param0) (sum param0)), die is toch constant met de gegeven inputs?
+* 
+
+20:06
+OPmerking
+    Starting layers level 1
+    D1
+    D2
+    D3
+    _append ['and', ['list2', 'param0', 1], ['list2', 'param1', 0]] new_code_trees size 0 new_families size 1282
+    _append ['var', 'i', ['list2', 0, 'param1'], ['sub', [], 'i']] new_code_trees size 0 new_families size 2419
+    postprocessing
+    writing output file ...
+    writing output file done
+    compute solved_all, # new functions 3010
+        f1140 is evaluated OK by eval_get_row_sums
+        f1676 is evaluated OK by eval_board_col
+        f1909 is evaluated OK by eval_get_diag1_cell
+    solved all False elapsed 49 seconds
+    Starting layers level 2
+    D1
+    D2
+    postprocessing
+    writing output file ...
+    writing output file done
+    compute solved_all, # new functions 3010
+        f1140 is evaluated OK by eval_get_row_sums
+        f1676 is evaluated OK by eval_board_col
+        f1909 is evaluated OK by eval_get_diag1_cell
+    solved all False elapsed 24 seconds
+    Starting layers level 3
+    D1
+    D2
+    postprocessing
+    writing output file ...
+    writing output file done
+    compute solved_all, # new functions 3010
+
+    steeds 3010 nieuwe functies, hoe kan dat?

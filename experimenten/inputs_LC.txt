@@ -35,9 +35,12 @@
         )
         (
             eval_board_col
+            eval_get_diag1_cell
+            eval_get_diag2_cell
         )
     )
     (
+        (
             ((1 2 3 4 15 16 17 18 19))
             ((15 15 15 15))
             ((1 2 3 4 5 6 7 8 9))

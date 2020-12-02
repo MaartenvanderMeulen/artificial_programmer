@@ -362,6 +362,8 @@ def load(file_name):
         for line in f:
             line = line.strip().lower()
             if len(line) > 0 and line[0] != '#':
+                if len(program_str) > 0:
+                    program_str += " "
                 program_str += line
     return program_str
     

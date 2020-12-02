@@ -196,6 +196,20 @@ def eval_board_col(input, actual, extra_function_params, log_file, verbose):
     return error
     
     
+def eval_get_diag1_cell(input, actual, extra_function_params, log_file, verbose):
+    board, i = input
+    expect = board[i][i]    
+    error = 0 if expect == actual else 1
+    return error,
+    
+    
+def eval_get_diag2_cell(input, actual, extra_function_params, log_file, verbose):
+    board, i = input
+    expect = board[i][len(board)-1-i]    
+    error = 0 if expect == actual else 1
+    return error,
+    
+    
 def eval_board_diag1(input, actual, extra_function_params, log_file, verbose):
     board = input[0]
     n = len(board)
@@ -324,7 +338,10 @@ def evaluate_code(actual_code_str, expected_code_str):
 
 
 def evaluate_all(example_inputs, actual_outputs, evaluation_function, log_file, verbose):
-    function_name, extra_function_params = evaluation_function
+    if type(evaluation_function) == type(""):
+        function_name, extra_function_params = evaluation_function, []
+    else:
+        function_name, extra_function_params = evaluation_function
     global sum_errors, weights
     eval_function = eval(function_name)
     if verbose >= 3:
