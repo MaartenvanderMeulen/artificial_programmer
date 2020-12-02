@@ -11,13 +11,19 @@ import find_new_function
 
 def is_solved_by_function(example_inputs, evaluation_function, fname, functions, log_file, verbose):
     actual_outputs = []
+    formal_params, body = functions[fname]
+    used_example_inputs = []
     for input in example_inputs:
         # print("fname", fname, type(fname), "input", input, type(input))
-        code = [fname] + input
-        variables = dict()
-        actual_output = interpret.run(code, variables, functions)
-        actual_outputs.append(actual_output)
-    error, _ = evaluate.evaluate_all(example_inputs, actual_outputs, evaluation_function, log_file, verbose)
+        if len(input) == len(formal_params):
+            used_example_inputs.append(input)
+            code = [fname] + input
+            variables = dict()
+            actual_output = interpret.run(code, variables, functions)
+            actual_outputs.append(actual_output)
+    if len(used_example_inputs) == 0:
+        return False
+    error, _ = evaluate.evaluate_all(used_example_inputs, actual_outputs, evaluation_function, log_file, verbose)
     if verbose >= 2:
         log_file.write(f"is_solved_by_function({fname}), actual_outputs {actual_outputs}, error {error}\n")
     return error <= 0.0

@@ -196,20 +196,6 @@ def eval_board_col(input, actual, extra_function_params, log_file, verbose):
     return error
     
     
-def eval_get_diag1_cell(input, actual, extra_function_params, log_file, verbose):
-    board, i = input
-    expect = board[i][i]    
-    error = 0 if expect == actual else 1
-    return error,
-    
-    
-def eval_get_diag2_cell(input, actual, extra_function_params, log_file, verbose):
-    board, i = input
-    expect = board[i][len(board)-1-i]    
-    error = 0 if expect == actual else 1
-    return error,
-    
-    
 def eval_board_diag1(input, actual, extra_function_params, log_file, verbose):
     board = input[0]
     n = len(board)
@@ -321,7 +307,77 @@ def eval_is_sorted(input, actual, extra_function_params, log_file, verbose):
         if input[i] > input[i+1]:
             expect = 0
     return evaluate_int(actual, expect, False)
+    
+# ================================== EXACT evals voor testen van laagjes ==================
 
+    
+def eval_exact_inc(input, actual, extra_function_params, log_file, verbose):
+    expect = input[0] + 1    
+    error = 0 if expect == actual else 1
+    return error,
+    
+    
+def eval_exact_inc2(input, actual, extra_function_params, log_file, verbose):
+    expect = input[0] + 2
+    error = 0 if expect == actual else 1
+    return error,
+    
+    
+def eval_exact_inc3(input, actual, extra_function_params, log_file, verbose):
+    expect = input[0] + 3
+    error = 0 if expect == actual else 1
+    return error,
+    
+    
+def eval_exact_inc4(input, actual, extra_function_params, log_file, verbose):
+    expect = input[0] + 4
+    error = 0 if expect == actual else 1
+    return error,
+    
+    
+def eval_exact_inc5(input, actual, extra_function_params, log_file, verbose):
+    expect = input[0] + 5
+    error = 0 if expect == actual else 1
+    return error,
+    
+    
+def eval_exact_add(input, actual, extra_function_params, log_file, verbose):
+    expect = input[0] + input[1]
+    error = 0 if expect == actual else 1
+    return error,
+    
+    
+def eval_exact_add_and_inc(input, actual, extra_function_params, log_file, verbose):
+    expect = (input[0] + input[1]) + 1
+    error = 0 if expect == actual else 1
+    return error,
+    
+    
+def eval_exact_inc_and_add(input, actual, extra_function_params, log_file, verbose):
+    expect = (input[0] + 1) + (input[1] + 1)
+    error = 0 if expect == actual else 1
+    return error,
+    
+    
+def eval_exact_add3(input, actual, extra_function_params, log_file, verbose):
+    expect = input[0] + input[1] + input[2]
+    error = 0 if expect == actual else 1
+    return error,
+    
+    
+def eval_get_diag1_cell(input, actual, extra_function_params, log_file, verbose):
+    board, i = input
+    expect = board[i][i]    
+    error = 0 if expect == actual else 1
+    return error,
+    
+    
+def eval_get_diag2_cell(input, actual, extra_function_params, log_file, verbose):
+    board, i = input
+    expect = board[i][len(board)-1-i]    
+    error = 0 if expect == actual else 1
+    return error,
+    
     
 # ============================================== INTERFACE ====================
 

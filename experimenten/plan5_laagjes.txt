@@ -176,3 +176,19 @@ OPmerking
     compute solved_all, # new functions 3010
 
     steeds 3010 nieuwe functies, hoe kan dat?
+
+================================ 2 dEC ==============================================
+
+PLAN
+* eenvoudiger voorbeeld met "add"
+* _generate de ranges mee voor iedere loop, dan kan je je concentreren op wat die ranges moeten zijn
+* schrijf de ranges uit voor iedere combinatie van D en L.
+
+python build_layers.py experimenten/params_LD.txt
+    L1D3.txt is fout:
+        * add(add,*) en add(*,add) ontbreken
+    L2D3.txt is fout:
+        * functienummering : functies doronummeren
+        * de L2 functies roepen geen L1 functies aanroepen
+        * de L2 functies bevatten ook de L1 functies
+        * De L2 functies liefst 
