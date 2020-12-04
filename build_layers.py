@@ -12,18 +12,22 @@ import solve_problems
 
 
 class LayerBuilder(object):
-    def __init__(self, example_inputs, log_file, verbose, scenario):
+    def __init__(self, example_inputs, log_file, verbose, language_subset):
         self.example_inputs = example_inputs
         self.log_file = log_file
         self.verbose = verbose
-        self.scenario = scenario
-        self.constants = [0, 1, []]
-        self.local_variables = ["i",]
-        self.parameters = ["param0", "param1", "param2"]
+        if language_subset == "ims":
+            self.language_subset = ["for", "len", "at2", "sub", "eq", "sum", "list2", "extend"]
+            self.constants = [0, 1, ]
+            self.local_variables = ["i",]
+            self.parameters = ["param0", "param1",]
+        else:
+            raise RuntimeError(f"Unknown language subset {language_subset}")        
         self.old_families = dict()
         self.family_size = dict()
         self.is_constant_family = dict()
         self.old_code_trees = []
+        self.first_time = True
 
     def _generate_all_code_trees_of_depth1(self):
         for constant in self.constants:
@@ -157,15 +161,15 @@ class LayerBuilder(object):
                                     unassigned_locals = unassigned_locals1.union(unassigned_locals2)
                                     self._append([fname, code_tree1, code_tree2], tree_depth, code_tree_size, params, unassigned_locals)
             elif fname in ["for", "var"]:
-                for id in self.local_variables:
-                    # simplification : use at least "id" in the body
+                for id in self.local_variables:                    
+                    simplify2 = False # simplification : use at least "id" in the body 
                     for code_tree2, code_tree_depth2, code_tree_size2, params2, unassigned_locals2 in for_bodies:
-                        if id in unassigned_locals2:
+                        if not simplify2 or (id in unassigned_locals2):
                             unassigned_locals2 = unassigned_locals2.difference(set([id]))
-                            if free_locals_allowed or (len(unassigned_locals2) == 0):
-                                # simplification : range must use a param or free local
+                            if free_locals_allowed or (len(unassigned_locals2) == 0):                                
+                                simplify1 = True # simplification : range must use a param and may not use a free local
                                 for code_tree1, code_tree_depth1, code_tree_size1, params1, unassigned_locals1 in param1_loop:
-                                    if len(params1) > 0 or (free_locals_allowed and (len(unassigned_locals1) > 0)):
+                                    if not simplify1 or (len(params1) > 0 and len(unassigned_locals1) == 0):
                                         tree_depth = 1 + max(1, 1, code_tree_depth1, code_tree_depth2)
                                         if tree_depth == depth:
                                             code_tree_size = 1 + 1 + 1 + code_tree_size1 + code_tree_size2
@@ -175,11 +179,10 @@ class LayerBuilder(object):
 
     def _update_root_loop_functions(self):
         self.root_loop_functions = []
-        for fname in interpret.get_build_in_functions():
-            if fname not in ["list3", "last3", "at3"]:
-                if self.scenario == 0 or (self.scenario == 1 and fname in ["add", ]):
-                    count_params = len(interpret.get_build_in_function_param_types(fname))
-                    self.root_loop_functions.append((fname, count_params))
+        
+        for fname in self.language_subset:
+            count_params = len(interpret.get_build_in_function_param_types(fname))
+            self.root_loop_functions.append((fname, count_params))
         for fname, (params, _) in self.old_functions.items():
             self.root_loop_functions.append((fname, len(params)))
         if self.verbose >= 2:
@@ -199,8 +202,9 @@ class LayerBuilder(object):
             self.new_code_trees = []
             self.new_families = dict()
             if depth == 1:
-                if layer_level == 1:
+                if self.first_time:
                     self._generate_all_code_trees_of_depth1()
+                    self.first_time = False
             elif depth < max_depth:
                 root_loop_functions = self.root_loop_functions
                 param1_loop = self.old_code_trees
@@ -236,12 +240,13 @@ class LayerBuilder(object):
         for key, (code_tree, depth, size, params, unassigned_locals) in self.new_families_this_layer.items():
             self._check_consistency(code_tree, depth, size, params, unassigned_locals)
             if not self.is_constant_family[key]:
-                params_list = list(params)
-                params_list.sort()
-                if params_list == self.parameters[:len(params_list)]:
-                    fname = f"L{self.L}f{len(new_functions)}"
-                    new_functions.append([fname, params_list, code_tree, self.family_size[key]])
-                    self._count_use(code_tree, usage, self.L - 1)
+                params_0_to_n = self.parameters[:len(params)]
+                if params == set(params_0_to_n):
+                    if depth >= 3:
+                        fname = f"L{self.L}f{len(new_functions)}"
+                        new_functions.append([fname, params_0_to_n, code_tree, self.family_size[key]])
+                        self._count_use(code_tree, usage, self.L - 1)
+        new_functions.sort(key=lambda item: -item[-1])
         return new_functions, usage
 
 
@@ -269,8 +274,16 @@ def compute_solved_all(input_chunks, all_functions, log_file, verbose):
 def write_layer(layer_output_file_name, new_functions):
     with open(layer_output_file_name, "w") as f:
         f.write(f"(\n")
-        for fname, params, code, _ in new_functions:
-            f.write(f"    (function {fname} {interpret.convert_code_to_str(params)} {interpret.convert_code_to_str(code)})\n")
+        if False:
+            sizes = [-item[-1] for item in new_functions]
+            sizes.sort()
+            n = max(10, min(len(new_functions) // 10, 100))
+            threshold = sizes[n] if len(sizes) > n else sizes[-1]
+        else:
+            threshold = 0
+        for fname, params, code, family_size in new_functions:
+            if family_size >= threshold:
+                f.write(f"    (function {fname} {interpret.convert_code_to_str(params)} {interpret.convert_code_to_str(code)}) # {family_size}\n")
         f.write(f")\n")
 
 
@@ -301,7 +314,9 @@ def main(param_file):
     functions_file_name = params["functions_file"]
     inputs_file_name = params["inputs_file"]
     verbose = params["verbose"]
-    scenario = params["scenario"]
+    language_subset = params["language_subset"]
+    start_level = params["start_level"]
+    max_depth = params["max_depth"]
     with open(f"{output_folder}/params.txt", "w") as f:
         # write a copy to the output folder
         json.dump(params, f, sort_keys=True, indent=4)
@@ -315,11 +330,11 @@ def main(param_file):
         example_inputs = []
         for inputs_chunk, evaluations_chunk in input_chunks:
             example_inputs += inputs_chunk
-        layer_builder = LayerBuilder(example_inputs, log_file, verbose, scenario)
-        for layer_level in range(1, 3):
+        layer_builder = LayerBuilder(example_inputs, log_file, verbose, language_subset)
+        for layer_level in range(start_level, start_level+1):
             if verbose >= 0:
                 print(f"L{layer_level}")
-            new_functions, usage = layer_builder.build_layer(max_depth=3, old_functions=all_functions, layer_level=layer_level)
+            new_functions, usage = layer_builder.build_layer(max_depth=max_depth, old_functions=all_functions, layer_level=layer_level)
             if len(new_functions) == 0:
                 if verbose >= 0:
                     print(f"L{layer_level} no new functions found")
@@ -338,4 +353,5 @@ if __name__ == "__main__":
     if len(sys.argv) != 2:
         exit(f"Usage: python {sys.argv[0]} paramsfile")
     param_file = sys.argv[1]
+    interpret.self_test()
     exit(main(param_file))

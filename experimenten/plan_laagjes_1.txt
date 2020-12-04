@@ -39,11 +39,16 @@ Verifieren aantal outputs in result_LA.txt
         L1, D3 get_col = (for row board (at row col))
         L1, D3 get_row_sums = (for row board (sum row ))
         L1, D3 get_diag1_cell = (at (at board i) i)
-        L1, D3 get_diag2_cell = (at (at board i) (sub 2 i))
-               range = (for 
-        L2, D3 get_diag1 = (for i (len board) (get_diag1_cell board i))
-        L2, D3 get_diag2 = (get_diag1 (transpose board)(for i (len board) (get_diag2_cell board i))
-        L4, D3 is_magic_square  = (are_all_equal (get_all_sums board))
+        L1D3 (function get_last_index (param0) (param0) (sub (len param0) 1))
+        
+        L2D3 (function reverse_index (param0 param1) (sub (get_last_index param0) param1))
+        L2D3 get_diag1 = (for i (len board) (get_diag1_cell board i))
+
+        L3D3 (function get_diag2_cell (param0 param1) (at param0 (reverse_index param0 param1)))
+
+        L4, D3 get_diag2 = (for i (len board) (get_diag2_cell board i))
+        
+        L5, D3 is_magic_square  = (are_all_equal (get_all_sums board))
         
         
         L2, D3 transpose = (for i in (len board) (get_col board i))
@@ -51,7 +56,7 @@ Verifieren aantal outputs in result_LA.txt
 
 
         L1, D4 get_diag1 = (for i (len board) (at (at board i) i))
-        L1, D4 get_diag2 = (for i (len board) (at board i (sub 2 i)))
+        L1, D4 get_diag2 = (for i (len board) (at (at board i) (sub 2 i)))
         L1, D4 are_all_equal = (eq values (for _ values (at values 0)))
         L2, D4 get_col_sums = (for i (len board) (sum (get_col board i)))
         L2, D4 get_diag_sums = (list2 (sum (get_diag1 board)) (sum (get_diag2 board)))
@@ -180,4 +185,50 @@ OPmerking
 ================================ 2 dEC ==============================================
 
 python build_layers.py experimenten/params_LD.txt
+
+================================ 3 Dec ==============================================
+
+TODO LAAGJES
+* comment met # verderop in de regel
+* L2 maken met 
+* vereenvoudigingen : 
+    (function L1f1100 (param0) (for i param0 (lt i i))) # 128
+    (function L1f1119 (param0 param1) (for i (mul param1 param0) (lt i i))) # 113
+    (function L1f1120 (param0 param1) (for i (if param1 param0) (lt i i))) # 113
+        * 0 mag een for-loop body zijn
+    (function L1f800 (param0 param1) (mul (sum param0) (list param1))) # 75
+        * hier komt toch altijd 0 uit?
+
+compute solved_all:
+    L1f1110 is evaluated OK by eval_get_row_sums # family size 1
+    L1f1871 is evaluated OK by eval_get_diag1_cell # family size 2
+    L1f1638 is evaluated OK by eval_board_col # family size 1
+
+In LC/L1D3.txt zit
+
+* Heen en weer springen tussen levels met delen uit de taal.
+
+=================================== 4 dec =============================
+
+done L2 maken met language subset om ims
+    * L2D3 : lukt nog steeds niet
+    * L1D4
+done    (function L1f800 (param0 param1) (mul (sum param0) (list param1))) # 75
+        * hier komt toch altijd 0 uit?
+done vereenvoudigingen : 
+    (function L1f1100 (param0) (for i param0 (lt i i))) # 128
+    (function L1f1119 (param0 param1) (for i (mul param1 param0) (lt i i))) # 113
+    (function L1f1120 (param0 param1) (for i (if param1 param0) (lt i i))) # 113
+        * 0 mag een for-loop body zijn
+done (function L1f19 (param0) (for i param0 (at i i))) # 44
+    * (at i i), daar komt toch altijd 0 uit?.  Maar 0 als body mag niet?
+
+python build_layers.py experimenten/params_LC.txt
+
+TODO LAAGJES
+    * geneste for-loops verbieden?
+
+Even laten rusten verder.
+
+
 

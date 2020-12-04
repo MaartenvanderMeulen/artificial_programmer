@@ -152,19 +152,28 @@ def _run(program, variables, functions, debug, depth):
                         result += value
                     else:
                         result = 0
+        elif program[0] == "extend": # example (extend (1 2) (3 4))
+            result = 0
+            for i in range(1, len(program)):
+                value = _run(program[i], variables, functions, debug, depth+1)
+                if type(value) != type([]):
+                    result = 0
+                    break
+                if i == 1:
+                    result = value
+                else:
+                    result += value
         elif program[0] == "sub": # example (sub 3 2)
             result = 0
             for i in range(1, len(program)):
                 value = _run(program[i], variables, functions, debug, depth+1)
+                if type(value) != type(1):
+                    result = 0
+                    break
                 if i == 1:
                     result = value
                 else:
-                    if type(result) == type(1):
-                        if type(value) == type(1):
-                            result -= value
-                        # else ignore this value
-                    else:
-                        result = 0
+                    result -= value
         elif program[0] == "mul": # example (mul 1 2 3)
             result = 0
             for i in range(1, len(program)):
@@ -172,7 +181,7 @@ def _run(program, variables, functions, debug, depth):
                 if i == 1:
                     result = value
                 else:
-                    if type(result) == type(1):
+                    if type(value) == type(1):
                         result *= value
                     else:
                         result = 0
@@ -220,16 +229,19 @@ def _run(program, variables, functions, debug, depth):
             result = 0
             if len(program) > 2:
                 x = _run(program[1], variables, functions, debug, depth+1)
-                if type(x) == type([]):
-                    for dim in range(len(program) - 2):
-                        index = _run(program[2 + dim], variables, functions, debug, depth+1)
-                        if type(index) != type(1):
-                            index = 0
-                        if type(x) != type([]) or index >= len(x) or index < 0:
-                            result = 0
-                            break
-                        x = x[index]
-                        result = x
+                for dim in range(len(program) - 2):
+                    if type(x) != type([]): # x gets reassigned below "x = x[index]", but check the result type here
+                        result = 0
+                        break
+                    index = _run(program[2 + dim], variables, functions, debug, depth+1)
+                    if type(index) != type(1):
+                        result = 0
+                        break
+                    if index >= len(x) or index < 0:
+                        result = 0
+                        break
+                    x = x[index]
+                    result = x
         elif program[0] in ["list", "list1", "list2", "list3"]: # example (list (at board 0 0) (at board 1 1)) --> (x y)
             result = []
             for p in program[1:]:
@@ -260,6 +272,14 @@ def _run(program, variables, functions, debug, depth):
                 if False: # set to True if expr may have side effects
                     expr = _run(program[2], variables, functions, debug, depth+1)
                 result = _run(program[3], variables, functions, debug, depth+1)
+        elif program[0] == "assign":
+            result = 0
+            if len(program) == 3:
+                local_variable = program[1]
+                if type(local_variable) == type(""):
+                    expr = _run(program[2], variables, functions, debug, depth+1)
+                    variables[local_variable] = expr
+                    result = expr
         elif program[0] == "function":
             result = 0
             if len(program) >= 4:
@@ -360,11 +380,14 @@ def load(file_name):
     with open(file_name, "r") as f:
         program_str = ""
         for line in f:
-            line = line.strip().lower()
-            if len(line) > 0 and line[0] != '#':
-                if len(program_str) > 0:
-                    program_str += " "
-                program_str += line
+            line_stripped = line.strip().lower().split(" ")
+            for part in line_stripped:
+                if len(part) > 0:
+                    if part[0] == '#':
+                        break
+                    if len(program_str) > 0:
+                        program_str += " "
+                    program_str += part
     return program_str
     
     
@@ -427,6 +450,7 @@ def get_build_in_functions():
         "len", "sum", # arity 1
         "div", "lt", "le", "eq", "ne", "ge", "gt", # arity 2
         "add", "sub", "mul", "and", "or", # arity 2
+        "extend", 
         "if", # arity 2 or 3
         "for", # artity 3, but 1st operand must be a variable name
         "var", # artity 3, but 1st operand must be a variable name
@@ -445,6 +469,7 @@ def get_build_in_function_param_types(fname):
         "eq":(1,1), "ne":(1,1), # arity 2
         "div":(1,1), "lt":(1,1), "le":(1,1), "ge":(1,1), "gt":(1,1), "sub":(1,1), "mul":(1,1), # arity 2, numeric
         "add":(1,1), "and":(1,1), "or":(1,1), # arity 2
+        "extend":([],[]),
         "if":(1,1), # arity 2
         "for":("v",1,1), # artity 3, but 1st operand must be a variable name
         "var":("v",1,1), # artity 3, but 1st operand must be a variable name
@@ -512,6 +537,13 @@ def compile_deap(program_str, functions):
     return program
 
 
+default_test_file = "experimenten/test_interpret.txt"
+def self_test(self_test_file=default_test_file):
+    result = run(compile(load(self_test_file)), variables={}, functions={}, debug=False)
+    result = "OK" if result == 1 else "FAILED"
+    print("interpreter self_test", result)
+
+
 if __name__ == "__main__":
-    file_name = sys.argv[1] if len(sys.argv) >= 2 else "test_interpret.txt" 
-    print(run(compile(load(file_name)), {}, {}, False))
+    file_name = sys.argv[1] if len(sys.argv) >= 2 else default_test_file 
+    self_test(file_name)

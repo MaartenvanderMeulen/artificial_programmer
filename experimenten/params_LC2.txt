@@ -1,8 +1,7 @@
 {
-    "functions_file": "experimenten/functions_leeg.txt",
+    "functions_file": "tmp/LC/L1D3.txt",
     "inputs_file": "experimenten/inputs_LC.txt",
     "verbose": 1,
     "language_subset": "ims",
-    "start_level": 1,
-    "max_depth": 3
+    "start_level": 2
 }

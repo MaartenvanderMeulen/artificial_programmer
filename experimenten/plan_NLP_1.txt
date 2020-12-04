@@ -1,0 +1,7 @@
+NLP TODO
+
+* tekst omzetten naar evaluatie functie.
+  Eerst een 0/1 evaluatie functie (goed/Fout)
+* Dan naar graduele evaluatie functie
+
+* Op gang komen met NPL via project verder gaan per "Kunstmatige Juridische Geest" project van Jaap

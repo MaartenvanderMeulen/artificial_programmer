@@ -1,0 +1,22 @@
+GA-SEARCH TODO
+
+* hyperparameter tuning met 1000 runs, op params_07.txt
+* onderzoek met 1000 runs of "no-effect-on-input penalty" echt geen verbetering geeft
+* onderzoek dynamic weights
+
+* Zodra de GA search voldoende "af" is, kan hij omgezet worden naar OpenCL & GPU.
+* De GPU moet dan "batches" van - zeg - 3500 individuals runnen (voor alle invoeren)
+* De kernel functie is dan de interpreter. 
+    * input is polish prefix vector.
+        * programma : vector van (type(integer), value(integer)) pairs "instructions"
+            * types :
+                * integer value
+                * local identifyer
+                * parameter identifyer
+                * function identifyer (kernel has local tabel with arities)
+        * vector of input data.  Lijsten van Lijsten worden omgezet naar een Polish prefix vector
+    * uitvoer is dan ook een Polish prefix vector.
+    * intern heeft de kernel een stack van tussenresultaten
+* Eerst uittesten met CPU implementatie van de OpenCL kernels.
+
+(are_all_equal (add (get_row_sums board) (add (get_col_sums board) (get diag_sums board))))
