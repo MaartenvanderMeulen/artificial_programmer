@@ -12,6 +12,12 @@ weights = np.ones((6)) / 6
 sum_errors = np.zeros_like(weights)
 
 
+def recursive_tuple(value):
+    if type(value) == type(1) or type(value) == type(""):
+        return value
+    return tuple([recursive_tuple(v) for v in value])
+
+
 def extract_numbers(values):
     if type(values) == type([]):
         result = set()
@@ -23,7 +29,7 @@ def extract_numbers(values):
         result = set([values])
     return result
 
-    
+
 def _distance_with_closest_numbers(x, values):
     '''distance of x with nearest'''
     assert type(x) == type(1)
@@ -41,13 +47,13 @@ def _distance_with_closest_numbers(x, values):
         result = abs(x - 0)
     assert result <= 1000000
     return result
-    
-    
+
+
 def evaluate_int(actual, expect, debug=False):
     '''compute and return error on this output'''
     errors = []
     assert type(expect) == type(1)
-    
+
     # error : type difference
     error = 0.0
     if type(actual) != type(1):
@@ -56,7 +62,7 @@ def evaluate_int(actual, expect, debug=False):
     # error : length
     error = 0.0
     if type(actual) != type(1):
-        actual_numbers = extract_numbers(actual)  
+        actual_numbers = extract_numbers(actual)
         if len(actual_numbers) == 0:
             error += 1.0
             actual = expect + 1000
@@ -75,7 +81,7 @@ def evaluate_list_of_ints(actual, expect, debug=False):
     assert type(expect) == type([])
     for item in expect:
         assert type(item) == type(1)
-    
+
     # error : type difference
     error = 0.0
     if type(actual) != type([]):
@@ -119,12 +125,12 @@ def find_col(board, v):
             if v_col == v:
                 return col
     return None
-    
-    
+
+
 def eval_board_col_diag_common(input, actual, extra_function_params, expect, expect_cols):
     board = input[0]
     n = len(board)
-    
+
     # error : type difference
     if type(actual) != type(expect):
         error_type = 1.0
@@ -153,7 +159,7 @@ def eval_board_col_diag_common(input, actual, extra_function_params, expect, exp
         if len(actual_set.intersection(row_set)) == 0:
             error_fromrows += 1
     error_fromrows = error_fromrows ** 2
-    
+
     # error : is actual[row] een element van board[row]
     error_fromrows_ordered = 0.0
     for row in range(n):
@@ -162,7 +168,7 @@ def eval_board_col_diag_common(input, actual, extra_function_params, expect, exp
         elif actual[row] not in board[row]:
             error_fromrows_ordered += 1.0
     error_fromrows_ordered = error_fromrows_ordered ** 2
-    
+
     # error : aantal kolommen
     col_values = np.zeros((n), dtype="int")
     for actual_value in actual:
@@ -171,7 +177,7 @@ def eval_board_col_diag_common(input, actual, extra_function_params, expect, exp
             col_values[col] = 1
     actual_cols = np.sum(col_values)
     error_columns = (abs(actual_cols - expect_cols)) ** 2
-    
+
     # error :zijn het de juiste elementen uit de rows
     error_correct_elements_ordered = 0.0
     for row in range(n):
@@ -180,33 +186,31 @@ def eval_board_col_diag_common(input, actual, extra_function_params, expect, exp
         elif actual[row] != expect[row]:
             error_correct_elements_ordered += 1.0
     error_correct_elements_ordered = error_correct_elements_ordered ** 2
-            
+
     w = [0.61, 0.06, 0.03, 0.09, 0.1, 0.11] # default weights
 
     return [error_type*w[0], error_len*w[1], error_fromrows*w[2], error_fromrows_ordered*w[3],
          error_columns*w[4], error_correct_elements_ordered*w[5]]
-    
-    
+
+
 def eval_board_col(input, actual, extra_function_params, log_file, verbose):
     board, col = input
-    expect = [row[col] for row in board]    
+    expect = [row[col] for row in board]
     error = eval_board_col_diag_common(input, actual, extra_function_params, expect, 1)
-    if verbose >= 3:
-        log_file.write(f"eval_board_col(board={board},col={col}), expect {expect}, actual {actual}, error {error}\n")
     return error
-    
-    
+
+
 def eval_board_diag1(input, actual, extra_function_params, log_file, verbose):
     board = input[0]
     n = len(board)
     expect = [row[i] for i, row in enumerate(board)]
     return eval_board_col_diag_common(input, actual, extra_function_params, expect, n)
-    
-    
+
+
 def eval_board_diag2(input, actual, extra_function_params, log_file, verbose):
     board = input[0]
     n = len(board)
-    expect = [row[n-1 - i] for i, row in enumerate(board)]    
+    expect = [row[n-1 - i] for i, row in enumerate(board)]
     result = eval_board_col_diag_common(input, actual, extra_function_params, expect, n)
     return result
 
@@ -214,18 +218,18 @@ def eval_board_diag2(input, actual, extra_function_params, log_file, verbose):
 def eval_get_row_sums(input, actual, extra_function_params, log_file, verbose):
     board = input[0]
     expect = []
-    expect += [sum(row) for row in board]    
+    expect += [sum(row) for row in board]
     return evaluate_list_of_ints(actual, expect, False)
-    
-    
+
+
 def eval_get_col_sums(input, actual, extra_function_params, log_file, verbose):
     board = input[0]
     n = len(board)
     expect = []
-    expect += [sum([row[col] for row in board]) for col in range(n)]    
+    expect += [sum([row[col] for row in board]) for col in range(n)]
     return evaluate_list_of_ints(actual, expect, False)
-    
-    
+
+
 def eval_get_diag_sums(input, actual, extra_function_params, log_file, verbose):
     board = input[0]
     n = len(board)
@@ -233,8 +237,8 @@ def eval_get_diag_sums(input, actual, extra_function_params, log_file, verbose):
     expect.append(sum([board[i][i] for i in range(n)]))
     expect.append(sum([board[i][(n-1) - i] for i in range(n)]))
     return evaluate_list_of_ints(actual, expect, False)
-    
-    
+
+
 def eval_get_magic_number_n(input, actual, extra_function_params, log_file, verbose):
     n = input[0]
     assert type(n) == type(1)
@@ -244,8 +248,8 @@ def eval_get_magic_number_n(input, actual, extra_function_params, log_file, verb
         assert expect == [0, 1, 5, 15, 34, 65, 111][n]
     result = evaluate_int(actual, expect, False)
     return result
-    
-    
+
+
 def eval_get_magic_number(input, actual, extra_function_params, log_file, verbose):
     board = input[0]
     assert type(board) == type([])
@@ -254,14 +258,14 @@ def eval_get_magic_number(input, actual, extra_function_params, log_file, verbos
     if 0 <= n <= 5:
         assert expect == [0, 1, 5, 15, 34, 65][n]
     return evaluate_int(actual, expect, False)
-    
-    
+
+
 def eval_are_all_equal(input, actual, extra_function_params, log_file, verbose):
     values = input[0]
     expect = sum([1 if value == values[0] else 0 for value in values]) == len(values)
     return evaluate_int(actual, int(expect), False)
 
-    
+
 def eval_is_magic(inputs, actual, extra_function_params, log_file, verbose):
     error = 0.0
     if type(actual) != type(1):
@@ -299,7 +303,7 @@ def eval_is_magic(inputs, actual, extra_function_params, log_file, verbose):
         if is_magic:
             error += 1.0
     return error,
-    
+
 
 def eval_is_sorted(input, actual, extra_function_params, log_file, verbose):
     error = 0.0
@@ -316,7 +320,7 @@ def eval_is_sorted(input, actual, extra_function_params, log_file, verbose):
         if data[i] > data[i+1]:
             count_out_of_order += 1
         else:
-            count_in_order += 1        
+            count_in_order += 1
 
     if model_says_its_sorted:
         error += count_out_of_order / (len(data) + 1)
@@ -326,78 +330,78 @@ def eval_is_sorted(input, actual, extra_function_params, log_file, verbose):
             error += 1.0
     return error,
 
-    
+
 # ================================== EXACT evals voor testen van laagjes ==================
 
-    
+
 def eval_exact_inc(input, actual, extra_function_params, log_file, verbose):
-    expect = input[0] + 1    
+    expect = input[0] + 1
     error = 0 if expect == actual else 1
     return error,
-    
-    
+
+
 def eval_exact_inc2(input, actual, extra_function_params, log_file, verbose):
     expect = input[0] + 2
     error = 0 if expect == actual else 1
     return error,
-    
-    
+
+
 def eval_exact_inc3(input, actual, extra_function_params, log_file, verbose):
     expect = input[0] + 3
     error = 0 if expect == actual else 1
     return error,
-    
-    
+
+
 def eval_exact_inc4(input, actual, extra_function_params, log_file, verbose):
     expect = input[0] + 4
     error = 0 if expect == actual else 1
     return error,
-    
-    
+
+
 def eval_exact_inc5(input, actual, extra_function_params, log_file, verbose):
     expect = input[0] + 5
     error = 0 if expect == actual else 1
     return error,
-    
-    
+
+
 def eval_exact_add(input, actual, extra_function_params, log_file, verbose):
     expect = input[0] + input[1]
     error = 0 if expect == actual else 1
     return error,
-    
-    
+
+
 def eval_exact_add_and_inc(input, actual, extra_function_params, log_file, verbose):
     expect = (input[0] + input[1]) + 1
     error = 0 if expect == actual else 1
     return error,
-    
-    
+
+
 def eval_exact_inc_and_add(input, actual, extra_function_params, log_file, verbose):
     expect = (input[0] + 1) + (input[1] + 1)
     error = 0 if expect == actual else 1
     return error,
-    
-    
+
+
 def eval_exact_add3(input, actual, extra_function_params, log_file, verbose):
     expect = input[0] + input[1] + input[2]
     error = 0 if expect == actual else 1
     return error,
-    
-    
+
+
 def eval_get_diag1_cell(input, actual, extra_function_params, log_file, verbose):
     board, i = input
-    expect = board[i][i]    
+    expect = board[i][i]
     error = 0 if expect == actual else 1
     return error,
-    
-    
+
+
 def eval_get_diag2_cell(input, actual, extra_function_params, log_file, verbose):
     board, i = input
-    expect = board[i][len(board)-1-i]    
+    expect = board[i][len(board)-1-i]
     error = 0 if expect == actual else 1
     return error,
-    
-    
+
+
 # ============================================== INTERFACE ====================
 
 
@@ -412,7 +416,7 @@ def evaluate_code(actual_code_str, expected_code_str):
     return len(expected_code_str) - count_equal_prefix_length(actual_code_str, expected_code_str)
 
 
-def evaluate_all(example_inputs, actual_outputs, evaluation_function, log_file, verbose):
+def evaluate_all(example_inputs, actual_outputs, evaluation_function, log_file, verbose, penalise_non_reacting_models=False):
     if type(evaluation_function) == type(""):
         function_name, extra_function_params = evaluation_function, []
     else:
@@ -425,9 +429,9 @@ def evaluate_all(example_inputs, actual_outputs, evaluation_function, log_file, 
     assert len(example_inputs) == len (actual_outputs)
     domain_output_set = set()
     for example_input, actual_output in zip(example_inputs, actual_outputs):
-        domain_output_set.add(bool(actual_output))
+        domain_output_set.add(recursive_tuple(actual_output))
         errors = eval_function(example_input, actual_output, extra_function_params, log_file, verbose)
-        errors = np.array(errors).astype(float)    
+        errors = np.array(errors).astype(float)
         if weights.shape[0] != errors.shape[0]:
             weights = np.ones((errors.shape[0])) / errors.shape[0]
         weighted_errors = errors * weights
@@ -438,16 +442,19 @@ def evaluate_all(example_inputs, actual_outputs, evaluation_function, log_file, 
         if verbose >= 4:
             log_file.write(f"    eval_all_deferred, eval({example_input}, {actual_output}) = {v}\n")
         model_evals.append(v)
-    penalise_non_reacting_models = False
     if penalise_non_reacting_models:
         if verbose >= 3:
             log_file.write(f"penalise_non_reacting_models\n")
+            log_file.write(f"    len(domain_output_set) {len(domain_output_set)}\n")
+            log_file.write(f"    old model evals {str(model_evals)}\n")
         if len(domain_output_set) == 1:
             max_eval = max(model_evals)
             model_evals = [max_eval for _ in model_evals]
+        if verbose >= 3:
+            log_file.write(f"    new model evals {str(model_evals)}\n")
     return sum(model_evals), model_evals
 
-    
+
 def init_dynamic_error_weight_adjustment():
     global sum_errors, weights
     n = 6

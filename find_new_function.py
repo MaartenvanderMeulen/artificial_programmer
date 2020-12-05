@@ -4,18 +4,12 @@ import random
 import copy
 import interpret
 import evaluate
+from evaluate import recursive_tuple
 import math
 import time
 import json
 from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull
 
-
-
-def recursive_tuple(value):
-    if type(value) == type(1) or type(value) == type(""):
-        return value
-    assert type(value) == type([])
-    return tuple([recursive_tuple(v) for v in value])
 
 
 def evaluate_individual_impl(toolbox, ind, debug=0):
@@ -27,6 +21,7 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
         code_str = interpret.convert_code_to_str(code)
         weighted_error = evaluate.evaluate_code(code_str, toolbox.solution_code_str)
         ind.model_outputs = ()
+        ind.model_evals = (weighted_error,)
         if weighted_error == 0.0:
             # now check that this also evaluates 
             ind.model_outputs = []
@@ -34,7 +29,7 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
                 variables = interpret.bind_params(toolbox.formal_params, input)
                 model_output = interpret.run(code, variables, toolbox.functions)
                 ind.model_outputs.append(model_output)        
-            weighted_error, ind.model_evals = evaluate.evaluate_all(toolbox.example_inputs, ind.model_outputs, toolbox.evaluation_function, toolbox.f, debug)
+            weighted_error, ind.model_evals = evaluate.evaluate_all(toolbox.example_inputs, ind.model_outputs, toolbox.evaluation_function, toolbox.f, debug, toolbox.penalise_non_reacting_models)
             assert weighted_error == 0
     else:
         t0 = time.time()
@@ -45,7 +40,7 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
             ind.model_outputs.append(model_output)        
         toolbox.t_interpret += time.time() - t0
         t0 = time.time()
-        weighted_error, ind.model_evals = evaluate.evaluate_all(toolbox.example_inputs, ind.model_outputs, toolbox.evaluation_function, toolbox.f, debug)
+        weighted_error, ind.model_evals = evaluate.evaluate_all(toolbox.example_inputs, ind.model_outputs, toolbox.evaluation_function, toolbox.f, debug, toolbox.penalise_non_reacting_models)
         assert math.isclose(weighted_error, sum(ind.model_evals))
         toolbox.t_eval += time.time() - t0
         ind.model_outputs = recursive_tuple(ind.model_outputs)
@@ -451,8 +446,10 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.best_of_n_cx = params["best_of_n_cx"]
     toolbox.parent_selection_strategy = params["parent_selection_strategy"]
     toolbox.beta = params["weight_complementairity"]
+    toolbox.penalise_non_reacting_models = params["penalise_non_reacting_models"]
+    toolbox.hops = params["hops"]
     
-    for _ in range(20):
+    for _ in range(toolbox.hops):
         toolbox.ind_str_set = set()
         toolbox.eval_cache = dict()
         toolbox.eval_count = 0
@@ -473,6 +470,7 @@ def solve_by_new_function(problem, functions, f, params):
             return result
         else:
             f.write(f"timeout\t{seconds}\tsec\t{toolbox.eval_count}\tevals\t{problem_name}\t\n")
+        f.flush()
         
     f.write(f"failed\t\tsec\t\tevals\t{problem_name}\t\n")
     return None

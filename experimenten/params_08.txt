@@ -3,17 +3,17 @@
     "functions_file": "experimenten/functions_leeg.txt",
     "seed_prefix": 0,
     "verbose": 1,
-    "max_seconds": 60,
+    "max_seconds": 900,
     "pop_size": [
-        1000,
+        10000,
         200
     ],
     "nchildren": [
-        1000,
+        10000,
         100
     ],
     "ngen": [
-        1,
+        3,
         1000
     ],
     "max_individual_size": 40,
@@ -21,5 +21,7 @@
     "best_of_n_mut": 2,
     "best_of_n_cx": 3,
     "parent_selection_strategy": 2,
-    "weight_complementairity": 0.3
+    "weight_complementairity": 0.3,
+    "penalise_non_reacting_models": true,
+    "hops": 1
 }

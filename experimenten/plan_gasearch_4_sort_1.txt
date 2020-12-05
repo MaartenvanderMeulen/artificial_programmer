@@ -1,0 +1,18 @@
+GA-SEARCH
+
+TODO
+* sort
+        
+SOMEDAY
+* hyperparameter tuning met 1000 runs, op params_07.txt
+* Interpretator : omzetten naar C++ (en daarna naar OpenCL)
+
+====================================== 5 dec =============================
+
+TODO
+* is_sorted
+
+python solve_problems.py 1000 experimenten/params_08.txt
+        
+    
+
