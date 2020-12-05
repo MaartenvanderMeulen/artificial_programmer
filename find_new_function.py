@@ -117,7 +117,7 @@ def write_population(toolbox, population, label):
     if toolbox.verbose >= 2:
         toolbox.f.write(f"write_population {label}\n")
         for i, ind in enumerate(population):
-            toolbox.f.write(f"    ind {i} {ind.eval} {len(ind)} {ind.deap_str}\n")
+            toolbox.f.write(f"    ind {i} {ind.eval:.3f} {len(ind)} {ind.deap_str}\n")
             if toolbox.gen == 0:
                 evaluate_individual_impl(toolbox, ind, toolbox.verbose)
             if toolbox.verbose == 2 and i >= 10:

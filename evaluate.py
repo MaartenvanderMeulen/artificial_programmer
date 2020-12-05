@@ -308,27 +308,39 @@ def eval_is_magic(inputs, actual, extra_function_params, log_file, verbose):
 def eval_is_sorted(input, actual, extra_function_params, log_file, verbose):
     error = 0.0
     if type(actual) != type(1):
-        error += 0.64
+        error += 0.8
     else:
         if actual not in [0, 1]:
-            error += 0.1
+            error += 0.2
     model_says_its_sorted = bool(actual)
 
     data = input[0]
-    count_in_order, count_out_of_order = 0, 0
+    count_out_of_order = 0
     for i in range(len(data) - 1):
         if data[i] > data[i+1]:
             count_out_of_order += 1
-        else:
-            count_in_order += 1
 
     if model_says_its_sorted:
-        error += count_out_of_order / (len(data) + 1)
+        if len(data) >= 2:        
+            error += count_out_of_order / (len(data) - 1)
     else:
         is_sorted = count_out_of_order == 0
         if is_sorted:
-            error += 1.0
+            error += 0.5
     return error,
+
+
+def eval_is_sorted_self_test():
+    assert math.isclose(eval_is_sorted([[1, 2, 3, 4, 5]], 1, None, None, None)[0], 0.0)
+    assert math.isclose(eval_is_sorted([[1, 2, 3, 5, 4]], 1, None, None, None)[0], 0.25)
+    assert math.isclose(eval_is_sorted([[1, 2, 5, 4, 3]], 1, None, None, None)[0], 0.5)
+    assert math.isclose(eval_is_sorted([[1, 5, 4, 3, 2]], 1, None, None, None)[0], 0.75)
+    assert math.isclose(eval_is_sorted([[5, 4, 3, 2, 1]], 1, None, None, None)[0], 1.0)
+    assert math.isclose(eval_is_sorted([[5, 4, 3, 2, 1]], 0, None, None, None)[0], 0.0)
+    assert math.isclose(eval_is_sorted([[5, ]], 0, None, None, None)[0], 1.0)
+    assert math.isclose(eval_is_sorted([[5, ]], 1, None, None, None)[0], 0.0)
+    assert math.isclose(eval_is_sorted([[]], 0, None, None, None)[0], 1.0)
+    assert math.isclose(eval_is_sorted([[]], 1, None, None, None)[0], 0.0)
 
 
 # ================================== EXACT evals voor testen van laagjes ==================
@@ -443,15 +455,16 @@ def evaluate_all(example_inputs, actual_outputs, evaluation_function, log_file, 
             log_file.write(f"    eval_all_deferred, eval({example_input}, {actual_output}) = {v}\n")
         model_evals.append(v)
     if penalise_non_reacting_models:
-        if verbose >= 3:
-            log_file.write(f"penalise_non_reacting_models\n")
-            log_file.write(f"    len(domain_output_set) {len(domain_output_set)}\n")
-            log_file.write(f"    old model evals {str(model_evals)}\n")
         if len(domain_output_set) == 1:
+            if verbose >= 3:
+                log_file.write(f"penalise_non_reacting_models\n")
+                log_file.write(f"    domain_output_set {str(domain_output_set)}\n")
+                log_file.write(f"    len(domain_output_set) {len(domain_output_set)}\n")
+                log_file.write(f"    old model evals {str(model_evals)}\n")
             max_eval = max(model_evals)
             model_evals = [max_eval for _ in model_evals]
-        if verbose >= 3:
-            log_file.write(f"    new model evals {str(model_evals)}\n")
+            if verbose >= 3:
+                log_file.write(f"    new model evals {str(model_evals)}\n")
     return sum(model_evals), model_evals
 
 
@@ -477,3 +490,7 @@ def dynamic_error_weight_adjustment(log_file, verbose):
     if verbose >= 1:
         log_file.write(f"weights after {weights}, {sum_errors * weights}\n")
     sum_errors.fill(0)
+
+
+if __name__ == "__main__":
+    eval_is_sorted_self_test()
