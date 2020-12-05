@@ -11,11 +11,14 @@ import find_new_function
 
 def is_solved_by_function(example_inputs, evaluation_function, fname, functions, log_file, verbose):
     actual_outputs = []
-    formal_params, body = functions[fname]
+    if fname in functions:         
+        formal_params = functions[fname]
+        arity = len(formal_params)
+    else:
+        arity = len(interpret.get_build_in_function_param_types(fname))    
     used_example_inputs = []
     for input in example_inputs:
-        # print("fname", fname, type(fname), "input", input, type(input))
-        if len(input) == len(formal_params):
+        if len(input) == arity:
             used_example_inputs.append(input)
             code = [fname] + input
             variables = dict()
@@ -106,7 +109,7 @@ def main(seed, param_file):
         functions_file_name = params["functions_file"]
         problems_file_name = params["problems_file"]
         functions = interpret.get_functions(functions_file_name)
-        problems = interpret.compile(interpret.load(problems_file_name))
+        problems = interpret.compile(interpret.load(problems_file_name))        
         solved_all = solve_problems(problems, functions, log_file, params, append_functions_to_file=None)
         return 0 if solved_all else 1
 

@@ -302,11 +302,30 @@ def eval_is_magic(inputs, actual, extra_function_params, log_file, verbose):
     
 
 def eval_is_sorted(input, actual, extra_function_params, log_file, verbose):
-    expect = 1
-    for i in range(len(input) - 1):
-        if input[i] > input[i+1]:
-            expect = 0
-    return evaluate_int(actual, expect, False)
+    error = 0.0
+    if type(actual) != type(1):
+        error += 0.64
+    else:
+        if actual not in [0, 1]:
+            error += 0.1
+    model_says_its_sorted = bool(actual)
+
+    data = input[0]
+    count_in_order, count_out_of_order = 0, 0
+    for i in range(len(data) - 1):
+        if data[i] > data[i+1]:
+            count_out_of_order += 1
+        else:
+            count_in_order += 1        
+
+    if model_says_its_sorted:
+        error += count_out_of_order / (len(data) + 1)
+    else:
+        is_sorted = count_out_of_order == 0
+        if is_sorted:
+            error += 1.0
+    return error,
+
     
 # ================================== EXACT evals voor testen van laagjes ==================
 
@@ -400,7 +419,7 @@ def evaluate_all(example_inputs, actual_outputs, evaluation_function, log_file, 
         function_name, extra_function_params = evaluation_function
     global sum_errors, weights
     eval_function = eval(function_name)
-    if verbose >= 3:
+    if verbose >= 4:
         log_file.write(f"evaluate_all({function_name})\n")
     model_evals = []
     assert len(example_inputs) == len (actual_outputs)

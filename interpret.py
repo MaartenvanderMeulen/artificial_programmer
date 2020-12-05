@@ -141,17 +141,66 @@ def _run(program, variables, functions, debug, depth):
         result = None
         if len(program) == 0:
             result = []
-        elif program[0] == "add": # example (add 3 2)
-            result = 0
-            for i in range(1, len(program)):
-                value = _run(program[i], variables, functions, debug, depth+1)
-                if i == 1:
-                    result = value
+        elif program[0] in ["lt", "le", "ge", "gt", "add", "sub", "mul", "div"]: # operands must be NUMERIC
+            a = _run(program[1], variables, functions, debug, depth+1) if len(program) > 1 else 0
+            b = _run(program[2], variables, functions, debug, depth+1) if len(program) > 2 else 0
+            if type(a) != type(1) or type(b) != type(1):
+                result = 0
+            else:
+                if program[0] == "lt": # example (le 3 2)
+                    result = 1 if a < b else 0
+                elif program[0] == "le": # example (le 3 2)
+                    result = 1 if a <= b else 0
+                elif program[0] == "ge": # example (ge 3 2)
+                    result = 1 if a >= b else 0
+                elif program[0] == "gt": # example (gt 3 2)
+                    result = 1 if a > b else 0
+                elif program[0] == "add":
+                    result = a + b
+                elif program[0] == "sub":
+                    result = a - b
+                elif program[0] == "mul":
+                    result = a * b
+                elif program[0] == "div":
+                    result = a // b if b != 0 else 0
                 else:
-                    if type(result) == type(value):
-                        result += value
-                    else:
-                        result = 0
+                    raise RuntimeError("internal error at line 156 of the APL interpreter")
+        elif program[0] in ["eq", "ne", ]:
+            a = _run(program[1], variables, functions, debug, depth+1) if len(program) > 1 else 0
+            b = _run(program[2], variables, functions, debug, depth+1) if len(program) > 2 else 0
+            if program[0] == "eq":
+                result = 1 if a == b else 0
+            elif program[0] == "ne":
+                result = 1 if a != b else 0
+            else:
+                raise RuntimeError("internal error at line 156 of the APL interpreter")
+        elif program[0] in ["and",]: # with lazy evaluation of operands : only evaluate when needed
+            result = 0 # at least one operand must be True
+            for i in range(1, len(program)):
+                result = _run(program[i], variables, functions, debug, depth+1)
+                if not result: # found an operand that is False.  result of AND is False.  Skip rest.
+                    break
+        elif program[0] in ["or"]: # with lazy evaluation of operands : only evaluate when needed
+            result = 0 # at least one operand must be True
+            for i in range(1, len(program)):
+                result = _run(program[i], variables, functions, debug, depth+1)
+                if result: # found an operand that is nonzero.  result of OR is THIS NON-ZERO value.  skip rest
+                    break
+        elif program[0] in ["not"]:
+            result = 0
+            if len(program) > 1:
+                x = _run(program[1], variables, functions, debug, depth+1)
+                result = 0 if x else 1
+        elif program[0] in ["first"]:
+            result = 0
+            if len(program) > 1:
+                x = _run(program[1], variables, functions, debug, depth+1)
+                result = x[0] if type(x) == type([]) else 0
+        elif program[0] in ["rest"]:
+            result = 0
+            if len(program) > 1:
+                x = _run(program[1], variables, functions, debug, depth+1)
+                result = x[1:] if type(x) == type([]) else 0
         elif program[0] == "extend": # example (extend (1 2) (3 4))
             result = 0
             for i in range(1, len(program)):
@@ -163,62 +212,6 @@ def _run(program, variables, functions, debug, depth):
                     result = value
                 else:
                     result += value
-        elif program[0] == "sub": # example (sub 3 2)
-            result = 0
-            for i in range(1, len(program)):
-                value = _run(program[i], variables, functions, debug, depth+1)
-                if type(value) != type(1):
-                    result = 0
-                    break
-                if i == 1:
-                    result = value
-                else:
-                    result -= value
-        elif program[0] == "mul": # example (mul 1 2 3)
-            result = 0
-            for i in range(1, len(program)):
-                value = _run(program[i], variables, functions, debug, depth+1)
-                if i == 1:
-                    result = value
-                else:
-                    if type(value) == type(1):
-                        result *= value
-                    else:
-                        result = 0
-        elif program[0] == "div": # example (div 3 2)
-            a = _run(program[1], variables, functions, debug, depth+1) if len(program) > 1 else 0
-            if type(a) != type(1):
-                a = 0
-            b = _run(program[2], variables, functions, debug, depth+1) if len(program) > 2 else 0
-            if type(b) != type(1):
-                b = 0
-            result = a // b if b != 0 else 0
-        elif program[0] in ["eq", "ne", "lt", "le", "ge", "gt", "and", "or"]:
-            a = _run(program[1], variables, functions, debug, depth+1) if len(program) > 1 else 0
-            b = _run(program[2], variables, functions, debug, depth+1) if len(program) > 2 else 0
-            if type(a) != type(b):
-                result = 0
-            elif program[0] == "eq": # example (eq 3 2)
-                result = 1 if a == b else 0
-            elif program[0] == "ne": # example (ne 3 2)
-                result = 1 if a != b else 0
-            elif type(a) != type(1) or type(b) != type(1):
-                result = 0
-            else:
-                if program[0] == "lt": # example (le 3 2)
-                    result = 1 if a < b else 0
-                elif program[0] == "le": # example (le 3 2)
-                    result = 1 if a <= b else 0
-                elif program[0] == "ge": # example (ge 3 2)
-                    result = 1 if a >= b else 0
-                elif program[0] == "gt": # example (gt 3 2)
-                    result = 1 if a > b else 0
-                elif program[0] == "and": # example (and 1 1)
-                    result = 1 if a and b else 0
-                elif program[0] == "or": # example (or 1 1)
-                    result = 1 if a or b else 0
-                else:
-                    raise RuntimeError("internal error at line 156 of the APL interpreter")
         elif program[0] == "len": # example (len x)
             result = 0
             if len(program) > 1:
@@ -291,7 +284,7 @@ def _run(program, variables, functions, debug, depth):
                     functions[function_name] = result
         elif type(program[0]) == type("") and program[0] in functions:
             result = call_function(program, variables, functions, debug, depth)
-        elif program[0] == "if": # example (if cond x y))
+        elif program[0] == "if": # example (if cond x)), with lazy evaluation
             result = 0
             if len(program) >= 2:
                 result = _run(program[1], variables, functions, debug, depth+1)
@@ -447,9 +440,10 @@ def call_function(function_call, variables, functions, debug, depth):
 
 def get_build_in_functions():
     return [        
-        "len", "sum", # arity 1
-        "div", "lt", "le", "eq", "ne", "ge", "gt", # arity 2
-        "add", "sub", "mul", "and", "or", # arity 2
+        "len", "sum", "not", "first", "rest", # arity 1
+        "eq", "ne", # arity 2
+        "add", "sub", "mul", "div", "lt", "le", "ge", "gt", # arity 2, numeric        
+        "and", "or", # arity 2
         "extend", 
         "if", # arity 2 or 3
         "for", # artity 3, but 1st operand must be a variable name
@@ -465,10 +459,10 @@ def get_build_in_function_param_types(fname):
     # return a list with type-indication of the params of the build-in function.
     # type-indications : 1=numeric; "*"=zero or more numeric; "?"=0 or 1 numeric; "v"=variable; []=list
     arity_dict = {        
-        "len":(1,), "sum":([],), # arity 1
+        "len":(1,), "sum":([],), "not":(1,), "first":(1,), "rest":(1,), # arity 1
         "eq":(1,1), "ne":(1,1), # arity 2
-        "div":(1,1), "lt":(1,1), "le":(1,1), "ge":(1,1), "gt":(1,1), "sub":(1,1), "mul":(1,1), # arity 2, numeric
-        "add":(1,1), "and":(1,1), "or":(1,1), # arity 2
+        "div":(1,1), "lt":(1,1), "le":(1,1), "ge":(1,1), "gt":(1,1), "sub":(1,1), "mul":(1,1), "add":(1,1), # arity 2, numeric
+        "and":(1,1), "or":(1,1), # arity 2
         "extend":([],[]),
         "if":(1,1), # arity 2
         "for":("v",1,1), # artity 3, but 1st operand must be a variable name
@@ -482,7 +476,7 @@ def get_build_in_function_param_types(fname):
 
 
 def is_pure_numeric(fname):
-    return fname in ["div", "lt", "le", "ge", "gt", "sub", "mul"]
+    return fname in ["add", "sub", "mul", "div", "lt", "le", "ge", "gt", ]
     
 
 def convert_code_to_str(code):
