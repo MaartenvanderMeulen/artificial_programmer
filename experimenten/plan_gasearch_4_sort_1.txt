@@ -15,4 +15,9 @@ TODO
 python solve_problems.py 1000 experimenten/params_08.txt
         
     
+08 : 1000 runs opgestart.  Ongeveer 50% wordt opgelost, dat is wat veel, de input iets moeilijker maken
+08A : mindder constanten (0 1), en enkele iets langere tests
+08B : meer random getallen.  15x solved.  allemaal "funny functions"
+08C : 16 trainingsamples, in oplopende lengte
+08D : use only 0-1, 64 training examples
 
