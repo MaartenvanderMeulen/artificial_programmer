@@ -126,26 +126,13 @@
                         
             data))
             
-    (function mymerge (data1 data2)
-        (or
-            (if (and (gt (len data1) 0) (gt (len data2) 0))
-                (or
-                    (if (lt (first data1) (first data2))
-                        (extend (list1 (first data1)) (mymerge (rest data1) data2)))
-                    (if (gt (first data1) (first data2))
-                        (extend (list1 (first data2)) (mymerge data1 (rest data2))))
-                    (if (eq (first data1) (first data2))
-                        (extend (list2 (first data1 ) (first data2)) (mymerge (rest data1) (rest data2))))))
-            (if (eq data1 ()) data2)
-            (if (eq data2 ()) data1)))
     (assign x (0 1 2 2 3 4))
     (assert (eq (mysort x) (0 1 2 2 3 4)))
     (assign y (5 3 2 2 1 0))
     (assert (eq (mysort y) (0 1 2 2 3 5)))
-    (assert (eq (mymerge (mysort x) (mysort y)) (0 0 1 1 2 2 2 2 3 3 4 5)))
     (function is_sorted1 (data)
         (or 
-            (lt (len data) 2) 
+            (le (len data) 1) 
             (and (le (first data) (first (rest data))) (is_sorted1 (rest data)))))
     (assert (is_sorted1 x))
     (assert (not (is_sorted1 y)))
@@ -158,4 +145,17 @@
             (for i (sub (len data) 1) 1)))
     (assert (is_sorted3 x))
     (assert (not (is_sorted3 y)))
+
+    (function mymerge (data1 data2)
+        (if_then_else (and data1 data2)
+            (if_then_else (lt (first data1) (first data2))
+                (extend (list1 (first data1)) (mymerge (rest data1) data2))
+                (if_then_else (gt (first data1) (first data2))
+                    (extend (list1 (first data2)) (mymerge data1 (rest data2)))
+                    (if_then_else (eq (first data1) (first data2))
+                        (extend (list2 (first data1 ) (first data2)) (mymerge (rest data1) (rest data2))))))
+            (if_then_else data1 data1
+                (if_then_else data2 data2
+                    ()))))
+    (assert (eq (mymerge (mysort x) (mysort y)) (0 0 1 1 2 2 2 2 3 3 4 5)))
 )

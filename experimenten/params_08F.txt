@@ -1,0 +1,27 @@
+{
+    "problems_file": "experimenten/problems_is_sortedF.txt",
+    "functions_file": "experimenten/functions_leeg.txt",
+    "seed_prefix": 0,
+    "verbose": 1,
+    "max_seconds": 1800,
+    "pop_size": [
+        4000,
+        200
+    ],
+    "nchildren": [
+        4000,
+        100
+    ],
+    "ngen": [
+        3,
+        1000
+    ],
+    "max_individual_size": 40,
+    "pcrossover": 0.4,
+    "best_of_n_mut": 2,
+    "best_of_n_cx": 3,
+    "parent_selection_strategy": 2,
+    "weight_complementairity": 0.3,
+    "penalise_non_reacting_models": true,
+    "hops": 1
+}

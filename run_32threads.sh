@@ -7,7 +7,7 @@ do
     for t in `seq 0 1 $lastt`
     do
         startseed=`expr 1000 + $t`
-        for seed in `seq $startseed $nt 1999` ; do python solve_problems.py $seed experimenten/params_$id.txt ; done &
+        for seed in `seq $startseed $nt 1099` ; do python solve_problems.py $seed experimenten/params_$id.txt ; done &
     done
     wait
     echo $id `date` `grep solved tmp/$id/log*.txt | wc --lines`

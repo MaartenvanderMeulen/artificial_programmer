@@ -97,6 +97,10 @@ def main(seed, param_file):
     if params.get("do_not_overwrite_logfile", False):
         if os.path.exists(log_file):
             exit(0)
+    params["param_file"] = param_file
+    params["id"] = id
+    params["output_folder"] = output_folder
+    params["seed"] = seed
 
     with open(f"{output_folder}/params.txt", "w") as f:
         # write a copy to the output folder

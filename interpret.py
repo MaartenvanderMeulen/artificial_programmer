@@ -82,7 +82,7 @@ class Parser:
         program = Parser._parse_element()
         Parser._expect_token(Parser._end_of_program)
         return program
-       
+
     def _parse_deap_element(functions):
         # print("DEBUG 84 : _parse_deap_element start", Parser._token)
         if Parser._token.isnumeric(): # positive integral number
@@ -115,7 +115,7 @@ class Parser:
         program = Parser._parse_deap_element(functions)
         Parser._expect_token(Parser._end_of_program)
         return program
-    
+
 
 
 # ====================== interpreter ======================================
@@ -125,7 +125,7 @@ class Parser:
 global count_runs_calls
 count_runs_calls = 0
 longest_run = 0
-    
+
 def _run(program, variables, functions, debug, depth):
     if depth > 100:
         #print("code depth exceeded")
@@ -134,7 +134,7 @@ def _run(program, variables, functions, debug, depth):
     count_runs_calls += 1
     if count_runs_calls > 10000:
         #print("code run calls exceeded")
-        raise RuntimeError("code run calls exceeded")    
+        raise RuntimeError("code run calls exceeded")
     if debug:
         print("    "*depth, "_run start", "program", program, "variables", variables, "functions", functions)
     if type(program) == type([]):
@@ -177,13 +177,13 @@ def _run(program, variables, functions, debug, depth):
         elif program[0] in ["and",]: # with lazy evaluation of operands : only evaluate when needed
             result = 0 # at least one operand must be True
             for i in range(1, len(program)):
-                result = _run(program[i], variables, functions, debug, depth+1)
+                result = 1 if _run(program[i], variables, functions, debug, depth+1) else 0
                 if not result: # found an operand that is False.  result of AND is False.  Skip rest.
                     break
         elif program[0] in ["or"]: # with lazy evaluation of operands : only evaluate when needed
             result = 0 # at least one operand must be True
             for i in range(1, len(program)):
-                result = _run(program[i], variables, functions, debug, depth+1)
+                result = 1 if _run(program[i], variables, functions, debug, depth+1) else 0
                 if result: # found an operand that is nonzero.  result of OR is THIS NON-ZERO value.  skip rest
                     break
         elif program[0] in ["not"]:
@@ -195,7 +195,7 @@ def _run(program, variables, functions, debug, depth):
             result = 0
             if len(program) > 1:
                 x = _run(program[1], variables, functions, debug, depth+1)
-                result = x[0] if type(x) == type([]) else 0
+                result = x[0] if type(x) == type([]) and len(x) > 0 else 0
         elif program[0] in ["rest"]:
             result = 0
             if len(program) > 1:
@@ -284,18 +284,16 @@ def _run(program, variables, functions, debug, depth):
                     functions[function_name] = result
         elif type(program[0]) == type("") and program[0] in functions:
             result = call_function(program, variables, functions, debug, depth)
-        elif program[0] == "if": # example (if cond x)), with lazy evaluation
+        elif program[0] in ["if", "if_then_else"]: # example (if cond x)), with lazy evaluation
             result = 0
-            if len(program) >= 2:
-                result = _run(program[1], variables, functions, debug, depth+1)
-                if len(program) >= 3:
-                    condition = result
-                    if condition:
-                        result = _run(program[2], variables, functions, debug, depth+1)
-                    elif len(program) >= 4:
-                        result = _run(program[3], variables, functions, debug, depth+1)
-                    #else:
-                    #    result = 0
+            if len(program) >= 3:
+                condition = _run(program[1], variables, functions, debug, depth+1)
+                if condition:
+                    result = _run(program[2], variables, functions, debug, depth+1)
+                elif len(program) >= 4:
+                    result = _run(program[3], variables, functions, debug, depth+1)
+                else:
+                    result = 0
         elif program[0] == "for": # example (for i n i))
             if len(program) < 4:
                 return []
@@ -338,9 +336,9 @@ def _run(program, variables, functions, debug, depth):
             result = 0
             if len(program) > 1:
                 values = _run(program[1], variables, functions, debug, depth+1)
-                if type(values) == type([]):                   
+                if type(values) == type([]):
                     for v in values:
-                        if type(v) != type(1):                   
+                        if type(v) != type(1):
                             result = 0
                             break
                         result += v
@@ -382,8 +380,8 @@ def load(file_name):
                         program_str += " "
                     program_str += part
     return program_str
-    
-    
+
+
 def compile(program_str):
     '''Compiles program_str'''
     return Parser.compile(program_str)
@@ -391,7 +389,7 @@ def compile(program_str):
 
 def run(program, variables, functions, debug=False):
     '''Runs compiled program'''
-    #print("run start") 
+    #print("run start")
     global count_runs_calls, longest_run
     count_runs_calls = 0
     try:
@@ -411,7 +409,7 @@ def run(program, variables, functions, debug=False):
         print(convert_code_to_str(program))
         print("MemoryError", str(e))
         return 0
-    #print("run end") 
+    #print("run end")
     return result
 
 
@@ -427,8 +425,8 @@ def bind_params(formal_params, actual_params):
         actual_params = actual_params + [0] # don't use actual_params.append(0) : that alters actual_params
     actual_params = actual_params[:len(formal_params)]
     return {name:value for name, value in zip(formal_params, actual_params)}
-    
-    
+
+
 def call_function(function_call, variables, functions, debug, depth):
     function_name = function_call[0]
     formal_params, code = functions[function_name]
@@ -439,16 +437,17 @@ def call_function(function_call, variables, functions, debug, depth):
 
 
 def get_build_in_functions():
-    return [        
+    return [
         "len", "sum", "not", "first", "rest", # arity 1
         "eq", "ne", # arity 2
-        "add", "sub", "mul", "div", "lt", "le", "ge", "gt", # arity 2, numeric        
+        "add", "sub", "mul", "div", "lt", "le", "ge", "gt", # arity 2, numeric
         "and", "or", # arity 2
-        "extend", 
-        "if", # arity 2 or 3
+        "extend",
+        "if", # arity 2
+        "if_then_else", # arity 3
         "for", # artity 3, but 1st operand must be a variable name
         "var", # artity 3, but 1st operand must be a variable name
-        
+
         "list1", # arity 1
         "list2", "last2", "at2", # arity 2
         # "list3", "last3", "at3", # arity 3
@@ -458,13 +457,14 @@ def get_build_in_functions():
 def get_build_in_function_param_types(fname):
     # return a list with type-indication of the params of the build-in function.
     # type-indications : 1=numeric; "*"=zero or more numeric; "?"=0 or 1 numeric; "v"=variable; []=list
-    arity_dict = {        
+    arity_dict = {
         "len":(1,), "sum":([],), "not":(1,), "first":(1,), "rest":(1,), # arity 1
         "eq":(1,1), "ne":(1,1), # arity 2
         "div":(1,1), "lt":(1,1), "le":(1,1), "ge":(1,1), "gt":(1,1), "sub":(1,1), "mul":(1,1), "add":(1,1), # arity 2, numeric
         "and":(1,1), "or":(1,1), # arity 2
         "extend":([],[]),
         "if":(1,1), # arity 2
+        "if_then_else":(1,1,1), # arity 3
         "for":("v",1,1), # artity 3, but 1st operand must be a variable name
         "var":("v",1,1), # artity 3, but 1st operand must be a variable name
 
@@ -477,12 +477,12 @@ def get_build_in_function_param_types(fname):
 
 def is_pure_numeric(fname):
     return fname in ["add", "sub", "mul", "div", "lt", "le", "ge", "gt", ]
-    
+
 
 def convert_code_to_str(code):
     if type(code) == type([]):
         result = "(" + " ".join([convert_code_to_str(item) for item in code]) + ")"
-    else:        
+    else:
         result = str(code)
         if result in ["list1", "list2", "list3"]:
             result = "list"
@@ -492,15 +492,15 @@ def convert_code_to_str(code):
             result = "at"
     return result
 
-    
+
 def convert_code_to_deap_str(code, toolbox):
     if type(code) == type([]):
         result = convert_code_to_deap_str(code[0], toolbox) + "(" + ", ".join([convert_code_to_deap_str(item, toolbox) for item in code[1:]]) + ")"
-    else:        
+    else:
         result = str(code)
     return result
 
-    
+
 def add_function(function, functions, write_functions_to_file=None, mode="a"):
     # print("DEBUG 405", function)
     keyword, fname, params, code = function
@@ -539,5 +539,5 @@ def self_test(self_test_file=default_test_file):
 
 
 if __name__ == "__main__":
-    file_name = sys.argv[1] if len(sys.argv) >= 2 else default_test_file 
+    file_name = sys.argv[1] if len(sys.argv) >= 2 else default_test_file
     self_test(file_name)

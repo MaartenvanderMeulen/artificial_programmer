@@ -16,7 +16,10 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
     deap_str = ind.deap_str
     assert deap_str == str(ind)
     toolbox.eval_count += 1
+    # print("DEBU 19", deap_str)
     code = interpret.compile_deap(deap_str, toolbox.functions)
+    # print("DEBU 21", deap_str)
+    toolbox.functions[toolbox.problem_name] = [toolbox.formal_params, code]
     if toolbox.monkey_mode: # if the solution can be found in monkey mode, the real search could in theory find it also
         code_str = interpret.convert_code_to_str(code)
         weighted_error = evaluate.evaluate_code(code_str, toolbox.solution_code_str)
@@ -26,8 +29,7 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
             # now check that this also evaluates 
             ind.model_outputs = []
             for input in toolbox.example_inputs:
-                variables = interpret.bind_params(toolbox.formal_params, input)
-                model_output = interpret.run(code, variables, toolbox.functions)
+                model_output = interpret.run([toolbox.problem_name] + input, dict(), toolbox.functions)
                 ind.model_outputs.append(model_output)        
             weighted_error, ind.model_evals = evaluate.evaluate_all(toolbox.example_inputs, ind.model_outputs, toolbox.evaluation_function, toolbox.f, debug, toolbox.penalise_non_reacting_models)
             assert weighted_error == 0
@@ -35,8 +37,7 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
         t0 = time.time()
         ind.model_outputs = []
         for input in toolbox.example_inputs:
-            variables = interpret.bind_params(toolbox.formal_params, input)
-            model_output = interpret.run(code, variables, toolbox.functions)
+            model_output = interpret.run([toolbox.problem_name] + input, dict(), toolbox.functions)
             ind.model_outputs.append(model_output)        
         toolbox.t_interpret += time.time() - t0
         t0 = time.time()
@@ -68,14 +69,14 @@ def f():
 
 class Toolbox(object):
     def __init__(self, problem, functions):
-        _, formal_params, example_inputs, evaluation_function, hints, _ = problem
+        problem_name, formal_params, example_inputs, evaluation_function, hints, _ = problem
         int_hints, var_hints, func_hints, solution_hints = hints
         pset = gp.PrimitiveSet("MAIN", len(formal_params))
         for i, param in enumerate(formal_params):
             rename_cmd = f'pset.renameArguments(ARG{i}="{param}")'
             eval(rename_cmd)
-        for c in int_hints:
-            pset.addTerminal(c)
+        for constant in int_hints: 
+            pset.addTerminal(constant)
         for variable in var_hints:
             if variable not in formal_params:
                 pset.addTerminal(variable)
@@ -88,7 +89,14 @@ class Toolbox(object):
             if function in func_hints:
                 arity = len(params)
                 pset.addPrimitive(f, arity, name=function)
+        # add recursive call if in func_hints
+        if problem_name in func_hints:
+            arity = len(formal_params)
+            pset.addPrimitive(f, arity, name=problem_name)
+            dummy_code = 0
+            functions[problem_name] = [formal_params, dummy_code]
         # toolbox = base.Toolbox()
+        self.problem_name = problem_name
         self.formal_params = formal_params
         self.example_inputs = example_inputs
         self.evaluation_function = evaluation_function
@@ -124,6 +132,22 @@ def write_population(toolbox, population, label):
                 break
         toolbox.f.write("\n")
         toolbox.f.flush()
+
+
+def write_final_population(toolbox, population):
+    with open(toolbox.pop_file, "w") as f:
+        f.write("(\n")
+        for ind in population:
+            code = interpret.compile_deap(ind.deap_str, toolbox.functions)
+            code_str = interpret.convert_code_to_str(code)
+            f.write(f"    {code_str} # {ind.eval:.3f}\n")
+        f.write(")\n")
+
+
+def clear_final_population(toolbox):
+    with open(toolbox.pop_file, "w") as f:
+        f.write("(\n")
+        f.write(")\n")
 
 
 def write_path(toolbox, ind, indent=0):
@@ -371,6 +395,7 @@ def consistency_check(inds):
 
 
 def ga_search_impl(toolbox):
+    clear_final_population(toolbox)
     try:
         population, solution = generate_initial_population(toolbox)
         if solution:
@@ -402,7 +427,7 @@ def ga_search_impl(toolbox):
                 toolbox.gen += 1
     except RuntimeWarning:
         pass
-    write_population(toolbox, population, "pop final")
+    write_final_population(toolbox, population)
     best = population[0]
     return best, toolbox.gen+1
 
@@ -448,6 +473,7 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.beta = params["weight_complementairity"]
     toolbox.penalise_non_reacting_models = params["penalise_non_reacting_models"]
     toolbox.hops = params["hops"]
+    toolbox.pop_file = params["output_folder"] + "/pop_" + str(params["seed"]) + ".txt"
     
     for _ in range(toolbox.hops):
         toolbox.ind_str_set = set()
@@ -464,7 +490,9 @@ def solve_by_new_function(problem, functions, f, params):
             result = ["function", problem_name, problem_params, code]
             # cx_perc = round(100*compute_cx_fraction(best))
             f.write(f"solved\t{seconds}\tsec\t{toolbox.eval_count}\tevals\t{problem_name}\t{best.deap_str}\n")
-            assert evaluate_individual_impl(toolbox, best, toolbox.verbose) == 0
+            if toolbox.verbose >= 1:                   
+                score = evaluate_individual_impl(toolbox, best, 4)
+                assert score == 0
             if toolbox.verbose >= 1:
                 write_path(toolbox, best)
             return result
