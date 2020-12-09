@@ -1,5 +1,6 @@
 # Inspired by https://deap.readthedocs.io/en/master/examples/gp_symbreg.html
 # it is used by search.py
+import os
 import random
 import copy
 import interpret
@@ -8,7 +9,7 @@ from evaluate import recursive_tuple
 import math
 import time
 import json
-from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull
+from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull, gp.from_string
 
 
 
@@ -162,8 +163,7 @@ def write_path(toolbox, ind, indent=0):
             write_path(toolbox, parent, indent+1)
 
 
-def generate_initial_population(toolbox):
-    evaluate.init_dynamic_error_weight_adjustment()
+def generate_initial_population_impl(toolbox):
     toolbox.ind_str_set = set()
     population = []
     retry_count = 0
@@ -184,6 +184,56 @@ def generate_initial_population(toolbox):
             return None, ind
         population.append(ind)
     return population, None
+
+
+def read_old_populations(old_populations_folder):
+    old_pops = []
+    for filename in os.listdir(old_populations_folder):
+        if filename[:3] == "pop":
+            old_pop = interpret.compile(interpret.load(old_populations_folder + "/" + filename))
+            if len(old_pop) > 0:
+                old_pops.append(old_pop)
+    return old_pops
+
+
+def load_initial_population_impl(toolbox, old_pops):
+    toolbox.ind_str_set = set()
+    population = []
+    tot_old_pop_size = sum([len(old_pop) for old_pop in old_pops])
+    if toolbox.verbose >= 2:
+        print("tot_old_pop_size", tot_old_pop_size, "required newpop size", toolbox.pop_size[0])
+    count_skipped = 0
+    for old_pop in old_pops:
+        k = toolbox.pop_size[0] // len(old_pops)
+        if toolbox.verbose >= 2:
+            print("    k", k, "len(old_pop)", len(old_pop))
+        # take sample of size k from the old population
+        codes = random.sample(old_pop, k=k) if k < len(old_pop) else old_pop
+        for code in codes:
+            deap_str = interpret.convert_code_to_deap_str(code, toolbox)
+            ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)
+            ind.deap_str = str(ind)
+            if ind.deap_str in toolbox.ind_str_set:
+                count_skipped += 1
+                continue
+            toolbox.ind_str_set.add(ind.deap_str)
+            ind.parents = []
+            ind.eval = evaluate_individual(toolbox, ind)
+            if ind.eval == 0.0:
+                return None, ind
+            population.append(ind)
+    if toolbox.verbose >= 2:
+        print("new pop size", len(population), "skipped doubles", count_skipped)
+    return population, None
+
+
+def generate_initial_population(toolbox):
+    evaluate.init_dynamic_error_weight_adjustment()
+    if toolbox.new_initial_population:
+        return generate_initial_population_impl(toolbox)
+    else:
+        old_pops = read_old_populations(toolbox.old_populations_folder)
+        return load_initial_population_impl(toolbox, old_pops)
 
 
 def copy_individual(ind):
@@ -474,6 +524,10 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.penalise_non_reacting_models = params["penalise_non_reacting_models"]
     toolbox.hops = params["hops"]
     toolbox.pop_file = params["output_folder"] + "/pop_" + str(params["seed"]) + ".txt"
+    toolbox.new_initial_population = params["new_initial_population"]
+    if not toolbox.new_initial_population:
+        toolbox.old_populations_folder = params["old_populations_folder"]
+
     
     for _ in range(toolbox.hops):
         toolbox.ind_str_set = set()

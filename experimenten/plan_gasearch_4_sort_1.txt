@@ -21,5 +21,13 @@ python solve_problems.py 1000 experimenten/params_08.txt
 08C : 16 trainingsamples, in oplopende lengte
 08D : use only 0-1, 64 training examples
 
+===================================== ... =================================
+...
+08G : genereert recusieve is_sorted functie
+
+=================================== 9 dec ===================================
+
+08I skipped vanwege I
+08J : voortgezette optimalisatie op 08G
 
 
