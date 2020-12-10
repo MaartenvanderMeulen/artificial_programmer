@@ -46,6 +46,8 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
         assert math.isclose(weighted_error, sum(ind.model_evals))
         toolbox.t_eval += time.time() - t0
         ind.model_outputs = recursive_tuple(ind.model_outputs)
+        if weighted_error == 0.0 and len(ind) > len(toolbox.self.solution_deap_ind):
+            weighted_error += (len(ind) - len(toolbox.self.solution_deap_ind)) / 1000.0
     return weighted_error
 
 
@@ -96,16 +98,18 @@ class Toolbox(object):
             pset.addPrimitive(f, arity, name=problem_name)
             dummy_code = 0
             functions[problem_name] = [formal_params, dummy_code]
-        # toolbox = base.Toolbox()
         self.problem_name = problem_name
         self.formal_params = formal_params
         self.example_inputs = example_inputs
         self.evaluation_function = evaluation_function
         self.functions = functions
         self.pset = pset
-        self.solution_code_str = interpret.convert_code_to_str(solution_hints)
         self.eval_cache = dict()
-        self.ind_str_set = set()
+        self.ind_str_set = set()        
+        self.solution_code_str = interpret.convert_code_to_str(solution_hints) # for monkey test
+        deap_str = interpret.convert_code_to_deap_str(solution_hints, self)
+        self.solution_deap_ind = gp.PrimitiveTree.from_string(deap_str, pset) # for finding shortest solution
+        assert deap_str == str(self.solution_deap_ind)
 
 
 def best_of_n(population, n):

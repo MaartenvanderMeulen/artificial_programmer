@@ -1,9 +1,10 @@
 '''Evaluate the error of the actual data with respect to the expected data'''
 import sys
 import numpy as np
-import interpret
-# import time
+import copy
 import math
+# import time
+import interpret
 
 
 # used in dynamic weight adjustment
@@ -349,6 +350,12 @@ def eval_merge_elem(input, actual, extra_function_params, log_file, verbose):
     for i in range(1, len(data)):
         assert data[i-1] <= data[i]
     expect = data + [elem] 
+    expect.sort()
+    return evaluate_list_of_ints(actual, expect)
+
+
+def eval_sort(input, actual, extra_function_params, log_file, verbose):
+    expect = copy.deepcopy(input[0])
     expect.sort()
     return evaluate_list_of_ints(actual, expect)
 

@@ -1,0 +1,12 @@
+(
+    (function merge_elem (elem sorted_data)
+        (if_then_else
+            (eq (len sorted_data) 0) # if empty list or no list
+            (list elem)
+            (if_then_else
+                (le elem (first sorted_data))
+                (cons elem sorted_data)
+                (cons (first sorted_data) (merge_elem elem (rest sorted_data))))
+        )
+    )
+)

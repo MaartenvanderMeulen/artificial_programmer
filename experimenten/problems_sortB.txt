@@ -1,0 +1,25 @@
+(
+    (sort (data)
+        (
+            ((66 61 70 75 84))
+            ((66 61 70 66 75 84))
+            ((10 13 12))
+            ((10 14 13 10))
+            ((84 43 66 61 77 70))
+            ((84 75 61 66 70 43 84))
+            ((84 ))
+            ((84 74))
+            ((84 84))
+            ((84 99))
+        )
+        (eval_sort ())
+        ((1) () (if_then_else rest merge_elem first sort)
+            (if_then_else
+                (rest data)
+                (merge_elem (first data) (sort (rest data)))
+                data
+            )
+        )
+        2
+    )
+)

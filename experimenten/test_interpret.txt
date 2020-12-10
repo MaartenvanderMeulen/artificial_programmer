@@ -162,12 +162,13 @@
     (assert (eq (cons (first y) (rest y)) y))
     (function mymerge_elem (elem sorted_data)
         (if_then_else
-            sorted_data
+            (eq (len sorted_data) 0) # in case sorted_data is not a list, it is skipped
+            (list elem)
             (if_then_else
                 (le elem (first sorted_data))
                 (cons elem sorted_data)
-                (cons (first sorted_data) (mymerge_elem elem (rest sorted_data))))
-            (list elem)
+                (cons (first sorted_data) (mymerge_elem elem (rest sorted_data)))
+            )
         )
     )
     (function mysort2 (data)
