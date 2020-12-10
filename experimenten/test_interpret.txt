@@ -160,7 +160,7 @@
     (assert (eq (mymerge (mysort x) (mysort y)) (0 0 1 1 2 2 2 2 3 3 4 5)))
     (assert (eq (cons (first x) (rest x)) x))
     (assert (eq (cons (first y) (rest y)) y))
-    (function mymerge_elem (elem sorted_data)
+    (function mymerge_elem1 (elem sorted_data)
         (if_then_else
             (eq (len sorted_data) 0) # in case sorted_data is not a list, it is skipped
             (list elem)
@@ -169,6 +169,13 @@
                 (cons elem sorted_data)
                 (cons (first sorted_data) (mymerge_elem elem (rest sorted_data)))
             )
+        )
+    )
+    (function mymerge_elem (elem sorted_data)
+        (if_then_else
+            (or (eq (len sorted_data) 0) (le elem (first sorted_data)))
+            (cons elem sorted_data)
+            (cons (first sorted_data) (mymerge_elem elem (rest sorted_data)))
         )
     )
     (function mysort2 (data)

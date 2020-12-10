@@ -1,0 +1,25 @@
+(
+    (merge_elem (elem sorted_data)
+        (
+            (66 (61 70 75 84))
+            (66 (61 66 70 75 84))
+            (10 (12 13))
+            (10 (10 13 14))
+            (84 (43 61 66 70 75))
+            (84 (43 61 66 70 75 84))
+            (84 ())
+            (84 (74))
+            (84 (84))
+            (84 (99))
+        )
+        (eval_merge_elem ())
+        (() () (if_then_else or le first rest cons list1 merge_elem)
+            (if_then_else
+                (or (le (len sorted_data) 0) (le elem (first sorted_data)))
+                (cons elem sorted_data)
+                (cons (first sorted_data) (mymerge_elem elem (rest sorted_data)))
+            )
+        )
+        1
+    )
+)

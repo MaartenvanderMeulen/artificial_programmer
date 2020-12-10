@@ -102,9 +102,10 @@ def main(seed, param_file):
     params["output_folder"] = output_folder
     params["seed"] = seed
 
-    with open(f"{output_folder}/params.txt", "w") as f:
-        # write a copy to the output folder
-        json.dump(params, f, sort_keys=True, indent=4)
+    if False:
+        with open(f"{output_folder}/params.txt", "w") as f:
+            # write a copy to the output folder
+            json.dump(params, f, sort_keys=True, indent=4)
 
     random.seed(seed)
     with open(f"{output_folder}/log_{seed}.txt", "w") as log_file:
