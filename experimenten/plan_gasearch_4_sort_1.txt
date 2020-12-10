@@ -35,3 +35,13 @@ python solve_problems.py 1000 experimenten/params_08.txt
 09A, merge, wordt 1x opgelost van de 28.
 09B, voortgezette optimalisatie geeft crash.  python solve_problems.py 1000 experimenten/params_09B.txt
 
+===================================== 10 dec ============================================
+
+Bug in 09B met convert_code_to_deap_str opgelost.
+
+TODO
+done zorg dat ind's nooit langer worden dan max_individual_size
+done 09B op 28 threads
+done 10A sort
+done find shortest solution
+ 

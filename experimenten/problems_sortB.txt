@@ -15,7 +15,7 @@
         (eval_sort ())
         ((1) () (if_then_else rest merge_elem first sort)
             (if_then_else
-                (rest data)
+                data
                 (merge_elem (first data) (sort (rest data)))
                 data
             )

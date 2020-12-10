@@ -46,8 +46,8 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
         assert math.isclose(weighted_error, sum(ind.model_evals))
         toolbox.t_eval += time.time() - t0
         ind.model_outputs = recursive_tuple(ind.model_outputs)
-        if weighted_error == 0.0 and len(ind) > len(toolbox.self.solution_deap_ind):
-            weighted_error += (len(ind) - len(toolbox.self.solution_deap_ind)) / 1000.0
+        if weighted_error == 0.0 and len(ind) > len(toolbox.solution_deap_ind):
+            weighted_error += (len(ind) - len(toolbox.solution_deap_ind)) / 1000.0
     return weighted_error
 
 
@@ -58,7 +58,7 @@ def evaluate_individual(toolbox, individual, debug=0):
     assert deap_str == str(individual)
     if deap_str in toolbox.eval_cache: #  TODO handle dynamic weighting that changes the evaluation
         eval, individual.model_outputs, individual.model_evals = toolbox.eval_cache[deap_str]
-        assert math.isclose(eval, sum(individual.model_evals))
+        assert eval < 0.1 or math.isclose(eval, sum(individual.model_evals))
         return eval
     weighted_error = evaluate_individual_impl(toolbox, individual, debug)
     toolbox.eval_cache[deap_str] = weighted_error, individual.model_outputs, individual.model_evals
@@ -363,8 +363,8 @@ def select_parents(toolbox, population):
         if parent1.eval > parent2.eval or (parent1.eval == parent2.eval and len(parent1) > len(parent2)):
             parent1, parent2 = parent2, parent1
         # compute p        
-        assert math.isclose(parent1.eval, sum(parent1.model_evals))
-        assert math.isclose(parent2.eval, sum(parent2.model_evals))
+        assert parent1.eval < 0.1 or math.isclose(parent1.eval, sum(parent1.model_evals))
+        assert parent2.eval < 0.1 or math.isclose(parent2.eval, sum(parent2.model_evals))
         p_fitness1 = (1 - parent1.eval/(max_eval*1.1))
         p_fitness2 = (1 - parent2.eval/(max_eval*1.1))
         assert 0 <= p_fitness1 and p_fitness1 <= 1
