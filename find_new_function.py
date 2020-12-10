@@ -545,7 +545,7 @@ def solve_by_new_function(problem, functions, f, params):
             code = interpret.compile_deap(best.deap_str, toolbox.functions)
             result = ["function", problem_name, problem_params, code]
             # cx_perc = round(100*compute_cx_fraction(best))
-            f.write(f"solved\t{seconds}\tsec\t{toolbox.eval_count}\tevals\t{problem_name}\t{best.deap_str}\n")
+            f.write(f"solved\t{seconds}\tsec\t{toolbox.eval_count}\tevals\t{problem_name}\t{len(best)}\tlen\t{best.deap_str}\n")
             if toolbox.verbose >= 1:                   
                 score = evaluate_individual_impl(toolbox, best, 4)
                 assert score == 0
@@ -553,8 +553,8 @@ def solve_by_new_function(problem, functions, f, params):
                 write_path(toolbox, best)
             return result
         else:
-            f.write(f"timeout\t{seconds}\tsec\t{toolbox.eval_count}\tevals\t{problem_name}\t\n")
+            f.write(f"timeout\t{seconds}\tsec\t{toolbox.eval_count}\tevals\t{problem_name}\t\t\t\n")
         f.flush()
         
-    f.write(f"failed\t\tsec\t\tevals\t{problem_name}\t\n")
+    f.write(f"failed\t\tsec\t\tevals\t{problem_name}\t\t\t\n")
     return None
