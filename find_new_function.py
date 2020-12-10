@@ -17,9 +17,7 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
     deap_str = ind.deap_str
     assert deap_str == str(ind)
     toolbox.eval_count += 1
-    # print("DEBU 19", deap_str)
     code = interpret.compile_deap(deap_str, toolbox.functions)
-    # print("DEBU 21", deap_str)
     toolbox.functions[toolbox.problem_name] = [toolbox.formal_params, code]
     if toolbox.monkey_mode: # if the solution can be found in monkey mode, the real search could in theory find it also
         code_str = interpret.convert_code_to_str(code)
@@ -172,7 +170,7 @@ def generate_initial_population_impl(toolbox):
     while len(population) < toolbox.pop_size[0]:
         ind = gp.PrimitiveTree(gp.genHalfAndHalf(pset=toolbox.pset, min_=2, max_=4))
         ind.deap_str = str(ind)
-        if ind.deap_str in toolbox.ind_str_set: # or len(ind) > toolbox.max_individual_size:
+        if ind.deap_str in toolbox.ind_str_set or len(ind) > toolbox.max_individual_size:
             if retry_count < toolbox.child_creation_retries:
                 retry_count += 1
                 continue
@@ -205,14 +203,9 @@ def deap_len_of_code(code):
 def load_initial_population_impl(toolbox, old_pops):
     toolbox.ind_str_set = set()
     population = []
-    tot_old_pop_size = sum([len(old_pop) for old_pop in old_pops])
-    if toolbox.verbose >= 2:
-        print("tot_old_pop_size", tot_old_pop_size, "required newpop size", toolbox.pop_size[0])
     count_skipped = 0
     for old_pop in old_pops:
         k = toolbox.pop_size[0] // len(old_pops)
-        if toolbox.verbose >= 2:
-            print("    k", k, "len(old_pop)", len(old_pop))
         # take sample of size k from the old population
         codes = random.sample(old_pop, k=k) if k < len(old_pop) else old_pop
         for code in codes:
@@ -221,7 +214,7 @@ def load_initial_population_impl(toolbox, old_pops):
             ind.deap_str = str(ind)
             assert len(ind) == deap_len_of_code(code)
             assert deap_str == ind.deap_str
-            if ind.deap_str in toolbox.ind_str_set:
+            if ind.deap_str in toolbox.ind_str_set or len(ind) > toolbox.max_individual_size:
                 count_skipped += 1
                 continue
             toolbox.ind_str_set.add(ind.deap_str)
@@ -230,8 +223,6 @@ def load_initial_population_impl(toolbox, old_pops):
             if ind.eval == 0.0:
                 return None, ind
             population.append(ind)
-    if toolbox.verbose >= 2:
-        print("new pop size", len(population), "skipped doubles", count_skipped)
     return population, None
 
 
@@ -268,7 +259,7 @@ def cxOnePoint(toolbox, parent1, parent2):
     slice2 = parent2.searchSubtree(index2)
     child[slice1] = parent2[slice2]
     child.deap_str = str(child)
-    if child.deap_str in toolbox.ind_str_set: # or len(child) > toolbox.max_individual_size:
+    if child.deap_str in toolbox.ind_str_set or len(child) > toolbox.max_individual_size:
         return None
     child.eval = evaluate_individual(toolbox, child)
     return child
@@ -313,7 +304,7 @@ def mutUniform(toolbox, parent, expr, pset):
     type_ = child[index].ret
     child[slice_] = expr(pset=pset, type_=type_)
     child.deap_str = str(child)
-    if child.deap_str in toolbox.ind_str_set: # or len(child) > toolbox.max_individual_size:
+    if child.deap_str in toolbox.ind_str_set or len(child) > toolbox.max_individual_size:
         return None
     child.eval = evaluate_individual(toolbox, child)
     return child
@@ -465,7 +456,6 @@ def ga_search_impl(toolbox):
         toolbox.gen = 0
         for toolbox.parachute_level in range(len(toolbox.ngen)):
             while toolbox.gen < toolbox.ngen[toolbox.parachute_level]:
-                # print("gen", toolbox.gen, "len", len(population[0]))
                 code_str = interpret.convert_code_to_str(interpret.compile_deap(population[0].deap_str, toolbox.functions))
                 if toolbox.f and toolbox.verbose >= 1:
                     toolbox.f.write(f"start generation {toolbox.gen:2d} best eval {population[0].eval:.5f} {code_str}\n")
