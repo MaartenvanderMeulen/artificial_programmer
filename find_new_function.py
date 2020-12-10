@@ -33,12 +33,14 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
                 model_output = interpret.run([toolbox.problem_name] + input, dict(), toolbox.functions)
                 ind.model_outputs.append(model_output)        
             weighted_error, ind.model_evals = evaluate.evaluate_all(toolbox.example_inputs, ind.model_outputs, toolbox.evaluation_function, toolbox.f, debug, toolbox.penalise_non_reacting_models)
+            if weighted_error != 0:
+                weighted_error, ind.model_evals = evaluate.evaluate_all(toolbox.example_inputs, ind.model_outputs, toolbox.evaluation_function, toolbox.f, 4, toolbox.penalise_non_reacting_models)
             assert weighted_error == 0
     else:
         t0 = time.time()
         ind.model_outputs = []
         for input in toolbox.example_inputs:
-            model_output = interpret.run([toolbox.problem_name] + input, dict(), toolbox.functions)
+            model_output = interpret.run([toolbox.problem_name] + input, dict(), toolbox.functions, debug=toolbox.verbose >= 5)
             ind.model_outputs.append(model_output)        
         toolbox.t_interpret += time.time() - t0
         t0 = time.time()
@@ -196,6 +198,10 @@ def read_old_populations(old_populations_folder):
     return old_pops
 
 
+def deap_len_of_code(code):
+    return sum([deap_len_of_code(x) for x in code]) if type(code) == type([]) else 1
+
+
 def load_initial_population_impl(toolbox, old_pops):
     toolbox.ind_str_set = set()
     population = []
@@ -213,6 +219,8 @@ def load_initial_population_impl(toolbox, old_pops):
             deap_str = interpret.convert_code_to_deap_str(code, toolbox)
             ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)
             ind.deap_str = str(ind)
+            assert len(ind) == deap_len_of_code(code)
+            assert deap_str == ind.deap_str
             if ind.deap_str in toolbox.ind_str_set:
                 count_skipped += 1
                 continue

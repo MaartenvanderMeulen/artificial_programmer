@@ -343,6 +343,16 @@ def eval_is_sorted_self_test():
     assert math.isclose(eval_is_sorted([[]], 1, None, None, None)[0], 0.0)
 
 
+def eval_merge_elem(input, actual, extra_function_params, log_file, verbose):
+    elem = input[0]
+    data = input[1]
+    for i in range(1, len(data)):
+        assert data[i-1] <= data[i]
+    expect = data + [elem] 
+    expect.sort()
+    return evaluate_list_of_ints(actual, expect)
+
+
 # ================================== EXACT evals voor testen van laagjes ==================
 
 

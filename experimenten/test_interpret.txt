@@ -158,4 +158,83 @@
                 (if_then_else data2 data2
                     ()))))
     (assert (eq (mymerge (mysort x) (mysort y)) (0 0 1 1 2 2 2 2 3 3 4 5)))
+    (assert (eq (cons (first x) (rest x)) x))
+    (assert (eq (cons (first y) (rest y)) y))
+    (function mymerge_elem (elem sorted_data)
+        (if_then_else
+            sorted_data
+            (if_then_else
+                (le elem (first sorted_data))
+                (cons elem sorted_data)
+                (cons (first sorted_data) (mymerge_elem elem (rest sorted_data))))
+            (list elem)
+        )
+    )
+    (function mysort2 (data)
+        (if_then_else
+            (le (len data) 1)
+            data
+            (mymerge_elem (first data) (mysort2 (rest data)))
+        )
+    )
+    (assert (eq (mymerge_elem 0 (1 3)) (0 1 3)))
+    (assert (eq (mymerge_elem 4 (1 3)) (1 3 4)))
+    (assert (eq (mymerge_elem 2 (1 3)) (1 2 3)))
+    (assert (eq (mymerge_elem 0 (0 1 2 2 5)) (0 0 1 2 2 5)))
+    (assert (eq (mymerge_elem 2 (0 1 2 2 5)) (0 1 2 2 2 5)))
+    (assert (eq (mymerge_elem 5 (0 1 2 2 5)) (0 1 2 2 5 5)))
+    (assert (eq (mysort2 x) (0 1 2 2 3 4)))
+    (assert (eq (mysort2 y) (0 1 2 2 3 5)))
+    (function mymerge_elem3 (elem sorted_data)
+        (append
+            (for i sorted_data
+                (if (le elem i)
+                    (last 
+                        (assign old_elem elem)
+                        (assign elem i)
+                        old_elem
+                    )
+                    i
+                )
+            )
+            elem
+        )
+    )
+    (assert (eq (mymerge_elem3 4 (1 3)) (1 3 4)))
+    (assert (eq (mymerge_elem3 2 (1 3)) (1 2 3)))
+    (assert (eq (mymerge_elem3 0 (1 3)) (0 1 3)))
+    (assert (eq (mymerge_elem3 4 (1 3)) (1 3 4)))
+    (assert (eq (mymerge_elem3 2 (1 3)) (1 2 3)))
+    (assert (eq (mymerge_elem3 0 (0 1 2 2 5)) (0 0 1 2 2 5)))
+    (assert (eq (mymerge_elem3 2 (0 1 2 2 5)) (0 1 2 2 2 5)))
+    (assert (eq (mymerge_elem3 5 (0 1 2 2 5)) (0 1 2 2 5 5)))
+    (function mysort3 (data)
+        (if_then_else
+            (le (len data) 1)
+            data
+            (mymerge_elem3 (first data) (mysort3 (rest data)))))
+    (function mysort4 (data)
+        (if_then_else
+            (le (len data) 1)
+            data
+            (last2
+                (assign elem (first data))
+                (append
+                    (for i (mysort4 (rest data))
+                        (if (le elem i)
+                            (last 
+                                (assign old_elem elem)
+                                (assign elem i)
+                                old_elem
+                            )
+                            i
+                        )
+                    )
+                    elem
+                )
+            )
+        )
+    )
+    (assert (eq (mysort4 x) (0 1 2 2 3 4)))
+    (assert (eq (mysort4 y) (0 1 2 2 3 5)))
 )

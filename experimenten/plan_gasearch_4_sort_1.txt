@@ -21,13 +21,17 @@ python solve_problems.py 1000 experimenten/params_08.txt
 08C : 16 trainingsamples, in oplopende lengte
 08D : use only 0-1, 64 training examples
 
+
 ===================================== ... =================================
-...
-08G : genereert recusieve is_sorted functie
+08E : combinatie van alle trainingsets.  parachuting 10000, 900 sec.  Lukt niet
+08F : parachuting 4000, 1800 sec, recursie en "car,cdr,cons" style.  Lukt, maar de recursieve code is vrij onbegrijpelijk
+08G : genereert recusieve is_sorted functie.  Definitie van and en or iets aangepast, nu is de code leesbaarder.
 
 =================================== 9 dec ===================================
-
+08H skipped vanwege vergissing
 08I skipped vanwege I
 08J : voortgezette optimalisatie op 08G
 
+09A, merge, wordt 1x opgelost van de 28.
+09B, voortgezette optimalisatie geeft crash.  python solve_problems.py 1000 experimenten/params_09B.txt
 

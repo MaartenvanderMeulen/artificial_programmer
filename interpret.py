@@ -110,11 +110,16 @@ class Parser:
         return result
 
     def compile_deap(program_str, functions):
-        Parser._tokens = Parser._tokenize(program_str)
-        Parser._first_token()
-        program = Parser._parse_deap_element(functions)
-        Parser._expect_token(Parser._end_of_program)
-        return program
+        try:
+            Parser._tokens = Parser._tokenize(program_str)
+            Parser._first_token()
+            program = Parser._parse_deap_element(functions)
+            Parser._expect_token(Parser._end_of_program)
+            return program
+        except RuntimeError as e:
+            print("Runtimeerror", str(e))
+            print("compile_deap(", program_str, ")")
+            raise e
 
 
 
@@ -125,6 +130,21 @@ class Parser:
 global count_runs_calls
 count_runs_calls = 0
 longest_run = 0
+
+def check_depth(data, current_depth, max_depth):
+    if current_depth > max_depth:
+        raise RuntimeError("data depth exceeded")
+    count_items = 1
+    if type(data) == type([]):
+        count_items += 1
+        if len(data) > 100:
+            raise RuntimeError("data list length exceeded")
+        for item in data:
+            count_items += check_depth(item, current_depth+1, max_depth)
+    if count_items > 1000:
+        raise RuntimeError("data size exceeded")
+    return count_items
+
 
 def _run(program, variables, functions, debug, depth):
     if depth > 100:
@@ -212,6 +232,28 @@ def _run(program, variables, functions, debug, depth):
                     result = value
                 else:
                     result += value
+        elif program[0] == "append":
+            result = 0
+            for i in range(1, len(program)):
+                value = _run(program[i], variables, functions, debug, depth+1)
+                if i == 1:
+                    if type(value) != type([]):
+                        result = 0
+                        break
+                    result = value
+                else:
+                    result.append(value)
+        elif program[0] == "cons":
+            result = 0
+            for i in range(1, len(program)):
+                value = _run(program[i], variables, functions, debug, depth+1)
+                if i == 1:
+                    result = [value]
+                else:
+                    if type(value) != type([]):
+                        result = 0
+                        break
+                    result.extend(value)
         elif program[0] == "len": # example (len x)
             result = 0
             if len(program) > 1:
@@ -271,7 +313,8 @@ def _run(program, variables, functions, debug, depth):
                 local_variable = program[1]
                 if type(local_variable) == type(""):
                     expr = _run(program[2], variables, functions, debug, depth+1)
-                    variables[local_variable] = expr
+                    check_depth(expr, 0, 5)
+                    variables[local_variable] = copy.deepcopy(expr)
                     result = expr
         elif program[0] == "function":
             result = 0
@@ -343,6 +386,8 @@ def _run(program, variables, functions, debug, depth):
                             break
                         result += v
         else:
+            if type(program[0]) == type("") and program[0] not in variables and program[0] not in functions:
+                print(f"Warning: list starts with non-function {str(program[0])}")
             result = []
             for p in program:
                 result.append(_run(p, variables, functions, debug, depth+1))
@@ -352,7 +397,8 @@ def _run(program, variables, functions, debug, depth):
     elif type(program) == type(""):
         identifyer = program
         # NOTE : the copy.deepcopy is mandatory here to prevent self-referential loops with
-        # (var n (1) (add n (n))
+        # (var n (1) (extend n (n))
+
         result = copy.deepcopy(variables[identifyer]) if identifyer in variables else 0
     elif type(program) == type(1):
         result = program
@@ -360,6 +406,7 @@ def _run(program, variables, functions, debug, depth):
         raise RuntimeError(f"list, identifyer or int expected instead of '{program}'")
     if debug:
         print("    "*depth, "_run   end", "program", program, "variables", variables, "functions", functions, "result", result)
+    check_depth(result, 0, 5)
     return result
 
 
@@ -401,7 +448,8 @@ def run(program, variables, functions, debug=False):
             #print(convert_code_to_str(program))
             #print(longest_run, "seconds")
     except RuntimeError as e:
-        if str(e) not in ["code run calls exceeded", "code depth exceeded", "for loop max iterations exceeded"]:
+        if str(e) not in ["code run calls exceeded", "code depth exceeded", "for loop max iterations exceeded",
+                "data depth exceeded", "data list length exceeded", "data size exceeded"]:
             print(convert_code_to_str(program))
             print("RuntimeError", str(e))
         return 0
@@ -442,7 +490,7 @@ def get_build_in_functions():
         "eq", "ne", # arity 2
         "add", "sub", "mul", "div", "lt", "le", "ge", "gt", # arity 2, numeric
         "and", "or", # arity 2
-        "extend",
+        "extend", "append", "cons",
         "if", # arity 2
         "if_then_else", # arity 3
         "for", # artity 3, but 1st operand must be a variable name
@@ -458,11 +506,13 @@ def get_build_in_function_param_types(fname):
     # return a list with type-indication of the params of the build-in function.
     # type-indications : 1=numeric; "*"=zero or more numeric; "?"=0 or 1 numeric; "v"=variable; []=list
     arity_dict = {
-        "len":(1,), "sum":([],), "not":(1,), "first":(1,), "rest":(1,), # arity 1
+        "len":(1,), "sum":([],), "not":(1,), "first":([],), "rest":(1,), # arity 1
         "eq":(1,1), "ne":(1,1), # arity 2
         "div":(1,1), "lt":(1,1), "le":(1,1), "ge":(1,1), "gt":(1,1), "sub":(1,1), "mul":(1,1), "add":(1,1), # arity 2, numeric
         "and":(1,1), "or":(1,1), # arity 2
         "extend":([],[]),
+        "append":([],1),
+        "cons":(1,[]),
         "if":(1,1), # arity 2
         "if_then_else":(1,1,1), # arity 3
         "for":("v",1,1), # artity 3, but 1st operand must be a variable name
@@ -495,14 +545,17 @@ def convert_code_to_str(code):
 
 def convert_code_to_deap_str(code, toolbox):
     if type(code) == type([]):
-        result = convert_code_to_deap_str(code[0], toolbox) + "(" + ", ".join([convert_code_to_deap_str(item, toolbox) for item in code[1:]]) + ")"
+        fname = convert_code_to_deap_str(code[0], toolbox)
+        if fname in ["list", "last", "at"]:
+            arity = len(code) - 1
+            fname += str(arity)
+        result = fname + "(" + ", ".join([convert_code_to_deap_str(item, toolbox) for item in code[1:]]) + ")"
     else:
         result = str(code)
     return result
 
 
 def add_function(function, functions, write_functions_to_file=None, mode="a"):
-    # print("DEBUG 405", function)
     keyword, fname, params, code = function
     if keyword != "function":
         raise RuntimeError(f"interpret.add_function : keyword 'function' expected")
