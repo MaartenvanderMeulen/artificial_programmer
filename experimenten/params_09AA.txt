@@ -3,10 +3,11 @@
     "problems_file": "experimenten/problems_merge_elem.txt",
     "functions_file": "experimenten/functions_leeg.txt",
     "seed_prefix": 0,
+    "skip_seeds": [1013, 1075, 1218],
     "verbose": 1,
     "optimise_solution_length": true,
     "extensive_statistics": true,
-    "max_seconds": 1200,
+    "max_seconds": 600,
     "new_initial_population": true,
     "old_populations_folder": "tmp/08G",
     "pop_size": [

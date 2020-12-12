@@ -99,3 +99,46 @@ Groeten, Victor.
 
 python solve_problems.py 1921 experimenten/params_09AA.txt
 
+========================================= email Victor 12 Dec ================================
+
+Beste Maarten,
+
+Bedankt voor de uitleg. Ik heb een aantal vervolgvragen.
+
+UNIEKE INDIVIDUEN
+
+Ik snap het getal van van 21,300, dat dus het totaal aantal individuen is dat gedurende 1 search van zo'n 50-60 generaties langskomt. Wat ik me nu realiseer is dat het grootste deel daarvan niet interessant is voor mijn vraag. Laat ik daarom de vraag eerst conceptueel toelichten en dan specificeren.
+
+Als onze zoekruimte de aardbol is, elke oplossing een punt op aarde en de beste oplossing Mount Everest (want we evalueren op "altitude"), dan is mijn vraag in feite: "hoeveel verschillende punten bekijken we". Echter, als we beginnen met 4000 (en dan nog 3 keer 4000) relatieve random oplossingen met nauwelijks optimalisatie, dan krijgen we 16,000 punten met relatief weinig variatie, en meer belangrijk, nauwelijk hoogte. Immers: het duurt een paar generaties voordat een oplossing er echt goed uitziet. Mijn vraag zou daarom moeten zijn: "hoeveel unieke oplossingen hoger dan 4000m vinden we, en hoe vaak vinden we elke oplossing". De gedachte achter deze vraag is dat we mogelijk de Mont Blanc 10 keer vinden, Kilimanjaro 20 keer, Mount Everest 3 keer, K2 7 keer, etc. Het kan ook zijn dat we elk van deze maar 1 keer vinden.
+
+In het ene geval, waarbij we continue unieke oplossingen vinden en geen enkele oplossing meerdere keren, dan zou mijn conclusie zijn dat:
+1) We niet diep genoeg zoeken.
+2) We niet voldoende parachutes hebben.
+Immers: elke parachute lijkt in een ander deel van de zoekruimte terecht te komen (unieke oplossingen).
+
+Echter, als we regelmatig dezelfde oplossingen vinden (suboptimums zoals Mont Blanc, Kiliminanjaro etc.) dan geldt dat:
+1) We zoeken diep genoeg, want we eindigen regelmatig op een suboptimum waar niet zoveel meer te halen valt.
+
+Als dat het geval is (wat ik hoop), dan is vervolgens de vraag hoeveel van die suboptimums identiek zijn en hoeveel daarvan gelijk zijn aan de optimale oplossing. Het patroon daarin vertelt ons dan iets over wat ons probleem is:
+- Als we veel verschillende suboptimums vinden, elk maar een paar keer, dan suggereert dat, dat we gemakkelijk in willekeurige suboptimums blijven hange. In dat geval zou een beetje extra opschudden helpen (hoe: kunnen we het over hebben).
+- Als we een beperkt aantal suboptimums vinden, maar elk vele keren (dus: 20 keer Mt. Blanc, 20 keer Kilimanjaro, 10 keer Mt. Everest, en verder niet veel anderen), dan hoeven we niet veel op te schudden en is het gewoon zo dat er een paar goede oplossingen zijn die attractief zijn en dan hebben we een 20% success rate bij convergentie en dat is prima.
+
+Dus, specifiek de vraag voor jouw "1000 runs experiment":
+- Als we van elke run na 10 minuten de best oplossing nemen, dus 1000 individuen, hoeveel unieke exemplaren zitten daarin, en hoe vaak komt elk voor.
+- Voor degenen die vaak voorkomen, wat is hun score?
+
+WAT IS "UNIEK"
+
+Ik kan me voorstellen dat uniek niet noodzakelijk betkent "de identieke string". Net als (2+3) = (3+2) = 2+3 = -(-2-3) kan ik me voorstellen dat er verschilllende formules zijn die in feite hetzelfde zijn, maar net anders opgeschreven. Die zouden we denk ik wel als identief willen zien, of beter als "equivalent". Dat wil niet zeggen dat "5" hetzelfde is als (2+3). Immers, mutaties op 2+3 zullen anders zijn dan op "5'. Maar op 3+2 zijn ze waarschijnlijk hetzelfde.
+
+Mogelijk dus dat we over "equivalent" oplossingen moeten spreken als dingen die dezelfde uitkomst hebben, en er "ongeveer hetzelfde uitzien", waarbij ik niet precies weet wat dat betekent in jouw taaltje.
+
+PRIVE
+
+Mooi dat je afscheid goed ging. Toch een mijlpaal! 
+
+Veel plezier met de kerstboom. Toch altijd een vrolijk gezicht. Sara en ik doen daar niet aan (op de een of andere manier doen we weinig van dat soort dingen), maar het is altijd leuk om een mooie boom te zien.
+
+Groeten, Victor.
+
+P.S. Vandaag heerlijk hier (25 graden) en net 100 baantjes gezwommen en zit nu aan mijn buitentafel emailtjes te typen. Het kan slechter :-)

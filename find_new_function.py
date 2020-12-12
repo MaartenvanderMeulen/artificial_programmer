@@ -540,20 +540,21 @@ def basinhopper(toolbox):
         toolbox.t_eval = 0
 
         best, gen = ga_search_impl(toolbox)
+        write_population(toolbox.best_ind_file, [best], toolbox.functions)
         seconds = round(time.time() - toolbox.t0)
         if best.eval == 0:
             code = interpret.compile_deap(best.deap_str, toolbox.functions)
             result = ["function", toolbox.problem_name, toolbox.problem_params, code]
             # cx_perc = round(100*compute_cx_fraction(best))
-            toolbox.log_file.write(f"solved\t{toolbox.problem_name}\t{seconds}\tsec")
+            toolbox.f.write(f"solved\t{toolbox.problem_name}\t{seconds}\tsec")
             if toolbox.extensive_statistics:                
-                toolbox.log_file.write(f"\t{gen}\tgen\t{len(best)}\tlen")
-                toolbox.log_file.write(f"\t{toolbox.eval_count}\tevals")
-                toolbox.log_file.write(f"\t{toolbox.eval_lookup_count}\telc\t{toolbox.parachute_count}\tpac")
-                toolbox.log_file.write(f"\t{toolbox.parachute_offspring_count}\tpoc\t{toolbox.normal_offspring_count}\tnoc")
-                toolbox.log_file.write(f"\t{len(toolbox.all_generations_ind_str_set)}\tagu")
-            toolbox.log_file.write(f"\t{best.deap_str}")
-            toolbox.log_file.write(f"\n")
+                toolbox.f.write(f"\t{gen}\tgen\t{len(best)}\tlen")
+                toolbox.f.write(f"\t{toolbox.eval_count}\tevals")
+                toolbox.f.write(f"\t{toolbox.eval_lookup_count}\telc\t{toolbox.parachute_count}\tpac")
+                toolbox.f.write(f"\t{toolbox.parachute_offspring_count}\tpoc\t{toolbox.normal_offspring_count}\tnoc")
+                toolbox.f.write(f"\t{len(toolbox.all_generations_ind_str_set)}\tagu")
+            toolbox.f.write(f"\t{best.deap_str}")
+            toolbox.f.write(f"\n")
             if toolbox.verbose >= 1:
                 score = evaluate_individual_impl(toolbox, best, 4)
                 assert score == 0
@@ -561,10 +562,10 @@ def basinhopper(toolbox):
                 write_path(toolbox, best)
             return result
         else:
-            toolbox.log_file.write(f"timeout\t{toolbox.problem_name}\n")
-        toolbox.log_file.flush()
+            toolbox.f.write(f"timeout\t{toolbox.problem_name}\n")
+        toolbox.f.flush()
         
-    toolbox.log_file.write(f"failed\t{toolbox.problem_name}\n")
+    toolbox.f.write(f"failed\t{toolbox.problem_name}\n")
     return None
 
     
@@ -595,6 +596,7 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.hops = params["hops"]
     toolbox.final_pop_file = params["output_folder"] + "/pop_" + str(params["seed"]) + ".txt"
     toolbox.all_ind_file = params["output_folder"] + "/ind_" + str(params["seed"]) + ".txt"
+    toolbox.best_ind_file = params["output_folder"] + "/best_" + str(params["seed"]) + ".txt"
     toolbox.new_initial_population = params["new_initial_population"]
     if not toolbox.new_initial_population:
         toolbox.old_populations_folder = params["old_populations_folder"]

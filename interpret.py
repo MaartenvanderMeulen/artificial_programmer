@@ -132,7 +132,7 @@ count_runs_calls = 0
 longest_run = 0
 
 def check_depth(data, current_depth):
-    max_depth = 4
+    max_depth = 5
     if current_depth > max_depth:
         raise RuntimeError("data depth exceeded")
     count_items = 1
@@ -142,18 +142,18 @@ def check_depth(data, current_depth):
             raise RuntimeError("data list length exceeded")
         for item in data:
             count_items += check_depth(item, current_depth+1)
-    if count_items > 500:
+    if count_items > 1000:
         raise RuntimeError("data size exceeded")
     return count_items
 
 
 def _run(program, variables, functions, debug, depth):
-    if depth > 50:
+    if depth > 100:
         #print("code depth exceeded")
         raise RuntimeError("code depth exceeded")
     global count_runs_calls
     count_runs_calls += 1
-    if count_runs_calls > 5000:
+    if count_runs_calls > 10000:
         #print("code run calls exceeded")
         raise RuntimeError("code run calls exceeded")
     if debug:

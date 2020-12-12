@@ -93,6 +93,9 @@ def main(seed, param_file):
     with open(param_file, "r") as f:
         params = json.load(f)
     seed += params["seed_prefix"]
+    skip_seeds = params["skip_seeds"]
+    if seed in skip_seeds:
+        exit()
     log_file = f"{output_folder}/log_{seed}.txt" 
     if params.get("do_not_overwrite_logfile", False):
         if os.path.exists(log_file):
