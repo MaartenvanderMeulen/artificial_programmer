@@ -44,4 +44,58 @@ done zorg dat ind's nooit langer worden dan max_individual_size
 done 09B op 28 threads
 done 10A sort
 done find shortest solution
- 
+
+============================== vragenlijst Victor ======================================
+
+Beste Maarten,
+
+Bedankt voor de update.
+
+Dus, als ik het goed begrijp heb je in jouw puzzel 1.1% succes rate op 10 minuten, en 2.6% succes rate op 20 minuten. Dus, gemiddeld 1 oplossing per 900 minuten (op basis van 10 minuten grens) en 1 oplossing op bijna 800 minuten (20 minuten grens). Dus, het lijkt erop dat je curve iets zal zeggen van 1 per 12 uur of zo in de meest optimale setting. Dat is wat mij betreft een perfect probleem om mee verder te gaan, omdat het duidelijk is dat je oplossingen kan vinden, maar niet erg vaak. De uitdaging is nu om te zien of we dat "1 per 12 uur" terug kunnen brengen naar "1 per 1 uur" of zelfs beter.
+
+Er zijn een aantal dingen die ik me afvraag:
+
+ANALYSE VAN DE OPLOSSING
+1) Unieke Individuen. Als ik goed begrijp is iedere iteratie 200 individuen. In 20 minuten kun je 20 iteraties doen, dus je doet 1 iteratie per minute, of 200 individuen per minuut. Je 1000 tests van 20 minuten is 20,000 iteraties. Dus, in totaal doet je test zo'n 4 miljoen individuen. Mijn vraag is nu: als je die 4 miljoen individuen zou enumereren, hoeveel unieke individuen zijn dat, en voor elk individu, hoe vaak komt het voor? 
+2) Oplossingen. Van de 26 oplosingen die je vindt, hoeveel unieke oplossingen zijn dat. Met andere woorden: zijn alle oplossingen precies dezeflde string, of zijn ze allemaal anders? 
+3) Retrograde Analyse. Wat nu interessant is, is om te zien hoe het pad naar de oplossing er steeds uitziet. Dus, wie waren de parents/grandparents, etc. van de oplossingen? De 26 oplossingen hebben in principe 52 parents. Waren dat 52 verschillende parents, of waren dat 26 keer 2 identieke parents? Is er een parent combinatie die het vaakst voorkomt? Als dat zo is, hoe zit het dan met hun parents? Kortom: is er een soort "meest logische pad" naar de oplossing? Als dat zo is, welke van die parents/grand parents/great grand parents is degene die het lastigst te maken is?
+
+Al deze vragen hebben gemeen dat we willen snappen op individue niveau, wat tot een oplossing leidt en welke "snippet code" kennelijk het lastigst is om te maken.
+
+ANALYSE VAN DE ZOEKRUIMTE
+Wat daarnaast interessant is, is om een beeld te krijgen hoe snel je kunt weten of een zoektocht tot iets gaat leiden, of juist niet:
+- Jij begint met 1000 random startpunten en na 10 minuten heb je 11 oplossingen.
+- Jij gaat daarna door met 989 developed generaties en na nog 10 minuten heb je nog 15 oplossingen.
+Kennelijk is het zo dat die 989 al developed generaties gemiddeld iets beter zijn dan de random startpunten.
+- Als je nu nog verder door zou gaan met de 974 tot 30, 40, ... 100 minuten of zo, dan zul je waarschijnlijk op zeker moment merken dat de kans op verder succes per 10 minuten gaat afnemen: je zit in lokale optima en komt daar niet goed meer uit. Dat denk ik, maar weten we dat zeker?
+
+Als dat zo is, dan is het kennelijk zo dat beginnend vanuit een random startpunt op zeker moment duidelijk gaat worden, of het leidt tot success of dat het leidt tot failure. De vraag is nu: hoe snel wordt dat duidelijk en hoe kunnen we dat zien? Het zou kunnen zijn dat we bij de analyse van oplossingen ontdekken dat er 1 bepaald individu nodig is als ancestor en zodra die er niet is, dan wordt het niks. In any case, het is interessant om te snappen hoe dit zit, zodat we kunnen verklaren waarom we op zeker moment gaan vastzitten.
+
+DIVERSITEIT
+Onafhankelijk van het snappen wat er precies gebeurd (de vragen hierboven), we kunnen als hypothese hebben dat we een diversiteits probleem hebben en dat generaties op zeker moment te veel individuen hebben die op elkaar lijken. Een mogelijk manier om dat te toetsen is alsvolgt:
+- We doen 1000 runs van 10 minuten, waarbij we verwachten ongeveer 11 successen te hebben.
+- We nemen die 989 resterende runs en husselen die geheel door elkaar: dus elke nieuwe run bevat 200 individuen uit 200 van de 989 verschillende runs.
+- We runnen het weer voor 10 minuten en krijgen dan N successen. We halen die eruit en herhalen de stap, telkens voor 10 minuten.
+
+De vraag is nu of het aantal successen dat we krijgen elke tien minuten groter is dan in het door laten lopen van de individuele runs. Dus:
+- Individuele runs per 10 minuten vermoed ik iets als: 11, 15, 15, 12, 8, 6, 4, 3, 2, 1, 1, 1, 0, 0, 1, 0, 0 ... : kortom: we vinden steeds minder verdere oplossingen omdat generaties geheel geconverteerd zijn naar een lokaal optimum.
+- Runs die telkens na 10 minuten worden opgeschud: 11, 18, 20, 25, 30, 30, 28, 25, 15, 10, 5, 3, 2, 2, 1, etc. kortom, hier zou ik verwachten dat doordat we de combinatie van diversiteit in generaties hebben, gecombineerd met het langzaam steeds geavanceerder zijn van individuen, dat we veel meer oplossingen blijven vinden.
+
+Als een test zoals dit zou laten zien dat er zo'n verschil is, dan maakt het duidelijk dat behalve je normale mutaties tussen generaties, een extra "opschudding" (combineren van individuen uit verschillende iteraties) zinvol is. Als de tweede type run niks beters opleverd, dan is het niet zo dat de generaties zich specialiseren en dan die opschudding nuttig is.
+
+Anyway, zomaar wat gedachten.
+
+Veel success en plezier met je afscheid bij Vito!
+
+Groeten, Victor.
+
+
+====================================== 12 dec ==========================================
+
+09AA .  Aantal unieke individuals in alle 1000 runs bepalen.
+- check op fillin up memory verbeteren
+- Elke unieke individual wordt bewaard in de toolset, en aan het eind weggeschreven net zoals write_population
+- Een los programma maken dat alle 1000 unieke sets inleest, ze allemaal samenvoegt tot 1 set, en daar de grootte van wegschrijft
+
+python solve_problems.py 1921 experimenten/params_09AA.txt
+

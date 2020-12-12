@@ -130,7 +130,7 @@ def update_dynamic_weighted_evaluation(toolbox, individuals):
             ind.eval = evaluate_individual(toolbox, ind)
 
 
-def write_population(toolbox, population, label):
+def log_population(toolbox, population, label):
     if toolbox.verbose >= 2:
         toolbox.f.write(f"write_population {label}\n")
         for i, ind in enumerate(population):
@@ -143,6 +143,16 @@ def write_population(toolbox, population, label):
         toolbox.f.flush()
 
 
+def write_population(file_name, population, functions):
+    with open(file_name, "w") as f:
+        f.write("(\n")
+        for ind in population:
+            code = interpret.compile_deap(ind.deap_str, functions)
+            code_str = interpret.convert_code_to_str(code)
+            f.write(f"    {code_str} # {ind.eval:.3f}\n")
+        f.write(")\n")
+
+
 def write_final_population(toolbox, population):
     with open(toolbox.pop_file, "w") as f:
         f.write("(\n")
@@ -150,12 +160,6 @@ def write_final_population(toolbox, population):
             code = interpret.compile_deap(ind.deap_str, toolbox.functions)
             code_str = interpret.convert_code_to_str(code)
             f.write(f"    {code_str} # {ind.eval:.3f}\n")
-        f.write(")\n")
-
-
-def clear_final_population(toolbox):
-    with open(toolbox.pop_file, "w") as f:
-        f.write("(\n")
         f.write(")\n")
 
 
@@ -186,7 +190,9 @@ def generate_initial_population_impl(toolbox):
                 break
         retry_count = 0
         toolbox.ind_str_set.add(ind.deap_str)
-        toolbox.all_generations_ind_str_set.add(ind.deap_str)
+        if ind.deap_str not in toolbox.all_generations_ind_str_set:
+            toolbox.all_generations_ind_str_set.add(ind.deap_str)
+            toolbox.all_generations_ind.append(ind)
         ind.parents = []
         ind.eval = evaluate_individual(toolbox, ind)
         if ind.eval == 0.0:
@@ -227,7 +233,9 @@ def load_initial_population_impl(toolbox, old_pops):
                 count_skipped += 1
                 continue
             toolbox.ind_str_set.add(ind.deap_str)
-            toolbox.all_generations_ind_str_set.add(ind.deap_str)
+            if ind.deap_str not in toolbox.all_generations_ind_str_set:
+                toolbox.all_generations_ind_str_set.add(ind.deap_str)
+                toolbox.all_generations_ind.append(ind)
             ind.parents = []
             ind.eval = evaluate_individual(toolbox, ind)
             if ind.eval == 0.0:
@@ -425,13 +433,15 @@ def generate_offspring(toolbox, population, nchildren):
             return None, child
         assert child.deap_str == str(child)
         toolbox.ind_str_set.add(child.deap_str)
+        if child.deap_str not in toolbox.all_generations_ind_str_set:
+            toolbox.all_generations_ind_str_set.add(child.deap_str)
+            toolbox.all_generations_ind.append(child)
         offspring.append(child)
     return offspring, None
 
 
 def refresh_toolbox_from_population(toolbox, population):
-    toolbox.ind_str_set = {ind.deap_str for ind in population} # refresh set
-    toolbox.all_generations_ind_str_set.update(toolbox.ind_str_set)
+    toolbox.ind_str_set = {ind.deap_str for ind in population} # refresh set after deletion of non-fit individuals
     toolbox.model_outputs_dict = dict()
     for ind in population:
         if ind.model_outputs not in toolbox.model_outputs_dict:
@@ -455,7 +465,7 @@ def consistency_check(inds):
 
 
 def ga_search_impl(toolbox):
-    clear_final_population(toolbox)
+    write_population(toolbox.final_pop_file, [], toolbox.functions)
     try:
         population, solution = generate_initial_population(toolbox)
         if solution:
@@ -471,7 +481,7 @@ def ga_search_impl(toolbox):
                 code_str = interpret.convert_code_to_str(interpret.compile_deap(population[0].deap_str, toolbox.functions))
                 if toolbox.f and toolbox.verbose >= 1:
                     toolbox.f.write(f"start generation {toolbox.gen:2d} best eval {population[0].eval:.5f} {code_str}\n")
-                write_population(toolbox, population, f"generation {toolbox.gen}, pop at start")
+                log_population(toolbox, population, f"generation {toolbox.gen}, pop at start")
                 offspring, solution = generate_offspring(toolbox, population, toolbox.nchildren[toolbox.parachute_level])
                 if solution:
                     return solution, toolbox.gen+1
@@ -491,7 +501,7 @@ def ga_search_impl(toolbox):
                 toolbox.gen += 1
     except RuntimeWarning:
         pass
-    write_final_population(toolbox, population)
+    write_population(toolbox.final_pop_file, population, toolbox.functions)
     best = population[0]
     return best, toolbox.gen+1
 
@@ -513,10 +523,54 @@ def compute_cx_fraction(best):
     cx, mut = count_cx_mut(best)
     return cx / (cx + mut) if cx + mut > 0 else 0.0
     
+
+def basinhopper(toolbox):
+    for _ in range(toolbox.hops):
+        toolbox.ind_str_set = set()
+        toolbox.all_generations_ind_str_set = set()
+        toolbox.all_generations_ind = []
+        toolbox.eval_cache = dict()
+        toolbox.eval_count = 0
+        toolbox.eval_lookup_count = 0
+        toolbox.parachute_count = 0
+        toolbox.parachute_offspring_count = 0
+        toolbox.normal_offspring_count = 0
+        toolbox.t0 = time.time()
+        toolbox.t_interpret = 0
+        toolbox.t_eval = 0
+
+        best, gen = ga_search_impl(toolbox)
+        seconds = round(time.time() - toolbox.t0)
+        if best.eval == 0:
+            code = interpret.compile_deap(best.deap_str, toolbox.functions)
+            result = ["function", toolbox.problem_name, toolbox.problem_params, code]
+            # cx_perc = round(100*compute_cx_fraction(best))
+            toolbox.log_file.write(f"solved\t{toolbox.problem_name}\t{seconds}\tsec")
+            if toolbox.extensive_statistics:                
+                toolbox.log_file.write(f"\t{gen}\tgen\t{len(best)}\tlen")
+                toolbox.log_file.write(f"\t{toolbox.eval_count}\tevals")
+                toolbox.log_file.write(f"\t{toolbox.eval_lookup_count}\telc\t{toolbox.parachute_count}\tpac")
+                toolbox.log_file.write(f"\t{toolbox.parachute_offspring_count}\tpoc\t{toolbox.normal_offspring_count}\tnoc")
+                toolbox.log_file.write(f"\t{len(toolbox.all_generations_ind_str_set)}\tagu")
+            toolbox.log_file.write(f"\t{best.deap_str}")
+            toolbox.log_file.write(f"\n")
+            if toolbox.verbose >= 1:
+                score = evaluate_individual_impl(toolbox, best, 4)
+                assert score == 0
+            if toolbox.verbose >= 1:
+                write_path(toolbox, best)
+            return result
+        else:
+            toolbox.log_file.write(f"timeout\t{toolbox.problem_name}\n")
+        toolbox.log_file.flush()
+        
+    toolbox.log_file.write(f"failed\t{toolbox.problem_name}\n")
+    return None
+
     
 def solve_by_new_function(problem, functions, f, params):
-    problem_name, problem_params, _, _, _, _ = problem
     toolbox = Toolbox(problem, functions)
+    toolbox.problem_name, toolbox.problem_params, _, _, _, _ = problem
     toolbox.monkey_mode = False
     toolbox.dynamic_weights = False # not toolbox.monkey_mode
     toolbox.child_creation_retries = 99
@@ -539,50 +593,18 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.beta = params["weight_complementairity"]
     toolbox.penalise_non_reacting_models = params["penalise_non_reacting_models"]
     toolbox.hops = params["hops"]
-    toolbox.pop_file = params["output_folder"] + "/pop_" + str(params["seed"]) + ".txt"
+    toolbox.final_pop_file = params["output_folder"] + "/pop_" + str(params["seed"]) + ".txt"
+    toolbox.all_ind_file = params["output_folder"] + "/ind_" + str(params["seed"]) + ".txt"
     toolbox.new_initial_population = params["new_initial_population"]
     if not toolbox.new_initial_population:
         toolbox.old_populations_folder = params["old_populations_folder"]
     toolbox.optimise_solution_length = params["optimise_solution_length"]
     toolbox.extensive_statistics = params["extensive_statistics"]
     
-    for _ in range(toolbox.hops):
-        toolbox.ind_str_set = set()
-        toolbox.all_generations_ind_str_set = set()
-        toolbox.eval_cache = dict()
-        toolbox.eval_count = 0
-        toolbox.eval_lookup_count = 0
-        toolbox.parachute_count = 0
-        toolbox.parachute_offspring_count = 0
-        toolbox.normal_offspring_count = 0
-        toolbox.t0 = time.time()
-        toolbox.t_interpret = 0
-        toolbox.t_eval = 0
+    # search
+    toolbox.all_generations_ind = []
+    write_population(toolbox.all_ind_file, toolbox.all_generations_ind, toolbox.functions)
+    result = basinhopper(toolbox)
+    write_population(toolbox.all_ind_file, toolbox.all_generations_ind, toolbox.functions)
 
-        best, gen = ga_search_impl(toolbox)
-        seconds = round(time.time() - toolbox.t0)
-        if best.eval == 0:
-            code = interpret.compile_deap(best.deap_str, toolbox.functions)
-            result = ["function", problem_name, problem_params, code]
-            # cx_perc = round(100*compute_cx_fraction(best))
-            f.write(f"solved\t{problem_name}\t{seconds}\tsec")
-            if toolbox.extensive_statistics:                
-                f.write(f"\t{gen}\tgen\t{len(best)}\tlen")
-                f.write(f"\t{toolbox.eval_count}\tevals")
-                f.write(f"\t{toolbox.eval_lookup_count}\telc\t{toolbox.parachute_count}\tpac")
-                f.write(f"\t{toolbox.parachute_offspring_count}\tpoc\t{toolbox.normal_offspring_count}\tnoc")
-                f.write(f"\t{len(toolbox.all_generations_ind_str_set)}\tagu")
-            f.write(f"\t{best.deap_str}")
-            f.write(f"\n")
-            if toolbox.verbose >= 1:
-                score = evaluate_individual_impl(toolbox, best, 4)
-                assert score == 0
-            if toolbox.verbose >= 1:
-                write_path(toolbox, best)
-            return result
-        else:
-            f.write(f"timeout\t{problem_name}\n")
-        f.flush()
-        
-    f.write(f"failed\t{problem_name}\n")
-    return None
+    return result

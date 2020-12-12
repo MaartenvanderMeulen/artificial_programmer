@@ -131,7 +131,8 @@ global count_runs_calls
 count_runs_calls = 0
 longest_run = 0
 
-def check_depth(data, current_depth, max_depth):
+def check_depth(data, current_depth):
+    max_depth = 4
     if current_depth > max_depth:
         raise RuntimeError("data depth exceeded")
     count_items = 1
@@ -140,19 +141,19 @@ def check_depth(data, current_depth, max_depth):
         if len(data) > 100:
             raise RuntimeError("data list length exceeded")
         for item in data:
-            count_items += check_depth(item, current_depth+1, max_depth)
-    if count_items > 1000:
+            count_items += check_depth(item, current_depth+1)
+    if count_items > 500:
         raise RuntimeError("data size exceeded")
     return count_items
 
 
 def _run(program, variables, functions, debug, depth):
-    if depth > 100:
+    if depth > 50:
         #print("code depth exceeded")
         raise RuntimeError("code depth exceeded")
     global count_runs_calls
     count_runs_calls += 1
-    if count_runs_calls > 10000:
+    if count_runs_calls > 5000:
         #print("code run calls exceeded")
         raise RuntimeError("code run calls exceeded")
     if debug:
@@ -297,7 +298,8 @@ def _run(program, variables, functions, debug, depth):
                     old_value = variables[local_variable]
                 else:
                     old_value = None
-                variables[local_variable] = expr
+                check_depth(expr, 0)
+                variables[local_variable] = copy.deepcopy(expr)
                 result = _run(program[3], variables, functions, debug, depth+1)
                 if old_value is not None:
                     variables[local_variable] = old_value
@@ -313,7 +315,7 @@ def _run(program, variables, functions, debug, depth):
                 local_variable = program[1]
                 if type(local_variable) == type(""):
                     expr = _run(program[2], variables, functions, debug, depth+1)
-                    check_depth(expr, 0, 5)
+                    check_depth(expr, 0)
                     variables[local_variable] = copy.deepcopy(expr)
                     result = expr
         elif program[0] == "function":
@@ -406,7 +408,9 @@ def _run(program, variables, functions, debug, depth):
         raise RuntimeError(f"list, identifyer or int expected instead of '{program}'")
     if debug:
         print("    "*depth, "_run   end", "program", program, "variables", variables, "functions", functions, "result", result)
-    check_depth(result, 0, 5)
+    check_depth(result, 0)
+    # in an attempt to remove any self refence problems by callers, a unique copy is returned
+    result = copy.deepcopy(result)
     return result
 
 
