@@ -46,7 +46,7 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
         assert math.isclose(weighted_error, sum(ind.model_evals))
         toolbox.t_eval += time.time() - t0
         ind.model_outputs = recursive_tuple(ind.model_outputs)
-        if weighted_error == 0.0 and len(ind) > len(toolbox.solution_deap_ind):
+        if weighted_error == 0.0 and len(ind) > len(toolbox.solution_deap_ind) and toolbox.optimise_solution_length:
             weighted_error += (len(ind) - len(toolbox.solution_deap_ind)) / 1000.0
     return weighted_error
 
@@ -56,6 +56,7 @@ def evaluate_individual(toolbox, individual, debug=0):
         raise RuntimeWarning("out of time")
     deap_str = individual.deap_str
     assert deap_str == str(individual)
+    toolbox.eval_lookup_count += 1
     if deap_str in toolbox.eval_cache: #  TODO handle dynamic weighting that changes the evaluation
         eval, individual.model_outputs, individual.model_evals = toolbox.eval_cache[deap_str]
         assert eval < 0.1 or math.isclose(eval, sum(individual.model_evals))
@@ -109,7 +110,10 @@ class Toolbox(object):
         self.solution_code_str = interpret.convert_code_to_str(solution_hints) # for monkey test
         deap_str = interpret.convert_code_to_deap_str(solution_hints, self)
         self.solution_deap_ind = gp.PrimitiveTree.from_string(deap_str, pset) # for finding shortest solution
-        assert deap_str == str(self.solution_deap_ind)
+        if deap_str != str(self.solution_deap_ind):
+            print("deap_str1", deap_str)
+            print("deap_str2", str(self.solution_deap_ind))
+            raise RuntimeError(f"Check if function hints '{str(func_hints)}' contain all functions of solution hint '{str(solution_hints)}'")
 
 
 def best_of_n(population, n):
@@ -182,6 +186,7 @@ def generate_initial_population_impl(toolbox):
                 break
         retry_count = 0
         toolbox.ind_str_set.add(ind.deap_str)
+        toolbox.all_generations_ind_str_set.add(ind.deap_str)
         ind.parents = []
         ind.eval = evaluate_individual(toolbox, ind)
         if ind.eval == 0.0:
@@ -222,6 +227,7 @@ def load_initial_population_impl(toolbox, old_pops):
                 count_skipped += 1
                 continue
             toolbox.ind_str_set.add(ind.deap_str)
+            toolbox.all_generations_ind_str_set.add(ind.deap_str)
             ind.parents = []
             ind.eval = evaluate_individual(toolbox, ind)
             if ind.eval == 0.0:
@@ -425,6 +431,7 @@ def generate_offspring(toolbox, population, nchildren):
 
 def refresh_toolbox_from_population(toolbox, population):
     toolbox.ind_str_set = {ind.deap_str for ind in population} # refresh set
+    toolbox.all_generations_ind_str_set.update(toolbox.ind_str_set)
     toolbox.model_outputs_dict = dict()
     for ind in population:
         if ind.model_outputs not in toolbox.model_outputs_dict:
@@ -453,6 +460,7 @@ def ga_search_impl(toolbox):
         population, solution = generate_initial_population(toolbox)
         if solution:
             return solution, 0
+        toolbox.parachute_count = len(population)
         consistency_check(population)
         update_dynamic_weighted_evaluation(toolbox, population)
         population.sort(key=lambda item: item.eval)
@@ -470,6 +478,10 @@ def ga_search_impl(toolbox):
                 consistency_check(offspring)
                 if len(offspring) != toolbox.nchildren[toolbox.parachute_level]:
                     toolbox.f.write(f"{len(offspring)} offspring\n")
+                if toolbox.parachute_level == 0:
+                    toolbox.parachute_offspring_count += len(offspring)
+                else:
+                    toolbox.normal_offspring_count += len(offspring)
                 population += offspring
                 population.sort(key=lambda item: item.eval)
                 population[:] = population[:toolbox.pop_size[toolbox.parachute_level]]
@@ -509,6 +521,8 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.dynamic_weights = False # not toolbox.monkey_mode
     toolbox.child_creation_retries = 99
     toolbox.f = f
+    if len(toolbox.solution_deap_ind) > 0:
+        f.write(f"solution hint length {len(toolbox.solution_deap_ind)}\n")
 
     # tunable params
     toolbox.verbose = params["verbose"]
@@ -529,32 +543,46 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.new_initial_population = params["new_initial_population"]
     if not toolbox.new_initial_population:
         toolbox.old_populations_folder = params["old_populations_folder"]
-
+    toolbox.optimise_solution_length = params["optimise_solution_length"]
+    toolbox.extensive_statistics = params["extensive_statistics"]
     
     for _ in range(toolbox.hops):
         toolbox.ind_str_set = set()
+        toolbox.all_generations_ind_str_set = set()
         toolbox.eval_cache = dict()
         toolbox.eval_count = 0
+        toolbox.eval_lookup_count = 0
+        toolbox.parachute_count = 0
+        toolbox.parachute_offspring_count = 0
+        toolbox.normal_offspring_count = 0
         toolbox.t0 = time.time()
         toolbox.t_interpret = 0
         toolbox.t_eval = 0
 
-        best, _ = ga_search_impl(toolbox)
+        best, gen = ga_search_impl(toolbox)
         seconds = round(time.time() - toolbox.t0)
         if best.eval == 0:
             code = interpret.compile_deap(best.deap_str, toolbox.functions)
             result = ["function", problem_name, problem_params, code]
             # cx_perc = round(100*compute_cx_fraction(best))
-            f.write(f"solved\t{seconds}\tsec\t{toolbox.eval_count}\tevals\t{problem_name}\t{len(best)}\tlen\t{best.deap_str}\n")
-            if toolbox.verbose >= 1:                   
+            f.write(f"solved\t{problem_name}\t{seconds}\tsec")
+            if toolbox.extensive_statistics:                
+                f.write(f"\t{gen}\tgen\t{len(best)}\tlen")
+                f.write(f"\t{toolbox.eval_count}\tevals")
+                f.write(f"\t{toolbox.eval_lookup_count}\telc\t{toolbox.parachute_count}\tpac")
+                f.write(f"\t{toolbox.parachute_offspring_count}\tpoc\t{toolbox.normal_offspring_count}\tnoc")
+                f.write(f"\t{len(toolbox.all_generations_ind_str_set)}\tagu")
+            f.write(f"\t{best.deap_str}")
+            f.write(f"\n")
+            if toolbox.verbose >= 1:
                 score = evaluate_individual_impl(toolbox, best, 4)
                 assert score == 0
             if toolbox.verbose >= 1:
                 write_path(toolbox, best)
             return result
         else:
-            f.write(f"timeout\t{seconds}\tsec\t{toolbox.eval_count}\tevals\t{problem_name}\t\t\t\n")
+            f.write(f"timeout\t{problem_name}\n")
         f.flush()
         
-    f.write(f"failed\t\tsec\t\tevals\t{problem_name}\t\t\t\n")
+    f.write(f"failed\t{problem_name}\n")
     return None
