@@ -142,3 +142,13 @@ Veel plezier met de kerstboom. Toch altijd een vrolijk gezicht. Sara en ik doen 
 Groeten, Victor.
 
 P.S. Vandaag heerlijk hier (25 graden) en net 100 baantjes gezwommen en zit nu aan mijn buitentafel emailtjes te typen. Het kan slechter :-)
+
+
+==================================== 13 dec ========================================
+
+if A or B then C else Dat
+if not A and not B then D else C
+if (if A then False else not B)
+
+github 
+

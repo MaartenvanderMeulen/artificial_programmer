@@ -5,9 +5,9 @@
     "seed_prefix": 0,
     "skip_seeds": [1013, 1075, 1218],
     "verbose": 1,
-    "optimise_solution_length": true,
+    "optimise_solution_length": false,
     "extensive_statistics": true,
-    "max_seconds": 600,
+    "max_seconds": 1200,
     "new_initial_population": true,
     "old_populations_folder": "tmp/08G",
     "pop_size": [

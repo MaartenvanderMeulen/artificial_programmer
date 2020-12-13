@@ -298,8 +298,7 @@ def _run(program, variables, functions, debug, depth):
                     old_value = variables[local_variable]
                 else:
                     old_value = None
-                check_depth(expr, 0)
-                variables[local_variable] = copy.deepcopy(expr)
+                variables[local_variable] = expr
                 result = _run(program[3], variables, functions, debug, depth+1)
                 if old_value is not None:
                     variables[local_variable] = old_value
@@ -409,8 +408,6 @@ def _run(program, variables, functions, debug, depth):
     if debug:
         print("    "*depth, "_run   end", "program", program, "variables", variables, "functions", functions, "result", result)
     check_depth(result, 0)
-    # in an attempt to remove any self refence problems by callers, a unique copy is returned
-    result = copy.deepcopy(result)
     return result
 
 
