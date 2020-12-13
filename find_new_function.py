@@ -270,7 +270,7 @@ def cxOnePoint(toolbox, parent1, parent2):
         # No crossover on single node tree
         return None
     child = copy_individual(parent1)
-    child.parents = [parent1, parent2]
+    child.parents = [parent1, parent2] if toolbox.keep_path else []
     index1 = random.randrange(0, len(parent1))
     index2 = random.randrange(0, len(parent2))
     slice1 = parent1.searchSubtree(index1)
@@ -299,7 +299,7 @@ def crossover_with_local_search(toolbox, parent1, parent2):
         expr2 = parent2[slice2]
         for index1 in indexes1:
             child = copy_individual(parent1)
-            child.parents = [parent1, parent2]
+            child.parents = [parent1, parent2] if toolbox.keep_path else []
             slice1 = child.searchSubtree(index1)
             child[slice1] = expr2
             if len(child) <= toolbox.max_individual_size:
@@ -316,7 +316,7 @@ def crossover_with_local_search(toolbox, parent1, parent2):
 
 def mutUniform(toolbox, parent, expr, pset):
     child = copy_individual(parent)
-    child.parents = [parent,]
+    child.parents = [parent,] if toolbox.keep_path else []
     index = random.randrange(0, len(child))
     slice_ = child.searchSubtree(index)
     type_ = child[index].ret
@@ -334,7 +334,7 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
     best = None
     for index in indexes:
         child = copy_individual(parent)
-        child.parents = [parent,]
+        child.parents = [parent,] if toolbox.keep_path else []
         slice1 = child.searchSubtree(index)
         child[slice1] = expr
         if len(child) <= toolbox.max_individual_size:
@@ -602,6 +602,7 @@ def solve_by_new_function(problem, functions, f, params):
         toolbox.old_populations_folder = params["old_populations_folder"]
     toolbox.optimise_solution_length = params["optimise_solution_length"]
     toolbox.extensive_statistics = params["extensive_statistics"]
+    toolbox.keep_path = params["keep_path"]
     
     # search
     toolbox.all_generations_ind = []

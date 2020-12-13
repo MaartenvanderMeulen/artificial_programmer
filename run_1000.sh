@@ -1,7 +1,7 @@
 #!/bin/bash
 id=$1
 mkdir -p tmp/$id
-nt=30
+nt=24
 lastt=`expr $nt - 1`
 for t in `seq 0 1 $lastt`
 do
