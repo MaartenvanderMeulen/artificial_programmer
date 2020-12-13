@@ -13,15 +13,8 @@
             (84 (99))
         )
         (eval_merge_elem ())
-        (() () (if_then_else le len or first rest cons list1 merge_elem)
-            (if_then_else
-                sorted_data
-                (if_then_else
-                    (le elem (first sorted_data))
-                    (cons elem sorted_data)
-                    (cons (first sorted_data) (merge_elem elem (rest sorted_data)))
-                )
-                (list1 elem)
+        (() () (if_then_else le len or first rest cons merge_elem)
+            (len sorted_data
             )
         )        
         1
