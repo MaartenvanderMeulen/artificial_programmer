@@ -201,10 +201,10 @@ def generate_initial_population_impl(toolbox):
     return population, None
 
 
-def read_old_populations(old_populations_folder):
+def read_old_populations(old_populations_folder, prefix):
     old_pops = []
     for filename in os.listdir(old_populations_folder):
-        if filename[:3] == "pop":
+        if filename[:len(prefix)] == prefix:
             old_pop = interpret.compile(interpret.load(old_populations_folder + "/" + filename))
             if len(old_pop) > 0:
                 old_pops.append(old_pop)
@@ -244,12 +244,62 @@ def load_initial_population_impl(toolbox, old_pops):
     return population, None
 
 
+def analyse_population_impl(toolbox, old_pops):
+    population = []
+    count_deap_str = dict()
+    count_model_outputs = dict()
+    count_eval = dict()
+    for old_pop in old_pops:
+        for code in old_pop:
+            deap_str = interpret.convert_code_to_deap_str(code, toolbox)
+            ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)
+            ind.deap_str = str(ind)
+            ind.parents = []
+            ind.eval = evaluate_individual(toolbox, ind)
+            population.append(ind)
+
+            assert len(ind) == deap_len_of_code(code)
+            assert deap_str == ind.deap_str
+            if deap_str not in count_deap_str:
+                count_deap_str[deap_str] = 0
+            count_deap_str[deap_str] += 1
+            if ind.model_outputs not in count_model_outputs:
+                count_model_outputs[ind.model_outputs] = 0
+            count_model_outputs[ind.model_outputs] += 1
+            if ind.eval not in count_eval:
+                count_eval[ind.eval] = 0
+            count_eval[ind.eval] += 1
+    with open(f"{toolbox.output_folder}/analysis.txt", "w") as f:
+        f.write(f"count\tstr\n")
+        count_deap_str = [(key, value) for key, value in count_deap_str.items()]
+        count_deap_str.sort(key=lambda item: -item[1])
+        for key, value in count_deap_str:
+            f.write(f"{value}\t{key}\n")
+
+        f.write(f"\ncount\tmodel_output\n")
+        count_model_outputs = [(key, value) for key, value in count_model_outputs.items()]
+        count_model_outputs.sort(key=lambda item: -item[1])
+        for key, value in count_model_outputs:
+            f.write(f"{value}\t{key}\n")
+
+        f.write(f"\ncount\teval\n")
+        count_eval = [(key, value) for key, value in count_eval.items()]
+        count_eval.sort(key=lambda item: -item[1])
+        for key, value in count_eval:
+            f.write(f"{value}\t{key}\n")
+    return None
+
+
 def generate_initial_population(toolbox):
+    if toolbox.analyse_best:
+        bests = read_old_populations(toolbox.old_populations_folder, "best")
+        analyse_population_impl(toolbox, bests)    
+        exit()
     evaluate.init_dynamic_error_weight_adjustment()
     if toolbox.new_initial_population:
         return generate_initial_population_impl(toolbox)
     else:
-        old_pops = read_old_populations(toolbox.old_populations_folder)
+        old_pops = read_old_populations(toolbox.old_populations_folder, "pop")
         return load_initial_population_impl(toolbox, old_pops)
 
 
@@ -594,12 +644,14 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.beta = params["weight_complementairity"]
     toolbox.penalise_non_reacting_models = params["penalise_non_reacting_models"]
     toolbox.hops = params["hops"]
+    toolbox.output_folder = params["output_folder"]
     toolbox.final_pop_file = params["output_folder"] + "/pop_" + str(params["seed"]) + ".txt"
     toolbox.all_ind_file = params["output_folder"] + "/ind_" + str(params["seed"]) + ".txt"
     toolbox.best_ind_file = params["output_folder"] + "/best_" + str(params["seed"]) + ".txt"
     toolbox.new_initial_population = params["new_initial_population"]
     if not toolbox.new_initial_population:
         toolbox.old_populations_folder = params["old_populations_folder"]
+        toolbox.analyse_best = params["analyse_best"]
     toolbox.optimise_solution_length = params["optimise_solution_length"]
     toolbox.extensive_statistics = params["extensive_statistics"]
     toolbox.keep_path = params["keep_path"]
