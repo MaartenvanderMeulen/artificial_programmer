@@ -11,6 +11,8 @@
     "max_seconds": 1200,
     "new_initial_population": true,
     "old_populations_folder": "tmp/08G",
+    "analyse_best": false,
+    "show_path_depth": 1,
     "pop_size": [
         4000,
         200
