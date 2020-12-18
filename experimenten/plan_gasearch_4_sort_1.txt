@@ -152,3 +152,12 @@ if (if A then False else not B)
 
 github 
 
+===================================================== 17 dec ===========================
+
+
+file tmp/09AA/log_1888.txt enter+miss 0 + 0 (die file komt er nooit)
+p enter subopt 0.9469469469469469 check 999
+p stuck at subopt 0.9945425087405133 check 117270
+
+tmp/09AA/log_1888.txt
+

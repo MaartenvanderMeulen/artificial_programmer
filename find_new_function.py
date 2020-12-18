@@ -12,6 +12,8 @@ import json
 from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull, gp.from_string
 
 
+global parents_fraction
+parents_fraction = 1.0 # fractie van de oude populatie samen te voegen met de offspring
 
 def evaluate_individual_impl(toolbox, ind, debug=0):
     deap_str = ind.deap_str
@@ -526,11 +528,17 @@ def ga_search_impl(toolbox):
         population.sort(key=lambda item: item.eval)
         refresh_toolbox_from_population(toolbox, population)
         toolbox.gen = 0
+        global parents_fraction
+        prev_best = 1e9
         for toolbox.parachute_level in range(len(toolbox.ngen)):
             while toolbox.gen < toolbox.ngen[toolbox.parachute_level]:
+                if math.isclose(population[0].eval, prev_best):
+                    parents_fraction = min(1.0, parents_fraction / 2) # stuck, gooi parents weg
+                else:
+                    parents_fraction = min(1.0, parents_fraction * 2) # ga de gode kant op
                 code_str = interpret.convert_code_to_str(interpret.compile_deap(population[0].deap_str, toolbox.functions))
                 if toolbox.f and toolbox.verbose >= 1:
-                    toolbox.f.write(f"start generation {toolbox.gen:2d} best eval {population[0].eval:.5f} {code_str}\n")
+                    toolbox.f.write(f"start generation {toolbox.gen:2d} best eval {population[0].eval:.5f} pf {parents_fraction:.3f} {code_str}\n")
                 log_population(toolbox, population, f"generation {toolbox.gen}, pop at start")
                 offspring, solution = generate_offspring(toolbox, population, toolbox.nchildren[toolbox.parachute_level])
                 if solution:
@@ -542,6 +550,8 @@ def ga_search_impl(toolbox):
                     toolbox.parachute_offspring_count += len(offspring)
                 else:
                     toolbox.normal_offspring_count += len(offspring)
+                prev_best = population[0].eval
+                population = random.sample(population, k=int(len(population)*parents_fraction))
                 population += offspring
                 population.sort(key=lambda item: item.eval)
                 population[:] = population[:toolbox.pop_size[toolbox.parachute_level]]
