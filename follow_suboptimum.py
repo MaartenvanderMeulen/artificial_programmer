@@ -52,4 +52,4 @@ def follow_subopt(folder, score_to_follow, precision):
 
 
 if __name__ == "__main__":
-    follow_subopt("tmp/09AA", 77.61253, 0.00001)
+    follow_subopt("tmp/09AC", 77.61253, 0.00001)

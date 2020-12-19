@@ -161,3 +161,36 @@ p stuck at subopt 0.9945425087405133 check 117270
 
 tmp/09AA/log_1888.txt
 
+================================================= 19 Dec===========================================
+met fractie parents wegggooien (09AC):
+
+Duurde 13 uur en 32 minuten (24 threads)
+
+207 oplossingen
+
+p enter subopt 0.9433962264150944 check 1007
+p stuck at subopt 0.9460122699386503 check 17115
+
+Aantal generaties bij de oplossinen:
+    10
+    ...
+	66	
+	68	
+	73	
+	76	
+	77	
+	78	
+	79	
+	80	
+	92	
+	93	
+	96	
+	134	
+	135	
+	137	
+	143	
+Dus max generatie 145 is prima om dit resultaat te reproduceren
+
+================================================= 19 Dec nu met max generatie 146 en 20 minuten =======
+
+

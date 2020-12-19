@@ -8,7 +8,7 @@
     "optimise_solution_length": false,
     "extensive_statistics": true,
     "keep_path": false,
-    "max_seconds": 1200,
+    "max_seconds": 999,
     "new_initial_population": true,
     "old_populations_folder": "tmp/08G",
     "analyse_best": false,
@@ -23,7 +23,7 @@
     ],
     "ngen": [
         3,
-        1000
+        60
     ],
     "max_individual_size": 40,
     "pcrossover": 0.4,

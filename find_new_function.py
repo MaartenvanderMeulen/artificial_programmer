@@ -517,7 +517,8 @@ def consistency_check(inds):
 
 
 def ga_search_impl(toolbox):
-    write_population(toolbox.final_pop_file, [], toolbox.functions)
+    if toolbox.final_pop_file:
+        write_population(toolbox.final_pop_file, [], toolbox.functions)
     try:
         population, solution = generate_initial_population(toolbox)
         if solution:
@@ -561,7 +562,8 @@ def ga_search_impl(toolbox):
                 toolbox.gen += 1
     except RuntimeWarning:
         pass
-    write_population(toolbox.final_pop_file, population, toolbox.functions)
+    if toolbox.final_pop_file:
+        write_population(toolbox.final_pop_file, population, toolbox.functions)
     best = population[0]
     return best, toolbox.gen+1
 
@@ -600,7 +602,8 @@ def basinhopper(toolbox):
         toolbox.t_eval = 0
 
         best, gen = ga_search_impl(toolbox)
-        write_population(toolbox.best_ind_file, [best], toolbox.functions)
+        if toolbox.best_ind_file:
+            write_population(toolbox.best_ind_file, [best], toolbox.functions)
         seconds = round(time.time() - toolbox.t0)
         if best.eval == 0:
             code = interpret.compile_deap(best.deap_str, toolbox.functions)
@@ -622,7 +625,7 @@ def basinhopper(toolbox):
                 write_path(toolbox, best)
             return result
         else:
-            toolbox.f.write(f"timeout\t{toolbox.problem_name}\n")
+            toolbox.f.write(f"stopped\t{toolbox.problem_name}\t{gen}\tgen\t{seconds}\tseconds\n")
         toolbox.f.flush()
         
     toolbox.f.write(f"failed\t{toolbox.problem_name}\n")
@@ -655,9 +658,9 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.penalise_non_reacting_models = params["penalise_non_reacting_models"]
     toolbox.hops = params["hops"]
     toolbox.output_folder = params["output_folder"]
-    toolbox.final_pop_file = params["output_folder"] + "/pop_" + str(params["seed"]) + ".txt"
-    toolbox.all_ind_file = params["output_folder"] + "/ind_" + str(params["seed"]) + ".txt"
-    toolbox.best_ind_file = params["output_folder"] + "/best_" + str(params["seed"]) + ".txt"
+    toolbox.final_pop_file = None # params["output_folder"] + "/pop_" + str(params["seed"]) + ".txt"
+    toolbox.all_ind_file = None # params["output_folder"] + "/ind_" + str(params["seed"]) + ".txt"
+    toolbox.best_ind_file = None # params["output_folder"] + "/best_" + str(params["seed"]) + ".txt"
     toolbox.new_initial_population = params["new_initial_population"]
     if not toolbox.new_initial_population:
         toolbox.old_populations_folder = params["old_populations_folder"]
@@ -670,8 +673,10 @@ def solve_by_new_function(problem, functions, f, params):
     
     # search
     toolbox.all_generations_ind = []
-    write_population(toolbox.all_ind_file, toolbox.all_generations_ind, toolbox.functions)
+    if toolbox.all_ind_file:
+        write_population(toolbox.all_ind_file, toolbox.all_generations_ind, toolbox.functions)
     result = basinhopper(toolbox)
-    write_population(toolbox.all_ind_file, toolbox.all_generations_ind, toolbox.functions)
+    if toolbox.all_ind_file:
+        write_population(toolbox.all_ind_file, toolbox.all_generations_ind, toolbox.functions)
 
     return result
