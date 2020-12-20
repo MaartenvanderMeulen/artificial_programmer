@@ -332,6 +332,8 @@ def cxOnePoint(toolbox, parent1, parent2):
     if child.deap_str in toolbox.ind_str_set or len(child) > toolbox.max_individual_size:
         return None
     child.eval = evaluate_individual(toolbox, child)
+    if child.eval in toolbox.taboo_set:
+        return None
     return child
 
 
@@ -362,7 +364,8 @@ def crossover_with_local_search(toolbox, parent1, parent2):
                         if parent1.eval > child.eval or (parent1.eval == child.eval and len(parent1) > len(child)):
                             return child
                     if best is None or best.eval > child.eval or (best.eval == child.eval and len(best) > len(child)):
-                        best = child
+                        if child.eval not in toolbox.taboo_set:
+                            best = child
     return best
 
 
@@ -377,6 +380,8 @@ def mutUniform(toolbox, parent, expr, pset):
     if child.deap_str in toolbox.ind_str_set or len(child) > toolbox.max_individual_size:
         return None
     child.eval = evaluate_individual(toolbox, child)
+    if child.eval in toolbox.taboo_set:
+        return None
     return child
 
 
@@ -397,7 +402,8 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
                     if parent.eval > child.eval or (parent.eval == child.eval and len(parent) > len(child)):
                         return child
                 if best is None or best.eval > child.eval or (best.eval == child.eval and len(best) > len(child)):
-                    best = child
+                    if child.eval not in toolbox.taboo_set:
+                        best = child
     return best
 
 
@@ -516,10 +522,20 @@ def consistency_check(inds):
         consistency_check_ind(ind)
 
 
+def erase_suboptimum_parents(toolbox, population):
+    best_eval = population[0].eval
+    toolbox.taboo_set.add(best_eval)
+    population = [ind for ind in population if ind.eval > best_eval]
+    if len(population) == 0:
+        raise RuntimeWarning("grote opschudding gooit hele populatie weg...")
+    return population
+
+
 def ga_search_impl(toolbox):
     if toolbox.final_pop_file:
         write_population(toolbox.final_pop_file, [], toolbox.functions)
     try:
+        toolbox.taboo_set = set()
         population, solution = generate_initial_population(toolbox)
         if solution:
             return solution, 0
@@ -531,15 +547,26 @@ def ga_search_impl(toolbox):
         toolbox.gen = 0
         global parents_fraction
         prev_best = 1e9
+        stuck_count = 0
+        grote_opschudding_count = 0
         for toolbox.parachute_level in range(len(toolbox.ngen)):
             while toolbox.gen < toolbox.ngen[toolbox.parachute_level]:
+
+                # track if we are stuck
                 if math.isclose(population[0].eval, prev_best):
                     parents_fraction = min(1.0, parents_fraction / 2) # stuck, gooi parents weg
+                    stuck_count += 1
                 else:
-                    parents_fraction = min(1.0, parents_fraction * 2) # ga de gode kant op
-                code_str = interpret.convert_code_to_str(interpret.compile_deap(population[0].deap_str, toolbox.functions))
+                    # verbetering!
+                    parents_fraction = 1.0 # reset 
+                    stuck_count = 0
+                prev_best = population[0].eval
+                if stuck_count >= 5:
+                    # Erase all parents with this value BEFORE making the children, ERASING it from the gene pool
+                    population = erase_suboptimum_parents(toolbox, population)
                 if toolbox.f and toolbox.verbose >= 1:
-                    toolbox.f.write(f"start generation {toolbox.gen:2d} best eval {population[0].eval:.5f} pf {parents_fraction:.3f} {code_str}\n")
+                    # code_str = interpret.convert_code_to_str(interpret.compile_deap(population[0].deap_str, toolbox.functions))
+                    toolbox.f.write(f"gen {toolbox.gen:2d} best {population[0].eval:7.3f} pf {parents_fraction:.3f} sc {stuck_count} goc {grote_opschudding_count} taboo {str(toolbox.taboo_set)}\n") #  {code_str}\n")
                 log_population(toolbox, population, f"generation {toolbox.gen}, pop at start")
                 offspring, solution = generate_offspring(toolbox, population, toolbox.nchildren[toolbox.parachute_level])
                 if solution:
@@ -551,8 +578,8 @@ def ga_search_impl(toolbox):
                     toolbox.parachute_offspring_count += len(offspring)
                 else:
                     toolbox.normal_offspring_count += len(offspring)
-                prev_best = population[0].eval
-                population = random.sample(population, k=int(len(population)*parents_fraction))
+                if parents_fraction < 1.0:
+                    population = random.sample(population, k=int(len(population)*parents_fraction))
                 population += offspring
                 population.sort(key=lambda item: item.eval)
                 population[:] = population[:toolbox.pop_size[toolbox.parachute_level]]
@@ -560,8 +587,8 @@ def ga_search_impl(toolbox):
                 update_dynamic_weighted_evaluation(toolbox, population)
                 refresh_toolbox_from_population(toolbox, population)
                 toolbox.gen += 1
-    except RuntimeWarning:
-        pass
+    except RuntimeWarning as e:
+        toolbox.f.write("RuntimeWarning: " + str(e) + "\n")
     if toolbox.final_pop_file:
         write_population(toolbox.final_pop_file, population, toolbox.functions)
     best = population[0]

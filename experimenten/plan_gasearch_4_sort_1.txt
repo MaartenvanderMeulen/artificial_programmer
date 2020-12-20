@@ -194,3 +194,9 @@ Dus max generatie 145 is prima om dit resultaat te reproduceren
 ================================================= 19 Dec nu met max generatie 146 en 20 minuten =======
 
 
+
+=========================================================== 20 Dec 09ACA =====================
+
+= 09AC met
+	- paranets_fraction meteen weer op 1 indien verandering van beste waarde
+	- grote opschudding = alle individuals met beste waarde VOOR maken van kinderen verwijderen (uit de GENE pool)
