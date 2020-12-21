@@ -8,14 +8,11 @@ def handle_file(filename, score_to_follow, precision, counts):
     with open(filename, "r") as f:
         prev_eval = None
         for line in f:
-            if line[:len("start generation")] ==  "start generation":
-                # example : start generation 124 best eval 38.75731
-                line_stripped = line.strip().lower().split(" ")
-                eval = None
-                for i, part in enumerate(line_stripped):
-                    if part == "eval":
-                        eval = float(line_stripped[i+1])
-                        break
+            # line = line.strip().lower().split(" ")
+
+            if len(line) > 0 and line[:3] ==  "gen":
+                # example : gen 124 best 38.75731
+                eval = float(line[12:19])
                 if prev_eval is not None:
                     if prev_eval > score_to_follow + precision:
                         if eval > score_to_follow + precision:
@@ -41,15 +38,21 @@ def follow_subopt(folder, score_to_follow, precision):
     count_enter_subopt, count_miss_subopt, count_stuck_at_subopt, count_leave_subopt = 0, 0, 0, 0
     counts = count_enter_subopt, count_miss_subopt, count_stuck_at_subopt, count_leave_subopt
     count_files = 0
+    filenames = []
     for filename in os.listdir(folder):
         if filename[:3] == "log":
-            count_files += 1
-            counts = handle_file(folder + "/" + filename, score_to_follow, precision, counts)
+            filenames.append(filename)
+    filenames.sort()
+    for filename in filenames:
+        count_files += 1
+        counts = handle_file(folder + "/" + filename, score_to_follow, precision, counts)
     count_enter_subopt, count_miss_subopt, count_stuck_at_subopt, count_leave_subopt = counts
-    print("p enter subopt", count_enter_subopt / (count_enter_subopt + count_miss_subopt), "check", count_enter_subopt + count_miss_subopt)
-    print("p stuck at subopt", count_stuck_at_subopt / (count_stuck_at_subopt + count_leave_subopt), "check", count_stuck_at_subopt + count_leave_subopt)
+    print("count enter subopt", count_enter_subopt, "count through subopt", count_miss_subopt)
+    print("p enter subopt", count_enter_subopt / (count_enter_subopt + count_miss_subopt))
+    print("p stuck at subopt", count_stuck_at_subopt / (count_stuck_at_subopt + count_leave_subopt))
+    print("count stuck at subopt", count_stuck_at_subopt, "count leave subopt", count_leave_subopt)
     print("count_files", count_files)
 
 
 if __name__ == "__main__":
-    follow_subopt("tmp/09AC", 77.61253, 0.00001)
+    follow_subopt("tmp/09ACA", 77.61253, 0.001)

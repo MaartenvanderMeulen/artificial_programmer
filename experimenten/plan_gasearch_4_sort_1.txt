@@ -200,3 +200,75 @@ Dus max generatie 145 is prima om dit resultaat te reproduceren
 = 09AC met
 	- paranets_fraction meteen weer op 1 indien verandering van beste waarde
 	- grote opschudding = alle individuals met beste waarde VOOR maken van kinderen verwijderen (uit de GENE pool)
+
+statistics
+	- 263 solved, 728 stopped (allemaal timeout 1200 seconden)
+	- p enter subopt 0.6366711772665764
+	- p stuck at subopt 0.8853018372703412
+		- count enter subopt 941 count through subopt 537
+		- count stuck at subopt 3373 count leave subopt 437
+
+================================== 21 Dec 09ACB, geheugengebruik reduceren =====================
+
+tmp/09ACA/log_1056.txt, 140 iteraties.  Geheugengebruik met
+/usr/bin/time -v python solve_problems.py 1056 experimenten/params_09ACB.txt
+Command exited with non-zero status 1
+	Command being timed: "python solve_problems.py 1056 experimenten/params_09ACB.txt"
+	User time (seconds): 1198.85
+	System time (seconds): 1.47
+	Percent of CPU this job got: 99%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 20:00.66
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 1941344
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 779991
+	Voluntary context switches: 1
+	Involuntary context switches: 118971
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 576
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 1
+
+Dus 1.9 GB
+
+ps:
+USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+maarten  13051  100 11.8 2149044 1940832 pts/0 R+   13:15  19:59 python solve_problems.py 1056 experimenten/params_09ACB.txt
+
+Dus 2.1 GB
+
+=== zonder set van strings van alle ooit onderzochte  individuales:
+Command exited with non-zero status 1
+	Command being timed: "python solve_problems.py 1056 experimenten/params_09ACB.txt"
+	User time (seconds): 1198.91
+	System time (seconds): 1.40
+	Percent of CPU this job got: 99%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 20:00.66
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 1955928
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 743685
+	Voluntary context switches: 1
+	Involuntary context switches: 119214
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 592
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 1
+
+=== slimmere opslag van toolbox.eval_cache

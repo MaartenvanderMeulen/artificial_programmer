@@ -1,7 +1,7 @@
 #!/bin/bash
 id=$1
 mkdir -p tmp/$id
-tsp -S 24
+tsp -S 16
 for seed in `seq 1000 1 1990`
 do
     echo tsp $seed

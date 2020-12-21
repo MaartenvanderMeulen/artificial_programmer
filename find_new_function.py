@@ -108,7 +108,6 @@ class Toolbox(object):
         self.functions = functions
         self.pset = pset
         self.eval_cache = dict()
-        self.ind_str_set = set()        
         self.solution_code_str = interpret.convert_code_to_str(solution_hints) # for monkey test
         deap_str = interpret.convert_code_to_deap_str(solution_hints, self)
         self.solution_deap_ind = gp.PrimitiveTree.from_string(deap_str, pset) # for finding shortest solution
@@ -192,9 +191,6 @@ def generate_initial_population_impl(toolbox):
                 break
         retry_count = 0
         toolbox.ind_str_set.add(ind.deap_str)
-        if ind.deap_str not in toolbox.all_generations_ind_str_set:
-            toolbox.all_generations_ind_str_set.add(ind.deap_str)
-            toolbox.all_generations_ind.append(ind)
         ind.parents = []
         ind.eval = evaluate_individual(toolbox, ind)
         if ind.eval == 0.0:
@@ -235,9 +231,6 @@ def load_initial_population_impl(toolbox, old_pops):
                 count_skipped += 1
                 continue
             toolbox.ind_str_set.add(ind.deap_str)
-            if ind.deap_str not in toolbox.all_generations_ind_str_set:
-                toolbox.all_generations_ind_str_set.add(ind.deap_str)
-                toolbox.all_generations_ind.append(ind)
             ind.parents = []
             ind.eval = evaluate_individual(toolbox, ind)
             if ind.eval == 0.0:
@@ -491,9 +484,6 @@ def generate_offspring(toolbox, population, nchildren):
             return None, child
         assert child.deap_str == str(child)
         toolbox.ind_str_set.add(child.deap_str)
-        if child.deap_str not in toolbox.all_generations_ind_str_set:
-            toolbox.all_generations_ind_str_set.add(child.deap_str)
-            toolbox.all_generations_ind.append(child)
         offspring.append(child)
     return offspring, None
 
@@ -615,9 +605,6 @@ def compute_cx_fraction(best):
 
 def basinhopper(toolbox):
     for _ in range(toolbox.hops):
-        toolbox.ind_str_set = set()
-        toolbox.all_generations_ind_str_set = set()
-        toolbox.all_generations_ind = []
         toolbox.eval_cache = dict()
         toolbox.eval_count = 0
         toolbox.eval_lookup_count = 0
@@ -642,7 +629,6 @@ def basinhopper(toolbox):
                 toolbox.f.write(f"\t{toolbox.eval_count}\tevals")
                 toolbox.f.write(f"\t{toolbox.eval_lookup_count}\telc\t{toolbox.parachute_count}\tpac")
                 toolbox.f.write(f"\t{toolbox.parachute_offspring_count}\tpoc\t{toolbox.normal_offspring_count}\tnoc")
-                toolbox.f.write(f"\t{len(toolbox.all_generations_ind_str_set)}\tagu")
             toolbox.f.write(f"\t{best.deap_str}")
             toolbox.f.write(f"\n")
             if toolbox.verbose >= 1:
