@@ -7,3 +7,10 @@ do
     echo tsp $seed
     tsp -n -L $seed python solve_problems.py $seed experimenten/params_$id.txt
 done
+for t in `seq 17 1 31`
+do
+    echo sleep 60
+    sleep 60
+    echo tsp -S $t
+    tsp -S $t
+done

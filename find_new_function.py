@@ -60,11 +60,17 @@ def evaluate_individual(toolbox, individual, debug=0):
     assert deap_str == str(individual)
     toolbox.eval_lookup_count += 1
     if deap_str in toolbox.eval_cache: #  TODO handle dynamic weighting that changes the evaluation
-        eval, individual.model_outputs, individual.model_evals = toolbox.eval_cache[deap_str]
+        family_index = toolbox.eval_cache[deap_str]
+        eval, individual.model_outputs, individual.model_evals = toolbox.families_list[family_index]
         assert eval < 0.1 or math.isclose(eval, sum(individual.model_evals))
         return eval
     weighted_error = evaluate_individual_impl(toolbox, individual, debug)
-    toolbox.eval_cache[deap_str] = weighted_error, individual.model_outputs, individual.model_evals
+    if individual.model_outputs not in toolbox.families_dict:
+        family_index = len(toolbox.families_list)
+        toolbox.families_list.append((weighted_error, individual.model_outputs, individual.model_evals))
+        toolbox.families_dict[individual.model_outputs] = family_index
+    family_index = toolbox.families_dict[individual.model_outputs]
+    toolbox.eval_cache[deap_str] = family_index
     return weighted_error
 
 
@@ -108,6 +114,8 @@ class Toolbox(object):
         self.functions = functions
         self.pset = pset
         self.eval_cache = dict()
+        self.families_list = []
+        self.families_dict = dict()
         self.solution_code_str = interpret.convert_code_to_str(solution_hints) # for monkey test
         deap_str = interpret.convert_code_to_deap_str(solution_hints, self)
         self.solution_deap_ind = gp.PrimitiveTree.from_string(deap_str, pset) # for finding shortest solution

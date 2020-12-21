@@ -272,3 +272,29 @@ Command exited with non-zero status 1
 	Exit status: 1
 
 === slimmere opslag van toolbox.eval_cache
+Command exited with non-zero status 1
+	Command being timed: "python solve_problems.py 1056 experimenten/params_09ACB.txt"
+	User time (seconds): 1199.14
+	System time (seconds): 0.91
+	Percent of CPU this job got: 99%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 20:00.37
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 953700
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 497735
+	Voluntary context switches: 1
+	Involuntary context switches: 119522
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 384
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 1
+
+Dus 1.0 GB, dat scheelt!
