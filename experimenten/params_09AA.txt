@@ -34,6 +34,6 @@
     "weight_complementairity": 0.3,
     "penalise_non_reacting_models": true,
     "evolution_strategies": [], 
-    "meta_evolution_strategies": [], 
+    "metaevolution_strategies": [], 
     "hops": 1
 }

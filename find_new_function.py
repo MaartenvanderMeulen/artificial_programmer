@@ -558,7 +558,7 @@ def ga_search_impl(toolbox):
             while toolbox.gen < toolbox.ngen[toolbox.parachute_level]:
 
                 # track if we are stuck
-                if "parents_fraction" in toolbox.evolution_strategy:
+                if "parents_fraction" in toolbox.evolution_strategies:
                     if math.isclose(population[0].eval, prev_best):
                         parents_fraction = min(1.0, parents_fraction / 2) # stuck, gooi parents weg
                         stuck_count += 1
