@@ -298,3 +298,25 @@ Command exited with non-zero status 1
 	Exit status: 1
 
 Dus 1.0 GB, dat scheelt!
+
+================================= 09ACB & 09ACC
+
+09ACB : 31 threads, run 21 Dec 23:07 - 22 Dec 08:28
+
+
+WAITLIST:
+	09ACC == 09ACB met 16 threads
+	09ACA3 = 09ACA (taboo & paranet_fraction op 1 na verandering) met max 300000 evaluaties
+	09AC3 = 09AC parent_fraction) met max 300000 evaluaties
+	09AC3 = 09AC parent_fraction) met max 300000 evaluaties
+
+		TODO
+
+
+max_evaluations : 300000
+kijken of 09ACB en 09ACC verschillen
+
+DAARNA :
+- fraction_parents aanpassing --> - 20% * write_population
+- taboo van set van waarden naar 1 waarde
+- offspring voorrang geven indien we in suboptimum zitten (kan ook door #parents eerst 50% te laten zijn)

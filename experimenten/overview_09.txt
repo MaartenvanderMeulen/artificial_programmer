@@ -1,0 +1,10 @@
+09ACA = 09AC + taboo, 
+	solved 135/991, max evals 300000
+09AC = 09AA + fraction_parents
+	solved 207/991, maxseconds 1200
+	solved 134/991, met maxiter 60, en maxseconds 999
+	TODO , max evals 300000
+09AA = 09A
+	solved 47/1000, 24 threads, alles zelfde instellinhg
+	TODO , max evals 300000
+

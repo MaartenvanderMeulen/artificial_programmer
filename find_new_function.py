@@ -18,6 +18,8 @@ parents_fraction = 1.0 # fractie van de oude populatie samen te voegen met de of
 def evaluate_individual_impl(toolbox, ind, debug=0):
     deap_str = ind.deap_str
     assert deap_str == str(ind)
+    if toolbox.eval_count >= toolbox.max_evaluations:
+        raise RuntimeWarning("max evaluations reached")
     toolbox.eval_count += 1
     code = interpret.compile_deap(deap_str, toolbox.functions)
     toolbox.functions[toolbox.problem_name] = [toolbox.formal_params, code]
@@ -123,6 +125,7 @@ class Toolbox(object):
             print("deap_str1", deap_str)
             print("deap_str2", str(self.solution_deap_ind))
             raise RuntimeError(f"Check if function hints '{str(func_hints)}' contain all functions of solution hint '{str(solution_hints)}'")
+        self.taboo_set = set()
 
 
 def best_of_n(population, n):
@@ -522,11 +525,14 @@ def consistency_check(inds):
 
 def erase_suboptimum_parents(toolbox, population):
     best_eval = population[0].eval
-    toolbox.taboo_set.add(best_eval)
-    population = [ind for ind in population if ind.eval > best_eval]
-    if len(population) == 0:
-        raise RuntimeWarning("grote opschudding gooit hele populatie weg...")
-    return population
+    if "taboo_set" in toolbox.metaevolution_strategies:
+        toolbox.taboo_set.add(best_eval)
+    elif "taboo_value" in toolbox.metaevolution_strategies:
+        toolbox.taboo_set = set([best_eval])
+    new_population = [ind for ind in population if ind.eval > best_eval]
+    if len(new_population) == 0:
+        return population
+    return new_population
 
 
 def ga_search_impl(toolbox):
@@ -548,20 +554,23 @@ def ga_search_impl(toolbox):
         stuck_count = 0
         grote_opschudding_count = 0
         for toolbox.parachute_level in range(len(toolbox.ngen)):
+            popN = toolbox.pop_size[toolbox.parachute_level]
             while toolbox.gen < toolbox.ngen[toolbox.parachute_level]:
 
                 # track if we are stuck
-                if math.isclose(population[0].eval, prev_best):
-                    parents_fraction = min(1.0, parents_fraction / 2) # stuck, gooi parents weg
-                    stuck_count += 1
-                else:
-                    # verbetering!
-                    parents_fraction = 1.0 # reset 
-                    stuck_count = 0
+                if "parents_fraction" in toolbox.evolution_strategy:
+                    if math.isclose(population[0].eval, prev_best):
+                        parents_fraction = min(1.0, parents_fraction / 2) # stuck, gooi parents weg
+                        stuck_count += 1
+                    else:
+                        # verbetering!
+                        parents_fraction = 1.0 # reset 
+                        stuck_count = 0
                 prev_best = population[0].eval
-                if stuck_count >= 5:
-                    # Erase all parents with this value BEFORE making the children, ERASING it from the gene pool
-                    population = erase_suboptimum_parents(toolbox, population)
+                if "taboo_set" in toolbox.metaevolution_strategies or "taboo_value" in toolbox.metaevolution_strategies:
+                    if stuck_count >= 5:
+                        # Erase all parents with this value BEFORE making the children, ERASING it from the gene pool
+                        population = erase_suboptimum_parents(toolbox, population)
                 if toolbox.f and toolbox.verbose >= 1:
                     # code_str = interpret.convert_code_to_str(interpret.compile_deap(population[0].deap_str, toolbox.functions))
                     toolbox.f.write(f"gen {toolbox.gen:2d} best {population[0].eval:7.3f} pf {parents_fraction:.3f} sc {stuck_count} goc {grote_opschudding_count} taboo {str(toolbox.taboo_set)}\n") #  {code_str}\n")
@@ -580,7 +589,7 @@ def ga_search_impl(toolbox):
                     population = random.sample(population, k=int(len(population)*parents_fraction))
                 population += offspring
                 population.sort(key=lambda item: item.eval)
-                population[:] = population[:toolbox.pop_size[toolbox.parachute_level]]
+                population[:] = population[:popN]
                 consistency_check(population)
                 update_dynamic_weighted_evaluation(toolbox, population)
                 refresh_toolbox_from_population(toolbox, population)
@@ -646,7 +655,7 @@ def basinhopper(toolbox):
                 write_path(toolbox, best)
             return result
         else:
-            toolbox.f.write(f"stopped\t{toolbox.problem_name}\t{gen}\tgen\t{seconds}\tseconds\n")
+            toolbox.f.write(f"stopped\t{toolbox.problem_name}\t{gen}\tgen\t{seconds}\tseconds\t{toolbox.eval_count}\tevals\n")
         toolbox.f.flush()
         
     toolbox.f.write(f"failed\t{toolbox.problem_name}\n")
@@ -666,6 +675,7 @@ def solve_by_new_function(problem, functions, f, params):
     # tunable params
     toolbox.verbose = params["verbose"]
     toolbox.max_seconds = params["max_seconds"]
+    toolbox.max_evaluations = params["max_evaluations"]
     toolbox.pop_size = params["pop_size"]
     toolbox.nchildren = params["nchildren"]
     toolbox.ngen = params["ngen"]
@@ -691,6 +701,8 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.optimise_solution_length = params["optimise_solution_length"]
     toolbox.extensive_statistics = params["extensive_statistics"]
     toolbox.keep_path = params["keep_path"]
+    toolbox.evolution_strategies = params["evolution_strategies"]
+    toolbox.metaevolution_strategies = params["metaevolution_strategies"]
     
     # search
     toolbox.all_generations_ind = []
