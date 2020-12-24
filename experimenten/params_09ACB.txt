@@ -4,7 +4,7 @@
     "functions_file": "experimenten/functions_leeg.txt",
     "seed_prefix": 0,
     "skip_seeds": [],
-    "verbose": 1,
+    "verbose": 0,
     "optimise_solution_length": false,
     "extensive_statistics": true,
     "keep_path": false,
@@ -33,5 +33,7 @@
     "parent_selection_strategy": 2,
     "weight_complementairity": 0.3,
     "penalise_non_reacting_models": true,
+    "evolution_strategies": ["parents_fraction"], 
+    "metaevolution_strategies": [], 
     "hops": 1
 }

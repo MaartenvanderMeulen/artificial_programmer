@@ -1,0 +1,73 @@
+TODO
+- onderzoeken hoe ontsnapt wordt aan 77.6
+e	- Hard coderen : indien child van mut of cx < 77.6 en bestpop momenteel 77.6, schrijf dan die 2 parents weg en stop aan einde make offspring.
+
+- andere meta opschuddingen
+	- taboo van set van waarden naar 1 waarde
+- andere opschuddingen
+	- fraction_parents aanpassing --> - 20% * popN
+	- varieren met voorrang van de offspring indien we in suboptimum zitten (kan ook door #parents eerst 50% te laten zijn)
+
+SOMEDAY
+	- Interpretator : omzetten naar C++ (en daarna naar OpenCL)
+	- hyperparameter tuning met 1000 runs
+
+09AA
+	- p enter subopt 0.9469469469469469 check 999
+	- p stuck at subopt 0.9945425087405133 check 117270
+
+09AC
+	- met fractie parents wegggooien
+	- Duurde 13 uur en 32 minuten (24 threads)
+	- 207 oplossingen
+	- p enter subopt 0.9433962264150944 check 1007
+	- p stuck at subopt 0.9460122699386503 check 17115
+
+09ACA
+	- paranets_fraction meteen weer op 1 indien verandering van beste waarde
+	- grote opschudding = alle individuals met beste waarde VOOR maken van kinderen verwijderen (uit de GENE pool)
+	- 263 solved, 728 stopped (allemaal timeout 1200 seconden)
+	- p enter subopt 0.6366711772665764
+	- p stuck at subopt 0.8853018372703412
+
+merge_elem
+(cons (if_then_else (len sorted_data) (first sorted_data) (if_then_else elem elem sorted_data)) (rest (cons sorted_data (cons (if_then_else (rest sorted_data) (first (rest sorted_data)) (if_then_else elem elem elem)) (rest sorted_data))))) 57.353 crossover
+  (cons (if_then_else (len sorted_data) (first sorted_data) (if_then_else elem elem sorted_data)) (rest (cons sorted_data (cons (if_then_else (rest sorted_data) (first sorted_data) (if_then_else elem elem elem)) (rest sorted_data))))) 89.533 crossover
+  (cons (first (if_then_else sorted_data sorted_data (cons elem (cons sorted_data sorted_data)))) (cons elem (rest sorted_data))) 91.635 crossover
+(if_then_else sorted_data (cons (first sorted_data) (cons (if_then_else (rest sorted_data) (first (rest sorted_data)) (if_then_else elem elem elem)) (rest sorted_data))) (if_then_else sorted_data sorted_data (cons elem sorted_data))) 57.153 crossover
+  (if_then_else sorted_data (cons (first sorted_data) (cons elem (rest sorted_data))) (if_then_else sorted_data sorted_data (cons elem sorted_data))) 91.435 crossover
+  (if_then_else (first (cons (len elem) (or sorted_data sorted_data))) (rest (if_then_else (or elem sorted_data) (rest elem) (if_then_else sorted_data sorted_data elem))) (cons (if_then_else (rest sorted_data) (first (rest sorted_data)) (if_then_else elem elem elem)) sorted_data)) 118.440 mutatie
+
+991 runs:
+	201 zonder ontsnapping uit 77.6
+	505 met 1 ontsnapping
+	153 met in zelfde iter 2 ontsnappende childs
+	79 met 3
+	18 met 4
+	13 met 5
+	9 met 6
+	5 met 7
+	1 met 8
+	4 met 9
+	2 met 11
+	1 met 12
+
+In totaal 1348 ontsnappingen uit 77.6 in die 991 runs, waarvan 105 verschillend.
+
+Van die 1348 ontsnappingen uit 77.6 hebben 243 die 77.6 als parent, waarvan 77 verschillend.  Van die 77 zijn 8 mutaties van 77.6.
+
+De meestvoorkomende ontsnapping was naar 57.353.  Dit kwam 275 keer voor in 43 verschillende varianten.
+De meest voorkomende variant (91 keer) was met 89.533 en 91.635 als parents.
+
+Tja wat kunnen we hieruit concluderen?  
+- het is niet zo dat er maar 1 of een beperkt aantal mogelijke ontsnappinggen bestaan.
+  Er bestaan tenminste 105 verschillende manieren om te ontsnappen.
+- dit zijn de ontsnappingsmogelijkheden die gedetecteerd zijn (doordat een ontsnapping gedetecteerd werd).
+  We weten niet hoeveel ontsnappingen "gemist" zijn: dat de parents nodig voor ontsnapping wel in de populatie zaten,
+  maar dat die twee parents per toeval niet met elkaar gekruisd werden.  Dit kan en ga ik nog verder onderzoeken.
+- het is complex.  meer onderzoek is nodig.  :)
+
+
+
+
+

@@ -177,14 +177,18 @@ def write_final_population(toolbox, population):
 
 def write_path(toolbox, ind, indent=0):
     if toolbox.verbose >= 1:
-        indent_str = "".join(['  ' for i in range(indent)])
-        operator_str = ["", "mutatie", "crossover"][len(ind.parents)]
+        #indent_str = "\t" * indent
+        # operator_str = ["", "mutatie", "crossover"][len(ind.parents)]
         code = interpret.compile_deap(ind.deap_str, toolbox.functions)
         code_str = interpret.convert_code_to_str(code)
-        toolbox.f.write(f"{indent_str}{code_str} {ind.eval:.3f} {operator_str}\n")
-        evaluate_individual_impl(toolbox, ind, toolbox.verbose)
-        for parent in ind.parents:
-            write_path(toolbox, parent, indent+1)
+        if indent:
+            toolbox.f.write(f"parent\t{ind.eval:.3f}\tcode\t{code_str}\n")
+        else:
+            toolbox.f.write(f"child\t{ind.eval:.3f}\tcode\t{code_str}\n")
+        # evaluate_individual_impl(toolbox, ind, toolbox.verbose)
+        if indent == 0:
+            for parent in ind.parents:
+                write_path(toolbox, parent, indent+1)
 
 
 def generate_initial_population_impl(toolbox):
@@ -462,6 +466,8 @@ def generate_offspring(toolbox, population, nchildren):
     retry_count = 0  
     cxp_count, mutp_count = 0, 0    
     cx_count, mut_count = 0, 0    
+    toolbox.keep_path = math.isclose(population[0].eval, 77.61253, abs_tol=0.00001)
+    escapes_count = 0
     while len(offspring) < nchildren:
         op_choice = random.random()
         if op_choice < toolbox.pcrossover: # Apply crossover
@@ -496,6 +502,20 @@ def generate_offspring(toolbox, population, nchildren):
         assert child.deap_str == str(child)
         toolbox.ind_str_set.add(child.deap_str)
         offspring.append(child)
+        if math.isclose(population[0].eval, 77.61253, abs_tol=0.00001) and child.eval < 77.61253 - 0.00001:
+            if False:
+                toolbox.f.write(f"child\t{child.eval:.3f}\tcode\t{child.deap_str}\n")
+                for parent in child.parents:
+                    toolbox.f.write(f"parent\t{parent.eval:.3f}\tcode\t{parent.deap_str}\n")
+            toolbox.f.write(f"{child.eval:.3f}\t")
+            child.parents.sort(key=lambda item: item.eval)
+            for parent in child.parents:
+                toolbox.f.write(f"\t{parent.eval:.3f}")
+            toolbox.f.write(f"\n")
+            escapes_count += 1
+    offspring.sort(key=lambda item: item.eval)
+    if escapes_count or offspring[0].eval < 77.61253 - 0.00001 or toolbox.eval_count >= toolbox.max_evaluations // 2:
+        exit()        
     return offspring, None
 
 
@@ -556,7 +576,6 @@ def ga_search_impl(toolbox):
         for toolbox.parachute_level in range(len(toolbox.ngen)):
             popN = toolbox.pop_size[toolbox.parachute_level]
             while toolbox.gen < toolbox.ngen[toolbox.parachute_level]:
-
                 # track if we are stuck
                 if "parents_fraction" in toolbox.evolution_strategies:
                     if math.isclose(population[0].eval, prev_best):
@@ -669,7 +688,7 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.dynamic_weights = False # not toolbox.monkey_mode
     toolbox.child_creation_retries = 99
     toolbox.f = f
-    if len(toolbox.solution_deap_ind) > 0:
+    if params["verbose"] >= 1 and len(toolbox.solution_deap_ind) > 0:
         f.write(f"solution hint length {len(toolbox.solution_deap_ind)}\n")
 
     # tunable params

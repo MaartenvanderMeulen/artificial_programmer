@@ -45,51 +45,6 @@ done 09B op 28 threads
 done 10A sort
 done find shortest solution
 
-============================== vragenlijst Victor ======================================
-
-Beste Maarten,
-
-Bedankt voor de update.
-
-Dus, als ik het goed begrijp heb je in jouw puzzel 1.1% succes rate op 10 minuten, en 2.6% succes rate op 20 minuten. Dus, gemiddeld 1 oplossing per 900 minuten (op basis van 10 minuten grens) en 1 oplossing op bijna 800 minuten (20 minuten grens). Dus, het lijkt erop dat je curve iets zal zeggen van 1 per 12 uur of zo in de meest optimale setting. Dat is wat mij betreft een perfect probleem om mee verder te gaan, omdat het duidelijk is dat je oplossingen kan vinden, maar niet erg vaak. De uitdaging is nu om te zien of we dat "1 per 12 uur" terug kunnen brengen naar "1 per 1 uur" of zelfs beter.
-
-Er zijn een aantal dingen die ik me afvraag:
-
-ANALYSE VAN DE OPLOSSING
-1) Unieke Individuen. Als ik goed begrijp is iedere iteratie 200 individuen. In 20 minuten kun je 20 iteraties doen, dus je doet 1 iteratie per minute, of 200 individuen per minuut. Je 1000 tests van 20 minuten is 20,000 iteraties. Dus, in totaal doet je test zo'n 4 miljoen individuen. Mijn vraag is nu: als je die 4 miljoen individuen zou enumereren, hoeveel unieke individuen zijn dat, en voor elk individu, hoe vaak komt het voor? 
-2) Oplossingen. Van de 26 oplosingen die je vindt, hoeveel unieke oplossingen zijn dat. Met andere woorden: zijn alle oplossingen precies dezeflde string, of zijn ze allemaal anders? 
-3) Retrograde Analyse. Wat nu interessant is, is om te zien hoe het pad naar de oplossing er steeds uitziet. Dus, wie waren de parents/grandparents, etc. van de oplossingen? De 26 oplossingen hebben in principe 52 parents. Waren dat 52 verschillende parents, of waren dat 26 keer 2 identieke parents? Is er een parent combinatie die het vaakst voorkomt? Als dat zo is, hoe zit het dan met hun parents? Kortom: is er een soort "meest logische pad" naar de oplossing? Als dat zo is, welke van die parents/grand parents/great grand parents is degene die het lastigst te maken is?
-
-Al deze vragen hebben gemeen dat we willen snappen op individue niveau, wat tot een oplossing leidt en welke "snippet code" kennelijk het lastigst is om te maken.
-
-ANALYSE VAN DE ZOEKRUIMTE
-Wat daarnaast interessant is, is om een beeld te krijgen hoe snel je kunt weten of een zoektocht tot iets gaat leiden, of juist niet:
-- Jij begint met 1000 random startpunten en na 10 minuten heb je 11 oplossingen.
-- Jij gaat daarna door met 989 developed generaties en na nog 10 minuten heb je nog 15 oplossingen.
-Kennelijk is het zo dat die 989 al developed generaties gemiddeld iets beter zijn dan de random startpunten.
-- Als je nu nog verder door zou gaan met de 974 tot 30, 40, ... 100 minuten of zo, dan zul je waarschijnlijk op zeker moment merken dat de kans op verder succes per 10 minuten gaat afnemen: je zit in lokale optima en komt daar niet goed meer uit. Dat denk ik, maar weten we dat zeker?
-
-Als dat zo is, dan is het kennelijk zo dat beginnend vanuit een random startpunt op zeker moment duidelijk gaat worden, of het leidt tot success of dat het leidt tot failure. De vraag is nu: hoe snel wordt dat duidelijk en hoe kunnen we dat zien? Het zou kunnen zijn dat we bij de analyse van oplossingen ontdekken dat er 1 bepaald individu nodig is als ancestor en zodra die er niet is, dan wordt het niks. In any case, het is interessant om te snappen hoe dit zit, zodat we kunnen verklaren waarom we op zeker moment gaan vastzitten.
-
-DIVERSITEIT
-Onafhankelijk van het snappen wat er precies gebeurd (de vragen hierboven), we kunnen als hypothese hebben dat we een diversiteits probleem hebben en dat generaties op zeker moment te veel individuen hebben die op elkaar lijken. Een mogelijk manier om dat te toetsen is alsvolgt:
-- We doen 1000 runs van 10 minuten, waarbij we verwachten ongeveer 11 successen te hebben.
-- We nemen die 989 resterende runs en husselen die geheel door elkaar: dus elke nieuwe run bevat 200 individuen uit 200 van de 989 verschillende runs.
-- We runnen het weer voor 10 minuten en krijgen dan N successen. We halen die eruit en herhalen de stap, telkens voor 10 minuten.
-
-De vraag is nu of het aantal successen dat we krijgen elke tien minuten groter is dan in het door laten lopen van de individuele runs. Dus:
-- Individuele runs per 10 minuten vermoed ik iets als: 11, 15, 15, 12, 8, 6, 4, 3, 2, 1, 1, 1, 0, 0, 1, 0, 0 ... : kortom: we vinden steeds minder verdere oplossingen omdat generaties geheel geconverteerd zijn naar een lokaal optimum.
-- Runs die telkens na 10 minuten worden opgeschud: 11, 18, 20, 25, 30, 30, 28, 25, 15, 10, 5, 3, 2, 2, 1, etc. kortom, hier zou ik verwachten dat doordat we de combinatie van diversiteit in generaties hebben, gecombineerd met het langzaam steeds geavanceerder zijn van individuen, dat we veel meer oplossingen blijven vinden.
-
-Als een test zoals dit zou laten zien dat er zo'n verschil is, dan maakt het duidelijk dat behalve je normale mutaties tussen generaties, een extra "opschudding" (combineren van individuen uit verschillende iteraties) zinvol is. Als de tweede type run niks beters opleverd, dan is het niet zo dat de generaties zich specialiseren en dan die opschudding nuttig is.
-
-Anyway, zomaar wat gedachten.
-
-Veel success en plezier met je afscheid bij Vito!
-
-Groeten, Victor.
-
-
 ====================================== 12 dec ==========================================
 
 09AA .  Aantal unieke individuals in alle 1000 runs bepalen.
@@ -98,51 +53,6 @@ Groeten, Victor.
 - Een los programma maken dat alle 1000 unieke sets inleest, ze allemaal samenvoegt tot 1 set, en daar de grootte van wegschrijft
 
 python solve_problems.py 1921 experimenten/params_09AA.txt
-
-========================================= email Victor 12 Dec ================================
-
-Beste Maarten,
-
-Bedankt voor de uitleg. Ik heb een aantal vervolgvragen.
-
-UNIEKE INDIVIDUEN
-
-Ik snap het getal van van 21,300, dat dus het totaal aantal individuen is dat gedurende 1 search van zo'n 50-60 generaties langskomt. Wat ik me nu realiseer is dat het grootste deel daarvan niet interessant is voor mijn vraag. Laat ik daarom de vraag eerst conceptueel toelichten en dan specificeren.
-
-Als onze zoekruimte de aardbol is, elke oplossing een punt op aarde en de beste oplossing Mount Everest (want we evalueren op "altitude"), dan is mijn vraag in feite: "hoeveel verschillende punten bekijken we". Echter, als we beginnen met 4000 (en dan nog 3 keer 4000) relatieve random oplossingen met nauwelijks optimalisatie, dan krijgen we 16,000 punten met relatief weinig variatie, en meer belangrijk, nauwelijk hoogte. Immers: het duurt een paar generaties voordat een oplossing er echt goed uitziet. Mijn vraag zou daarom moeten zijn: "hoeveel unieke oplossingen hoger dan 4000m vinden we, en hoe vaak vinden we elke oplossing". De gedachte achter deze vraag is dat we mogelijk de Mont Blanc 10 keer vinden, Kilimanjaro 20 keer, Mount Everest 3 keer, K2 7 keer, etc. Het kan ook zijn dat we elk van deze maar 1 keer vinden.
-
-In het ene geval, waarbij we continue unieke oplossingen vinden en geen enkele oplossing meerdere keren, dan zou mijn conclusie zijn dat:
-1) We niet diep genoeg zoeken.
-2) We niet voldoende parachutes hebben.
-Immers: elke parachute lijkt in een ander deel van de zoekruimte terecht te komen (unieke oplossingen).
-
-Echter, als we regelmatig dezelfde oplossingen vinden (suboptimums zoals Mont Blanc, Kiliminanjaro etc.) dan geldt dat:
-1) We zoeken diep genoeg, want we eindigen regelmatig op een suboptimum waar niet zoveel meer te halen valt.
-
-Als dat het geval is (wat ik hoop), dan is vervolgens de vraag hoeveel van die suboptimums identiek zijn en hoeveel daarvan gelijk zijn aan de optimale oplossing. Het patroon daarin vertelt ons dan iets over wat ons probleem is:
-- Als we veel verschillende suboptimums vinden, elk maar een paar keer, dan suggereert dat, dat we gemakkelijk in willekeurige suboptimums blijven hange. In dat geval zou een beetje extra opschudden helpen (hoe: kunnen we het over hebben).
-- Als we een beperkt aantal suboptimums vinden, maar elk vele keren (dus: 20 keer Mt. Blanc, 20 keer Kilimanjaro, 10 keer Mt. Everest, en verder niet veel anderen), dan hoeven we niet veel op te schudden en is het gewoon zo dat er een paar goede oplossingen zijn die attractief zijn en dan hebben we een 20% success rate bij convergentie en dat is prima.
-
-Dus, specifiek de vraag voor jouw "1000 runs experiment":
-- Als we van elke run na 10 minuten de best oplossing nemen, dus 1000 individuen, hoeveel unieke exemplaren zitten daarin, en hoe vaak komt elk voor.
-- Voor degenen die vaak voorkomen, wat is hun score?
-
-WAT IS "UNIEK"
-
-Ik kan me voorstellen dat uniek niet noodzakelijk betkent "de identieke string". Net als (2+3) = (3+2) = 2+3 = -(-2-3) kan ik me voorstellen dat er verschilllende formules zijn die in feite hetzelfde zijn, maar net anders opgeschreven. Die zouden we denk ik wel als identief willen zien, of beter als "equivalent". Dat wil niet zeggen dat "5" hetzelfde is als (2+3). Immers, mutaties op 2+3 zullen anders zijn dan op "5'. Maar op 3+2 zijn ze waarschijnlijk hetzelfde.
-
-Mogelijk dus dat we over "equivalent" oplossingen moeten spreken als dingen die dezelfde uitkomst hebben, en er "ongeveer hetzelfde uitzien", waarbij ik niet precies weet wat dat betekent in jouw taaltje.
-
-PRIVE
-
-Mooi dat je afscheid goed ging. Toch een mijlpaal! 
-
-Veel plezier met de kerstboom. Toch altijd een vrolijk gezicht. Sara en ik doen daar niet aan (op de een of andere manier doen we weinig van dat soort dingen), maar het is altijd leuk om een mooie boom te zien.
-
-Groeten, Victor.
-
-P.S. Vandaag heerlijk hier (25 graden) en net 100 baantjes gezwommen en zit nu aan mijn buitentafel emailtjes te typen. Het kan slechter :-)
-
 
 ==================================== 13 dec ========================================
 

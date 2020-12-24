@@ -1,0 +1,204 @@
+Samenvatting resterende vragen
+done Elk individu is uniek (er komen geen dubbelen in de populatie voor).
+     Verschillende individuals met dezelfde werking == dezelfde output staan in dezelfde familie
+done Hoeveel verschillende oplossingen.  Moeilijk te zeggen, maar van de kortste oplossing zijn er twee varianten
+-    retrogade analyse.  TODO, bij alle oplossingen de parents erbij afdrukken
+-    zie kopje "ANALYSE VAN DE ZOEKRUIMTE".
+	 een paar mogelijkheden:
+	 1) de ontsnapping uit het lokale optimum is wel mogelijk met de huidige populatie, maar die twee parents kruisen niet
+	 2) de beide parents voor de ontsnapping zitten steeds iet tegelijkertijd in de populatie
+
+Focus op hoe te ontsnappen uit de 77.6
+- tests gaan doen van "opschuddingsmethoden" (operaties die meer muteren, crossen, generaties combineren, etc.) en dan zien of we wel uit die 77.6 ontsnappen.
+
+
+============================== 11 Dec
+
+Beste Maarten,
+
+Bedankt voor de update.
+
+Dus, als ik het goed begrijp heb je in jouw puzzel 1.1% succes rate op 10 minuten, en 2.6% succes rate op 20 minuten. Dus, gemiddeld 1 oplossing per 900 minuten (op basis van 10 minuten grens) en 1 oplossing op bijna 800 minuten (20 minuten grens). Dus, het lijkt erop dat je curve iets zal zeggen van 1 per 12 uur of zo in de meest optimale setting. Dat is wat mij betreft een perfect probleem om mee verder te gaan, omdat het duidelijk is dat je oplossingen kan vinden, maar niet erg vaak. De uitdaging is nu om te zien of we dat "1 per 12 uur" terug kunnen brengen naar "1 per 1 uur" of zelfs beter.
+
+Er zijn een aantal dingen die ik me afvraag:
+
+ANALYSE VAN DE OPLOSSING
+1) Unieke Individuen. Als ik goed begrijp is iedere iteratie 200 individuen. In 20 minuten kun je 20 iteraties doen, dus je doet 1 iteratie per minute, of 200 individuen per minuut. Je 1000 tests van 20 minuten is 20,000 iteraties. Dus, in totaal doet je test zo'n 4 miljoen individuen. Mijn vraag is nu: als je die 4 miljoen individuen zou enumereren, hoeveel unieke individuen zijn dat, en voor elk individu, hoe vaak komt het voor? 
+2) Oplossingen. Van de 26 oplosingen die je vindt, hoeveel unieke oplossingen zijn dat. Met andere woorden: zijn alle oplossingen precies dezeflde string, of zijn ze allemaal anders? 
+3) Retrograde Analyse. Wat nu interessant is, is om te zien hoe het pad naar de oplossing er steeds uitziet. Dus, wie waren de parents/grandparents, etc. van de oplossingen? De 26 oplossingen hebben in principe 52 parents. Waren dat 52 verschillende parents, of waren dat 26 keer 2 identieke parents? Is er een parent combinatie die het vaakst voorkomt? Als dat zo is, hoe zit het dan met hun parents? Kortom: is er een soort "meest logische pad" naar de oplossing? Als dat zo is, welke van die parents/grand parents/great grand parents is degene die het lastigst te maken is?
+
+Al deze vragen hebben gemeen dat we willen snappen op individue niveau, wat tot een oplossing leidt en welke "snippet code" kennelijk het lastigst is om te maken.
+
+ANALYSE VAN DE ZOEKRUIMTE
+Wat daarnaast interessant is, is om een beeld te krijgen hoe snel je kunt weten of een zoektocht tot iets gaat leiden, of juist niet:
+- Jij begint met 1000 random startpunten en na 10 minuten heb je 11 oplossingen.
+- Jij gaat daarna door met 989 developed generaties en na nog 10 minuten heb je nog 15 oplossingen.
+Kennelijk is het zo dat die 989 al developed generaties gemiddeld iets beter zijn dan de random startpunten.
+- Als je nu nog verder door zou gaan met de 974 tot 30, 40, ... 100 minuten of zo, dan zul je waarschijnlijk op zeker moment merken dat de kans op verder succes per 10 minuten gaat afnemen: je zit in lokale optima en komt daar niet goed meer uit. Dat denk ik, maar weten we dat zeker?
+
+Als dat zo is, dan is het kennelijk zo dat beginnend vanuit een random startpunt op zeker moment duidelijk gaat worden, of het leidt tot success of dat het leidt tot failure. De vraag is nu: hoe snel wordt dat duidelijk en hoe kunnen we dat zien? Het zou kunnen zijn dat we bij de analyse van oplossingen ontdekken dat er 1 bepaald individu nodig is als ancestor en zodra die er niet is, dan wordt het niks. In any case, het is interessant om te snappen hoe dit zit, zodat we kunnen verklaren waarom we op zeker moment gaan vastzitten.
+
+DIVERSITEIT
+Onafhankelijk van het snappen wat er precies gebeurd (de vragen hierboven), we kunnen als hypothese hebben dat we een diversiteits probleem hebben en dat generaties op zeker moment te veel individuen hebben die op elkaar lijken. Een mogelijk manier om dat te toetsen is alsvolgt:
+- We doen 1000 runs van 10 minuten, waarbij we verwachten ongeveer 11 successen te hebben.
+- We nemen die 989 resterende runs en husselen die geheel door elkaar: dus elke nieuwe run bevat 200 individuen uit 200 van de 989 verschillende runs.
+- We runnen het weer voor 10 minuten en krijgen dan N successen. We halen die eruit en herhalen de stap, telkens voor 10 minuten.
+
+De vraag is nu of het aantal successen dat we krijgen elke tien minuten groter is dan in het door laten lopen van de individuele runs. Dus:
+- Individuele runs per 10 minuten vermoed ik iets als: 11, 15, 15, 12, 8, 6, 4, 3, 2, 1, 1, 1, 0, 0, 1, 0, 0 ... : kortom: we vinden steeds minder verdere oplossingen omdat generaties geheel geconverteerd zijn naar een lokaal optimum.
+- Runs die telkens na 10 minuten worden opgeschud: 11, 18, 20, 25, 30, 30, 28, 25, 15, 10, 5, 3, 2, 2, 1, etc. kortom, hier zou ik verwachten dat doordat we de combinatie van diversiteit in generaties hebben, gecombineerd met het langzaam steeds geavanceerder zijn van individuen, dat we veel meer oplossingen blijven vinden.
+
+Als een test zoals dit zou laten zien dat er zo'n verschil is, dan maakt het duidelijk dat behalve je normale mutaties tussen generaties, een extra "opschudding" (combineren van individuen uit verschillende iteraties) zinvol is. Als de tweede type run niks beters opleverd, dan is het niet zo dat de generaties zich specialiseren en dan die opschudding nuttig is.
+
+Anyway, zomaar wat gedachten.
+
+Veel success en plezier met je afscheid bij Vito!
+
+Groeten, Victor.
+
+
+========================================= 12 Dec ================================
+
+Beste Maarten,
+
+Bedankt voor de uitleg. Ik heb een aantal vervolgvragen.
+
+UNIEKE INDIVIDUEN
+
+Ik snap het getal van van 21,300, dat dus het totaal aantal individuen is dat gedurende 1 search van zo'n 50-60 generaties langskomt. Wat ik me nu realiseer is dat het grootste deel daarvan niet interessant is voor mijn vraag. Laat ik daarom de vraag eerst conceptueel toelichten en dan specificeren.
+
+Als onze zoekruimte de aardbol is, elke oplossing een punt op aarde en de beste oplossing Mount Everest (want we evalueren op "altitude"), dan is mijn vraag in feite: "hoeveel verschillende punten bekijken we". Echter, als we beginnen met 4000 (en dan nog 3 keer 4000) relatieve random oplossingen met nauwelijks optimalisatie, dan krijgen we 16,000 punten met relatief weinig variatie, en meer belangrijk, nauwelijk hoogte. Immers: het duurt een paar generaties voordat een oplossing er echt goed uitziet. Mijn vraag zou daarom moeten zijn: "hoeveel unieke oplossingen hoger dan 4000m vinden we, en hoe vaak vinden we elke oplossing". De gedachte achter deze vraag is dat we mogelijk de Mont Blanc 10 keer vinden, Kilimanjaro 20 keer, Mount Everest 3 keer, K2 7 keer, etc. Het kan ook zijn dat we elk van deze maar 1 keer vinden.
+
+In het ene geval, waarbij we continue unieke oplossingen vinden en geen enkele oplossing meerdere keren, dan zou mijn conclusie zijn dat:
+1) We niet diep genoeg zoeken.
+2) We niet voldoende parachutes hebben.
+Immers: elke parachute lijkt in een ander deel van de zoekruimte terecht te komen (unieke oplossingen).
+
+Echter, als we regelmatig dezelfde oplossingen vinden (suboptimums zoals Mont Blanc, Kiliminanjaro etc.) dan geldt dat:
+1) We zoeken diep genoeg, want we eindigen regelmatig op een suboptimum waar niet zoveel meer te halen valt.
+
+Als dat het geval is (wat ik hoop), dan is vervolgens de vraag hoeveel van die suboptimums identiek zijn en hoeveel daarvan gelijk zijn aan de optimale oplossing. Het patroon daarin vertelt ons dan iets over wat ons probleem is:
+- Als we veel verschillende suboptimums vinden, elk maar een paar keer, dan suggereert dat, dat we gemakkelijk in willekeurige suboptimums blijven hange. In dat geval zou een beetje extra opschudden helpen (hoe: kunnen we het over hebben).
+- Als we een beperkt aantal suboptimums vinden, maar elk vele keren (dus: 20 keer Mt. Blanc, 20 keer Kilimanjaro, 10 keer Mt. Everest, en verder niet veel anderen), dan hoeven we niet veel op te schudden en is het gewoon zo dat er een paar goede oplossingen zijn die attractief zijn en dan hebben we een 20% success rate bij convergentie en dat is prima.
+
+Dus, specifiek de vraag voor jouw "1000 runs experiment":
+- Als we van elke run na 10 minuten de best oplossing nemen, dus 1000 individuen, hoeveel unieke exemplaren zitten daarin, en hoe vaak komt elk voor.
+- Voor degenen die vaak voorkomen, wat is hun score?
+
+WAT IS "UNIEK"
+
+Ik kan me voorstellen dat uniek niet noodzakelijk betkent "de identieke string". Net als (2+3) = (3+2) = 2+3 = -(-2-3) kan ik me voorstellen dat er verschilllende formules zijn die in feite hetzelfde zijn, maar net anders opgeschreven. Die zouden we denk ik wel als identief willen zien, of beter als "equivalent". Dat wil niet zeggen dat "5" hetzelfde is als (2+3). Immers, mutaties op 2+3 zullen anders zijn dan op "5'. Maar op 3+2 zijn ze waarschijnlijk hetzelfde.
+
+Mogelijk dus dat we over "equivalent" oplossingen moeten spreken als dingen die dezelfde uitkomst hebben, en er "ongeveer hetzelfde uitzien", waarbij ik niet precies weet wat dat betekent in jouw taaltje.
+
+PRIVE
+
+Mooi dat je afscheid goed ging. Toch een mijlpaal! 
+
+Veel plezier met de kerstboom. Toch altijd een vrolijk gezicht. Sara en ik doen daar niet aan (op de een of andere manier doen we weinig van dat soort dingen), maar het is altijd leuk om een mooie boom te zien.
+
+Groeten, Victor.
+
+P.S. Vandaag heerlijk hier (25 graden) en net 100 baantjes gezwommen en zit nu aan mijn buitentafel emailtjes te typen. Het kan slechter :-)
+
+============================================ 15 Dec
+
+Beste Maarten,
+
+DIt is super interessante data. 
+
+Ik heb de laatste data even in een grafiek gezet:
+image.png
+
+
+Wat je op de verticale as ziet is de penalty score, dus hoger in de grafiek is slecht. Op de verticale as zien we hoe vaak we een waarde vonden.
+
+Wat niet zo interessant is, zijn alle waarden helemaal links: dat zijn verschillende evaluaties die 1 keer voorkomen: hoe en waarom is niet zomaar te zeggen. Misschien waren we nog lekker aan het optimaliseren en was de tijd opeens op. Geen idee. Dus: die negeer ik even. Wat interessant is, zijn de punten die "rechts" liggen. In feite zijn dat er 5:
+- Het optimum (bijna 50x).
+- 3 oplossingen van rond de 40 punten (resp. ruim 50, ruim 100 en bijna 300 keer)
+- 1 oplossing van rond de 80 punten (ruim 300 keer).
+
+Die 4 oplossingen zijn schijnbaar echte lokale optima: keer op keer komen we daarin terecht en blijven dan hangen. Daarvan is de 304 keer rond de 80 punten de meest interessante om ons op te richten. Die oplossing is schrijnend: van de 1000 runs zijn er 304 zo slecht dat er maar 1 run is die nog slechter uitkwam. De vraag is nu waarom we daarin blijven hangen, en of we daar altijd in blijven hangen. Zodra we dat weten, kunnen we het ongetwijfeld verbeteren en mijn vermoeden is dat dan ook andere oplossingen beter worden.
+
+Wat ik nu zou doen als volgende stap is iets als het volgende:
+- Run je experiment voldoende vaak (100 is genoeg, want dan krijgen we 30 keer de oplossing van bijna 80).
+- Voor elk van de experimenten houdt bij wanneer je die oplossing vond en of ze ontsnappen eruit, en als dat zo is, waarop ze dan uitkomen.
+- Mijn verwachting is dat je weinig ontsnapt uit die oplossing, en dat je waarschijnlijk al vrij snel op die waarde komt.
+
+Even met voorbeeld getallen:
+- Je doet 100 runs.
+- Je krijgt 30 keer dat 77.6 de beste oplossing was.
+- Van die 30 oplossingen vind je dat na gemiddeld 4 minuten ze al op die 77.6 zaten en de andere 16 minuten werd er geen voortgang geboekt.
+- Er was nog 1 andere die ook op 77.6 zat en uiteindelijk "ontsnapte" en uitkwam op een lagere oplossing.
+
+Stel dat dat zo is, dan kun je dus zeggen dat 77.6 een lokaal optimum is dat 97% (30 van 31) "vangt", en dat gemiddeld je na 4 minuten daarin vast zit.
+
+Als dat zo is, dan kunnen we vervolgens wat tests gaan doen van "opschuddingsmethoden" (operaties die meer muteren, crossen, generaties combineren, etc.) en dan zien of we welk uit die 77.6 ontsnappen.
+
+Het doel is te zorgen dat we niet of nauwelijks in zo'n lokaal optimum blijven hangen door onze operaties te verbeteren, of meta operaties (zoals generates combineren).
+
+Zodra we dan nog maar zelden in 77.6 vastzitten, vermoed ik dat we ook veel minder vaak in die andere lokale optima vastzitten en dat het gewogen gemiddelde van alle top-punten over die 1000 oplossingen sterk gedaald zal zijn.
+
+Ik hoop dat dit een beetje duidelijk is. Anders bespreken we het donderdag wel verder.
+
+Groeten, Victor.
+
+
+================================ 19 Dec 
+
+Beste Maarten,
+
+Prachtige initiele restulaten! De 99.5% (dus 1/200) is 11 keer slechter dan de 94.6% (dus 11/200) en dat zien we in een 5x grotere oplossings kans. Dit bevestigt in elk geval dat ons concentreren op het meest flagrante voorbeeld van een slecht suboptimum (hoe slechter de waarde en hoe lastiger we eruit komen tellen beide mee), niet alleen effect heeft op dat suboptimum maar ook op de uiteindelijke oplossingskans.
+
+Ik weet niet 100% zeker of ik je vraag volledig begrijp, maar ik denk dat je vraagt: "Hoe kwantificeer ik de mate van opschudding van een actie", zodat je op basis daarvan een vergelijking kan doen tussen verschillende opschudding. Als dat zo is, dan hieronder mijn mening daarover.
+
+Het handigst is om dit te bekijken op drie niveau's, omdat er dan een logisch patroon ontstaat:
+- Evolutie (dus: enkele normale iteratie)
+- Meta-Evolutie (dus: enkelvoudige opschudding, gevolgd door normale iteraties)
+- MetaMeta-Evolutie (dus: grote opschudding, gevolgd door normale iteraties en meerdere Meta-Evoluties).
+
+Evolutie:
+Een evolutiestap zelf bestaat in deze puzzel uit iets als "genereer 100 kinderen, en neem dan de beste 200 uit de 300 ouders+kinderen". Op die manier weet je zeker dat een evolutiestap nooit slechter wordt. ECHTER: je zou wel degelijk een evolutiestap kunnen klassificeren als "slechter, gelijk, beter", als je evaluatie daarvan alsvolgt is:
+- Als de beste van de 100 kinderen slechter is dan de beste ouder, dan is de evolutiestap "slechter"
+- Als de beste van de 100 kinderen gelijk is aan de beste ouder, dan is de evolutiestap "gelijk"
+- Als de beste van de 100 kinderen beter is dan de beste ouder, dan is de evolutiestap "beter".
+Hoewel "slechter" en "gelijk" leiden tot dezelfde evaluatie, je kunt toch verschil zien.
+
+Als je op deze manier je evolutiestappen evalueert, dan kun je de stabiliteit van de evolutiestap definieren als het percentage gevallen dat "gelijk" is:
+- Als functie EvolutieStap een functie is die geen crossover en geen mutatie doet, en simpelweg een van de ouders kiest, en je voldoende kinderen maakt, dan gaat de kans naar dat je gelijk blijft naar 100% als het aantal kinderen naar oneindig gaat. 
+- Hoe minder kinderen je maakt en hoe sterker je crossover en mutatie zijn, hoe groter de kans dat je vooral nieuwe dingen onderzoekt. Als dat zo is, neemt het aantal gelijk af, en neemt het aantal slechter en beter toe. De vraag is nu hoeveel slechter en beter toenemen. Daar heb ik veel onderzoek naar gedaan.
+
+Mijn Ervaring
+
+Ik heb veel gekeken hiernaar bij mijn puzzels en het duurde een tijd voordat ik doorhad dat de toename van slechter en beter geheel afhankelijk is van waar je bent in de optimalisatie: 
+- Als je de journey bekijkt van "random start oplossing" naar "optimum", dan geldt dat bij een random start oplossing, bijna elke oplossing die niet gelijk is, beter is. Het komt maar weinig voor dat een crossover die kiest uit de beste van 100 kinderen er niet in slaagt iets beters te zijn dan de random ouders. Dus, in het begin zijn bijna alle "niet-gelijk" oplossing beter en zeer weinig zijn slechter. Echter, als je vlak bij het optimum zit, dan is bijna elke afwijking van dat optimum een verslechtering, want er is maar heel weinig ruimte om beter te worden.
+- Je kunt daarom niet een doel voor een hoeveelheid verbetering of verslechtering geven. Maar wat je verrassend wel kan doen: het aantal gelijke oplossingen als anchorpunt gebruiken: je wilt altijd ongeveer 50% gelijke oplossingen hebben. De logica daarachter is, dat de helft van je werk verliest, maar de waarde die je terugkrijgt is dat je stappen precies de juiste grootte zijn: de andere helft doet iets nuttigs.
+
+Een kleine aanpassing hierin is nodig als "gelijk" niet een heel logische definitie heeft. De aanpassing dan is dat je wilt dat "gelijk en beter" maximaal 50% en dat "slechter" ongeveer 50% is. Dus, je doel is dat je je opschudding groter maakt, als minder dan 50% van je nieuwe oplossingen slechter zijn en de opschudding minder maakt, als meer dan 50% van je opschudding slechter zijn.
+
+Parameteriseren van Evolutiestap
+
+Je kunt jouw crossover+mutatie op verschillende manieren parameteriseren. Ik wil even 1 voorbeeld uitwerken:
+- Laten we de 200 individuen in een generatie even als vast nemen (kunnen we ook varieren, maar dat kan later).
+- Laten we de nieuwe kinderen als N (parameter) nemen en de procedure is: genereer N kinderen en kies dan de beste 200 uit de 200+N.
+
+Als jij 0 kinderen genereert dan is elk generatie vreselijk.
+Als je oneindig veel kinderen genereert dan zal minimaal 1 van hen gelijk of beter dan de beste oplossing zijn, dus dan is elke generatie perfect.
+
+Dus, veel nieuwe kinderen is teveel en 0 nieuwe kinderen is te weinig. Je procedure van aanpassen kan nu zijn:
+- Elke keer als ik een generatie doe en mijn beste kind is slechter dan mijn beste ouder, dan N:=N+1.
+- Elke keer als ik een generatie doe en mijn beste kind is gelijk aan of beter dan mijn beste ouder, dan N:=N-1.
+
+Het effect zal zijn dat in het begin je maar heel weinig nieuwe kinderen hoeft te genereren per generatie en pas als je een beetje vast komt te zitten, ga je grotere groepen kinderen maken.
+
+META EVOLUTIE
+
+Voor meta evolutie het idee is hetzelfde. Echter, de evaluatie is niet direct na de meta stap. Het is pas na de stabilisatie van de opvolgende evolutiestappen.
+
+Dus, stel dat we een metaevolutie doen, zodra we N generaties van evoluties hebben gedaan zonder verbetering. Dan, na die ene metaevolutie is als het goed is het resultaat minder goed. Echter, dat betekent nog niets. Pas als we dan voldoende evolutiestappen hebben gedaan om weer N zonder verbetering te hebben, kunnen we pas evalueren of het beter, gelijk of slechter is.
+
+Vervolgens passen we dan weer dezelfde regel toe: als na die N evoluties zonder verbetering de overall score beter/gelijk/slechter is dan kunnen we een conclusie trekken. Opnieuw: we will ongeveer 50% van de gevallen slechter worden  en 50% beter/gelijk.
+
+Ik hoop dat dit helpt.
+
+Groeten, Victor.

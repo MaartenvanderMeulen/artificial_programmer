@@ -1,5 +1,6 @@
 import os
 import math
+import sys
 
 
 def handle_file(filename, score_to_follow, precision, counts):
@@ -55,4 +56,5 @@ def follow_subopt(folder, score_to_follow, precision):
 
 
 if __name__ == "__main__":
-    follow_subopt("tmp/09ACB", 77.61253, 0.001)
+    id = sys.argv[1] if len(sys.argv) >= 2 else "09ACA"
+    follow_subopt(f"tmp/{id}", 77.61253, 0.001)

@@ -1,10 +1,7 @@
 09ACA = 09AC + taboo, 
-	solved 135/991, max evals 300000
+	solved 135/991, max evals 300000, p enter subopt 65.5%, p stuck at subopt 88.5%
 09AC = 09AA + fraction_parents
-	solved 207/991, maxseconds 1200
-	solved 134/991, met maxiter 60, en maxseconds 999
-	TODO , max evals 300000
+	solved 130/991, max evals 300000, p enter subopt 94.7%, p stuck at subopt 94.3%
 09AA = 09A
-	solved 47/1000, 24 threads, alles zelfde instellinhg
-	TODO , max evals 300000
+	solved 40/991, max evals 300000, p enter subopt 94.4%, p stuck at subopt 98.2%
 
