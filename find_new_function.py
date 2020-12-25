@@ -460,17 +460,34 @@ def select_parents(toolbox, population):
     return best_parent1, best_parent2
 
 
+def analyse_parents(toolbox, population):
+    escapes_count = 0
+    for parent1 in population:
+        for parent2 in population:
+            child = crossover_with_local_search(toolbox, parent1, parent2)
+            if child and child.eval < 77.61253 - 0.00001:
+                escapes_count += 1
+    return escapes_count
+
+
 def generate_offspring(toolbox, population, nchildren):
     offspring = []
     expr_mut = lambda pset, type_: gp.genFull(pset=pset, min_=0, max_=2, type_=type_)
     retry_count = 0  
     cxp_count, mutp_count = 0, 0    
-    cx_count, mut_count = 0, 0    
-    toolbox.keep_path = math.isclose(population[0].eval, 77.61253, abs_tol=0.00001)
-    escapes_count = 0
+    cx_count, mut_count = 0, 0 
+    all_escapes_count = 0   
+    toolbox.keep_path = False
+    only_cx = False
+    do_special_experiment = math.isclose(population[0].eval, 77.61253, abs_tol=0.00001)
+    if do_special_experiment:
+        only_cx = True
+        all_escapes_count = analyse_parents(toolbox, population)
+        toolbox.keep_path = True
+        offspring_escapes_count = 0
     while len(offspring) < nchildren:
         op_choice = random.random()
-        if op_choice < toolbox.pcrossover: # Apply crossover
+        if op_choice < toolbox.pcrossover or only_cx: # Apply crossover
             cxp_count += 1
             parent1, parent2 = select_parents(toolbox, population)
             if toolbox.parachute_level == 0:
@@ -502,20 +519,24 @@ def generate_offspring(toolbox, population, nchildren):
         assert child.deap_str == str(child)
         toolbox.ind_str_set.add(child.deap_str)
         offspring.append(child)
-        if math.isclose(population[0].eval, 77.61253, abs_tol=0.00001) and child.eval < 77.61253 - 0.00001:
+        if do_special_experiment and child.eval < 77.61253 - 0.00001:
             if False:
                 toolbox.f.write(f"child\t{child.eval:.3f}\tcode\t{child.deap_str}\n")
                 for parent in child.parents:
                     toolbox.f.write(f"parent\t{parent.eval:.3f}\tcode\t{parent.deap_str}\n")
-            toolbox.f.write(f"{child.eval:.3f}\t")
-            child.parents.sort(key=lambda item: item.eval)
-            for parent in child.parents:
-                toolbox.f.write(f"\t{parent.eval:.3f}")
-            toolbox.f.write(f"\n")
-            escapes_count += 1
+            if False:
+                toolbox.f.write(f"{child.eval:.3f}\t")
+                child.parents.sort(key=lambda item: item.eval)
+                for parent in child.parents:
+                    toolbox.f.write(f"\t{parent.eval:.3f}")
+                toolbox.f.write(f"\n")
+            offspring_escapes_count += 1
     offspring.sort(key=lambda item: item.eval)
-    if escapes_count or offspring[0].eval < 77.61253 - 0.00001 or toolbox.eval_count >= toolbox.max_evaluations // 2:
-        exit()        
+    if do_special_experiment:
+        expected_offspring_escapes_count = nchildren * all_escapes_count / (len(population) ** 2)
+        toolbox.f.write(f"{all_escapes_count}\t{offspring_escapes_count}\t{expected_offspring_escapes_count}\n")
+        if offspring_escapes_count or offspring[0].eval < 77.61253 - 0.00001 or toolbox.eval_count >= toolbox.max_evaluations // 2:
+            exit()        
     return offspring, None
 
 

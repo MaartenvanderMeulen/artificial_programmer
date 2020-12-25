@@ -68,6 +68,42 @@ Tja wat kunnen we hieruit concluderen?
 - het is complex.  meer onderzoek is nodig.  :)
 
 
+================ experiment 09ACB, om op de achtergrond de helepopulatie te kruisen
+A kans op ontsnappen begint > 0 en groeit iedere iteratie.  Ontsnapping binnen 4 iteraties.  (5/30)
+	0(1, 0.1), 2(3), 7(3), 17(4), 29(1)
+B kans op ontsnappen begint bij 0, en blijft 0 of heel laag. Geen ontsnapping.  (12/30)
+	3(6), 5(28), 11(38), 13(44), 14(*), 16(*), 18(8), 20(*), 21(*), 23(*), 27, 28
+C kans op ontsnappen begint bij 0, en blijft 0 of heel laag, maar springt plotseling omhoog.  Ontsnapping (13/30)
+	4(5), 6(3), 8(3), 9(6), 10(5), 12(5), 15(2), 19(3), 22(3), 24(4), 25(3), 26(2), 30(4)
+
+Ontsnappen :
+iter 1 : 2x
+iter 2 : 2x
+iter 3 : 7x
+iter 4 : 3x
+iter 5 : 3x
+iter 6 : 1x
+
+Hoi Victor,
 
 
+Ik heb een experiment gedaan. Bij elke iteratie laat ik het normale aantal kinderen maken,
+maar ook alle combinaties van parents onderzoeken om te tellen hoeveel ontsnappingen er mogelijk zijn in de populatie.
+Gegeven dat aantal kan ik een verwachting bereken dat er ontsnapt gaat worden, en die vergelijken met de echte ontsnappingen.
 
+Voorbeeld : dus 100 kinderen maken uit 200 parents zoals voorheen,
+en daarnaast 200x200 parents kruisen tot 40000 kinderen.  Stel dat er daarvan 250 kinderen ontsnappen.
+Dan is de verwachting op ontsnappingen bij die eerste 100 kinderen : 100 * 250 / (200 * 200) = 0.625,
+dus ongeveer 50% kans om te ontsnappen die iteratie.
+
+Mijn conclusie van 30 runs is:
+- in 18 van de 30 runs kwam een redelijke kans om op ontsnappen, en werd er ook ontsnapt
+- in 12 van de 30 runs was geen ontsnapping mogelijk : op bijna alle iteraties 0 ontsnappings routes; met zelden een losse iteratie met 2-3 ontsnappings routes (verwachting 0.02 ontsnappingen).
+- langste ontsnapping duurde 6 iteraties.
+- 17 van de 18 ontsnappingen vinden in hooguit 5 iteraties plaats.
+- dus ofwel stoppen na 5 iteraties "vastzitten", ofwel 
+- stevig opschudden na 5 iteraties "vastzitten".  We moeten dus zoeken naar een opschudding die de kans om de volgende 5 iteraties te ontsnappen flink vergroot.
+
+
+groetjes,
+Maarten
