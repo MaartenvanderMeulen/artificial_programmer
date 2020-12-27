@@ -107,3 +107,128 @@ Mijn conclusie van 30 runs is:
 
 groetjes,
 Maarten
+
+================================= 1e experiment om goede opschuddingen te vinden
+
+kolom 1: #oplossingen in populatie
+kolom 2: 66% parents behouden, random "leftover" kinderen toevoegen
+kolom 3: 33% parents behouden, random "leftover" kinderen toevoegen
+kolom 4: 66% parents behouden, best "leftover" kinderen toevoegen
+kolom 5: 33% parents behouden, best "leftover" kinderen toevoegen
+x	0	0	0	0	0
+x	0	8	2	0	0
+x	0	8	18	0	0
+x	0	0	0	10	0
+x	0	2	2	0	0
+x	0	0	0	0	0
+x	0	0	0	0	0
+x	0	2	2	8	0
+tot 0   20  24  18  0
+
+Conclusie: beter minder parents behouden, en random  "leftover" kinderen toevoegen
+
+================================= 2e experiment om goede opschudding te vinden
+
+verschil is dat indien "stuck" de leftovers niet bewaard blijven.
+
+Voorlopig resultaat na ~ 1/6e runnen
+kolom 1 : 50% parents behouden, best "leftover" kinderen toevoegen
+kolom 2 : 0% parents behouden, best "leftover" kinderen toevoegen
+kolom 3 : 50% parents behouden, random "leftover" kinderen toevoegen
+log_1003.txt:x	0	0	0
+log_1016.txt:x	0	0	0
+log_1019.txt:x	0	0	0
+log_1027.txt:x	8	0	0
+log_1049.txt:x	0	0	0
+log_1055.txt:x	0	0	0
+log_1056.txt:x	0	0	0
+log_1084.txt:x	0	0	0
+log_1086.txt:x	0	0	0
+log_1096.txt:x	0	0	0
+log_1092.txt:x	0	0	0
+
+log_1011.txt:x	0	0	50
+log_1033.txt:x	0	0	2
+log_1038.txt:x	0	0	4
+log_1042.txt:x	0	0	8
+log_1043.txt:x	8	0	12
+log_1054.txt:x	0	0	46
+log_1060.txt:x	0	0	32
+log_1066.txt:x	0	0	60
+log_1067.txt:x	28	0	2
+log_1070.txt:x	0	0	158
+log_1074.txt:x	0	0	188
+log_1090.txt:x	0	0	208
+log_1095.txt:x	6	0	18
+
+Conclusie:
+	* random  "leftover" kinderen toevoegen!
+	* een deel van de parents behouden lijkt essentieel om meteen een ontsnapping te vinden.
+
+================================= 3e experiment om goede opschudding te vinden
+
+Alles met random kinderen toevoegen
+kolom 1 : 50% parents behouden
+kolom 2 : 33% parents behouden
+kolom 3 : 10% parents behouden
+kolom 4 : 0% parents behouden
+
+
+log_1003.txt:xx	0	0	18	0
+log_1005.txt:xx	0	12	4	0
+log_1014.txt:xx	0	0	0	0
+log_1015.txt:xx	2	2	0	0
+log_1016.txt:xx	74	90	0	0
+log_1019.txt:xx	0	30	0	0
+log_1021.txt:xx	0	0	8	0
+log_1033.txt:xx	2	6	0	0
+log_1038.txt:xx	0	0	8	0
+log_1042.txt:xx	76	64	20	0
+log_1046.txt:xx	352	0	0	0
+log_1049.txt:xx	4	18	76	0
+log_1084.txt:xx	6	78	56	0
+log_1086.txt:xx	16	0	0	0
+log_1090.txt:xx	0	0	40	0
+log_1095.txt:xx	194	0	0	0
+log_1096.txt:xx	0	0	0	0
+log_1097.txt:xx	0	0	0	0
+log_1099.txt:xx	2	2	0	0
+log_1100.txt:xx	0	0	0	0
+log_1106.txt:xx	0	0	0	0
+log_1109.txt:xx	4	0	4	0
+log_1110.txt:xx	114	168	4	0
+log_1112.txt:xx	2	0	40	0
+log_1120.txt:xx	8	12	8	
+log_1125.txt:xx	100	60	48	
+log_1126.txt:xx	0	12	0	
+
+totals          956	554	334	0
+countif>0       15	13	13	0
+
+Dus voor voorlopig 50%
+
+============================= geheugengebruik verminderen
+
+done.
+
+============================= 1000 runs met meta-evolution "pop mixen met 50% random left-behinds"
+
+Lijkt niet significant beter.
+
+Verklaring:
+- metingen zijn incorrect
+	- zijn de metingen wel reproduceerbaar?  Dit kan ik proberen op de seed 1000-1030, 09AC
+		- is OK
+	- moet ipv max_evals = 300000 hoger, bijvoorbeeld 450000, het maximum in 09AA in de versie met max 1200 sec
+		- zou kunnen, maar 300000 is niet slecht of duidelijk fout.  Deze optie is niet de 1e keus om verder te onderzoeken
+	- De 200x200 test bij vastzitten zegt niks over de performance bij een totale runnen
+		- best left-behinds ook testen in 09ACC?
+	- waarom herkt het verkleinen van aantal parents wel?
+	- werkt taboo_value dan misschien beter dan taboo_set?
+		- test
+
+============================= 
+
+
+
+

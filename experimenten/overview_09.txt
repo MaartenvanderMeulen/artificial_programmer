@@ -1,7 +1,10 @@
+09ACB = 09AC + mix_with_leftovers, 
+	solved 134/1000, max evals 300000, p enter subopt 94.7, p stuck at subopt 88.8%, efficiency 0.0005168487587726782
 09ACA = 09AC + taboo, 
 	solved 135/991, max evals 300000, p enter subopt 65.5%, p stuck at subopt 88.5%
 09AC = 09AA + fraction_parents
-	solved 130/991, max evals 300000, p enter subopt 94.7%, p stuck at subopt 94.3%
+	solved 130/1000, max evals 300000, p enter subopt 94.7%, p stuck at subopt 94.3%, efficiency 0.0004963964877310708
 09AA = 09A
-	solved 40/991, max evals 300000, p enter subopt 94.4%, p stuck at subopt 98.2%
+	solved 40/1000, max evals 300000, p enter subopt 94.4%, p stuck at subopt 98.2%, efficiency 0.00042736402705339583
+
 

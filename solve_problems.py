@@ -119,6 +119,7 @@ def main(seed, param_file):
         functions = interpret.get_functions(functions_file_name)
         problems = interpret.compile(interpret.load(problems_file_name))        
         solved_all = solve_problems(problems, functions, log_file, params, append_functions_to_file=None)
+        log_file.write("done\n")
         return 0 if solved_all else 1
 
 

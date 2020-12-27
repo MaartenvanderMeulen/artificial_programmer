@@ -1,6 +1,7 @@
 #!/bin/bash
-mkdir -p tmp/$1
-for seed in `seq 1000 1 1030`
+id=$1
+mkdir -p tmp/$id
+for seed in `seq 1000 1 1029`
 do
-    python solve_problems.py $seed experimenten/params_$1.txt &
+    tsp -n -L $seed python solve_problems.py $seed experimenten/params_$id.txt
 done

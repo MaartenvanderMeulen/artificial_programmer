@@ -4,12 +4,12 @@
     "functions_file": "experimenten/functions_leeg.txt",
     "seed_prefix": 0,
     "skip_seeds": [],
-    "verbose": 0,
+    "verbose": 1,
     "optimise_solution_length": false,
     "extensive_statistics": true,
     "keep_path": false,
-    "max_seconds": 36000,
-    "max_evaluations": 12000000,
+    "max_seconds": 3600,
+    "max_evaluations": 300000,
     "new_initial_population": true,
     "old_populations_folder": "tmp/08G",
     "analyse_best": false,
@@ -34,6 +34,6 @@
     "weight_complementairity": 0.3,
     "penalise_non_reacting_models": true,
     "evolution_strategies": ["parents_fraction"], 
-    "metaevolution_strategies": [], 
+    "metaevolution_strategies": ["mix_with_leftovers"], 
     "hops": 1
 }

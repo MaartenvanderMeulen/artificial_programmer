@@ -26,33 +26,33 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
     if toolbox.monkey_mode: # if the solution can be found in monkey mode, the real search could in theory find it also
         code_str = interpret.convert_code_to_str(code)
         weighted_error = evaluate.evaluate_code(code_str, toolbox.solution_code_str)
-        ind.model_outputs = ()
-        ind.model_evals = (weighted_error,)
+        model_outputs = ()
+        model_evals = (weighted_error,)
         if weighted_error == 0.0:
             # now check that this also evaluates 
-            ind.model_outputs = []
+            model_outputs = []
             for input in toolbox.example_inputs:
                 model_output = interpret.run([toolbox.problem_name] + input, dict(), toolbox.functions)
-                ind.model_outputs.append(model_output)        
-            weighted_error, ind.model_evals = evaluate.evaluate_all(toolbox.example_inputs, ind.model_outputs, toolbox.evaluation_function, toolbox.f, debug, toolbox.penalise_non_reacting_models)
+                model_outputs.append(model_output)        
+            weighted_error, model_evals = evaluate.evaluate_all(toolbox.example_inputs, model_outputs, toolbox.evaluation_function, toolbox.f, debug, toolbox.penalise_non_reacting_models)
             if weighted_error != 0:
-                weighted_error, ind.model_evals = evaluate.evaluate_all(toolbox.example_inputs, ind.model_outputs, toolbox.evaluation_function, toolbox.f, 4, toolbox.penalise_non_reacting_models)
+                weighted_error, model_evals = evaluate.evaluate_all(toolbox.example_inputs, model_outputs, toolbox.evaluation_function, toolbox.f, 4, toolbox.penalise_non_reacting_models)
             assert weighted_error == 0
     else:
         t0 = time.time()
-        ind.model_outputs = []
+        model_outputs = []
         for input in toolbox.example_inputs:
             model_output = interpret.run([toolbox.problem_name] + input, dict(), toolbox.functions, debug=toolbox.verbose >= 5)
-            ind.model_outputs.append(model_output)        
+            model_outputs.append(model_output)        
         toolbox.t_interpret += time.time() - t0
         t0 = time.time()
-        weighted_error, ind.model_evals = evaluate.evaluate_all(toolbox.example_inputs, ind.model_outputs, toolbox.evaluation_function, toolbox.f, debug, toolbox.penalise_non_reacting_models)
-        assert math.isclose(weighted_error, sum(ind.model_evals))
+        weighted_error, model_evals = evaluate.evaluate_all(toolbox.example_inputs, model_outputs, toolbox.evaluation_function, toolbox.f, debug, toolbox.penalise_non_reacting_models)
+        assert math.isclose(weighted_error, sum(model_evals))
         toolbox.t_eval += time.time() - t0
-        ind.model_outputs = recursive_tuple(ind.model_outputs)
+        model_outputs = recursive_tuple(model_outputs)
         if weighted_error == 0.0 and len(ind) > len(toolbox.solution_deap_ind) and toolbox.optimise_solution_length:
             weighted_error += (len(ind) - len(toolbox.solution_deap_ind)) / 1000.0
-    return weighted_error
+    return weighted_error, model_outputs, model_evals
 
 
 def evaluate_individual(toolbox, individual, debug=0):
@@ -62,17 +62,18 @@ def evaluate_individual(toolbox, individual, debug=0):
     assert deap_str == str(individual)
     toolbox.eval_lookup_count += 1
     if deap_str in toolbox.eval_cache: #  TODO handle dynamic weighting that changes the evaluation
-        family_index = toolbox.eval_cache[deap_str]
-        eval, individual.model_outputs, individual.model_evals = toolbox.families_list[family_index]
-        assert eval < 0.1 or math.isclose(eval, sum(individual.model_evals))
+        individual.family_index = toolbox.eval_cache[deap_str]
+        eval, model_outputs, model_evals = toolbox.families_list[individual.family_index]
+        assert eval < 0.1 or math.isclose(eval, sum(model_evals))
         return eval
-    weighted_error = evaluate_individual_impl(toolbox, individual, debug)
-    if individual.model_outputs not in toolbox.families_dict:
-        family_index = len(toolbox.families_list)
-        toolbox.families_list.append((weighted_error, individual.model_outputs, individual.model_evals))
-        toolbox.families_dict[individual.model_outputs] = family_index
-    family_index = toolbox.families_dict[individual.model_outputs]
-    toolbox.eval_cache[deap_str] = family_index
+    weighted_error, model_outputs, model_evals = evaluate_individual_impl(toolbox, individual, debug)
+    if model_outputs in toolbox.families_dict:
+        individual.family_index = toolbox.families_dict[model_outputs]
+    else:
+        individual.family_index = len(toolbox.families_list)
+        toolbox.families_list.append((weighted_error, model_outputs, model_evals))
+        toolbox.families_dict[model_outputs] = individual.family_index
+    toolbox.eval_cache[deap_str] = individual.family_index
     return weighted_error
 
 
@@ -118,6 +119,7 @@ class Toolbox(object):
         self.eval_cache = dict()
         self.families_list = []
         self.families_dict = dict()
+        self.leftovers = []
         self.solution_code_str = interpret.convert_code_to_str(solution_hints) # for monkey test
         deap_str = interpret.convert_code_to_deap_str(solution_hints, self)
         self.solution_deap_ind = gp.PrimitiveTree.from_string(deap_str, pset) # for finding shortest solution
@@ -273,9 +275,10 @@ def analyse_population_impl(toolbox, old_pops):
             if deap_str not in count_deap_str:
                 count_deap_str[deap_str] = 0
             count_deap_str[deap_str] += 1
-            if ind.model_outputs not in count_model_outputs:
-                count_model_outputs[ind.model_outputs] = 0
-            count_model_outputs[ind.model_outputs] += 1
+            model_outputs = toolbox.families_list[ind.family_index][1]
+            if model_outputs not in count_model_outputs:
+                count_model_outputs[model_outputs] = 0
+            count_model_outputs[model_outputs] += 1
             if ind.eval not in count_eval:
                 count_eval[ind.eval] = 0
             count_eval[ind.eval] += 1
@@ -313,15 +316,14 @@ def generate_initial_population(toolbox):
         return load_initial_population_impl(toolbox, old_pops)
 
 
-def copy_individual(ind):
-    consistency_check_ind(ind)
+def copy_individual(toolbox, ind):
+    consistency_check_ind(toolbox, ind)
     copy_ind = gp.PrimitiveTree(list(ind[:]))
-    copy_ind.deap_str = copy.deepcopy(ind.deap_str)
+    copy_ind.deap_str = ind.deap_str
     copy_ind.parents = [parent for parent in ind.parents]
     copy_ind.eval = ind.eval
-    copy_ind.model_outputs = copy.deepcopy(ind.model_outputs)
-    copy_ind.model_evals = copy.deepcopy(ind.model_evals)
-    consistency_check_ind(copy_ind)
+    copy_ind.family_index = ind.family_index
+    consistency_check_ind(toolbox, copy_ind)
     return copy_ind
 
 
@@ -329,7 +331,7 @@ def cxOnePoint(toolbox, parent1, parent2):
     if len(parent1) < 2 or len(parent2) < 2:
         # No crossover on single node tree
         return None
-    child = copy_individual(parent1)
+    child = copy_individual(toolbox, parent1)
     child.parents = [parent1, parent2] if toolbox.keep_path else []
     index1 = random.randrange(0, len(parent1))
     index2 = random.randrange(0, len(parent2))
@@ -360,7 +362,7 @@ def crossover_with_local_search(toolbox, parent1, parent2):
         slice2 = parent2.searchSubtree(index2)
         expr2 = parent2[slice2]
         for index1 in indexes1:
-            child = copy_individual(parent1)
+            child = copy_individual(toolbox, parent1)
             child.parents = [parent1, parent2] if toolbox.keep_path else []
             slice1 = child.searchSubtree(index1)
             child[slice1] = expr2
@@ -378,7 +380,7 @@ def crossover_with_local_search(toolbox, parent1, parent2):
 
 
 def mutUniform(toolbox, parent, expr, pset):
-    child = copy_individual(parent)
+    child = copy_individual(toolbox, parent)
     child.parents = [parent,] if toolbox.keep_path else []
     index = random.randrange(0, len(child))
     slice_ = child.searchSubtree(index)
@@ -398,7 +400,7 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
     random.shuffle(indexes)
     best = None
     for index in indexes:
-        child = copy_individual(parent)
+        child = copy_individual(toolbox, parent)
         child.parents = [parent,] if toolbox.keep_path else []
         slice1 = child.searchSubtree(index)
         child[slice1] = expr
@@ -416,12 +418,13 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
 
 
 def select_parents(toolbox, population):
-    if toolbox.parent_selection_strategy == 0 or len(toolbox.model_outputs_dict) == 1:
+    if toolbox.parent_selection_strategy == 0 or len(toolbox.current_families_dict) == 1:
         return [best_of_n(population, toolbox.best_of_n_cx), best_of_n(population, toolbox.best_of_n_cx)]
     if toolbox.parent_selection_strategy == 1:        
         # First attempt with toolbox.inter_family_cx_taboo.  Its just unlikely, not a taboo.
-        group1, group2 = random.sample(list(toolbox.model_outputs_dict), 2) # sample always returns a list
-        group1, group2 = toolbox.model_outputs_dict[group1], toolbox.model_outputs_dict[group2]
+        list_of_keys = list(toolbox.current_families_dict)
+        group1, group2 = random.sample(list_of_keys, 2) # sample always returns a list
+        group1, group2 = toolbox.current_families_dict[group1], toolbox.current_families_dict[group2]
         index1, index2 = random.randrange(0, len(group1)), random.randrange(0, len(group2))
         parent1, parent2 = group1[index1], group2[index2] # all individuals in the group have the same eval
         return parent1, parent2
@@ -435,21 +438,23 @@ def select_parents(toolbox, population):
     max_eval = max([ind.eval for ind in population])
     for _ in range(toolbox.best_of_n_cx):
         # select two parents
-        group1, group2 = random.sample(list(toolbox.model_outputs_dict), 2) # sample always returns a list
-        group1, group2 = toolbox.model_outputs_dict[group1], toolbox.model_outputs_dict[group2]
+        group1, group2 = random.sample(list(toolbox.current_families_dict), 2) # sample always returns a list
+        group1, group2 = toolbox.current_families_dict[group1], toolbox.current_families_dict[group2]
         index1, index2 = random.randrange(0, len(group1)), random.randrange(0, len(group2))
         parent1, parent2 = group1[index1], group2[index2] # all individuals in the group have the same eval
         # sort
         if parent1.eval > parent2.eval or (parent1.eval == parent2.eval and len(parent1) > len(parent2)):
             parent1, parent2 = parent2, parent1
         # compute p        
-        assert parent1.eval < 0.1 or math.isclose(parent1.eval, sum(parent1.model_evals))
-        assert parent2.eval < 0.1 or math.isclose(parent2.eval, sum(parent2.model_evals))
+        model_evals1 = toolbox.families_list[parent1.family_index][2]
+        model_evals2 = toolbox.families_list[parent2.family_index][2]
+        assert parent1.eval < 0.1 or math.isclose(parent1.eval, sum(model_evals1))
+        assert parent2.eval < 0.1 or math.isclose(parent2.eval, sum(model_evals2))
         p_fitness1 = (1 - parent1.eval/(max_eval*1.1))
         p_fitness2 = (1 - parent2.eval/(max_eval*1.1))
         assert 0 <= p_fitness1 and p_fitness1 <= 1
         assert 0 <= p_fitness2 and p_fitness2 <= 1
-        estimate_improvement = sum([eval1-eval2 for eval1, eval2 in zip(parent1.model_evals, parent2.model_evals) if eval1 > eval2])
+        estimate_improvement = sum([eval1-eval2 for eval1, eval2 in zip(model_evals1, model_evals2) if eval1 > eval2])
         assert estimate_improvement >= 0
         p_complementair = estimate_improvement / parent1.eval
         assert 0 <= p_complementair and p_complementair <= 1
@@ -479,12 +484,13 @@ def generate_offspring(toolbox, population, nchildren):
     all_escapes_count = 0   
     toolbox.keep_path = False
     only_cx = False
-    do_special_experiment = math.isclose(population[0].eval, 77.61253, abs_tol=0.00001)
-    if do_special_experiment:
-        only_cx = True
-        all_escapes_count = analyse_parents(toolbox, population)
-        toolbox.keep_path = True
-        offspring_escapes_count = 0
+    if False:
+        do_special_experiment = False # math.isclose(population[0].eval, 77.61253, abs_tol=0.00001)
+        if do_special_experiment:
+            only_cx = True
+            all_escapes_count = analyse_parents(toolbox, population)
+            toolbox.keep_path = True
+            offspring_escapes_count = 0
     while len(offspring) < nchildren:
         op_choice = random.random()
         if op_choice < toolbox.pcrossover or only_cx: # Apply crossover
@@ -519,52 +525,54 @@ def generate_offspring(toolbox, population, nchildren):
         assert child.deap_str == str(child)
         toolbox.ind_str_set.add(child.deap_str)
         offspring.append(child)
-        if do_special_experiment and child.eval < 77.61253 - 0.00001:
-            if False:
-                toolbox.f.write(f"child\t{child.eval:.3f}\tcode\t{child.deap_str}\n")
-                for parent in child.parents:
-                    toolbox.f.write(f"parent\t{parent.eval:.3f}\tcode\t{parent.deap_str}\n")
-            if False:
-                toolbox.f.write(f"{child.eval:.3f}\t")
-                child.parents.sort(key=lambda item: item.eval)
-                for parent in child.parents:
-                    toolbox.f.write(f"\t{parent.eval:.3f}")
-                toolbox.f.write(f"\n")
-            offspring_escapes_count += 1
+        if False:
+            if do_special_experiment and child.eval < 77.61253 - 0.00001:
+                if False:
+                    toolbox.f.write(f"child\t{child.eval:.3f}\tcode\t{child.deap_str}\n")
+                    for parent in child.parents:
+                        toolbox.f.write(f"parent\t{parent.eval:.3f}\tcode\t{parent.deap_str}\n")
+                if False:
+                    toolbox.f.write(f"{child.eval:.3f}\t")
+                    child.parents.sort(key=lambda item: item.eval)
+                    for parent in child.parents:
+                        toolbox.f.write(f"\t{parent.eval:.3f}")
+                    toolbox.f.write(f"\n")
+                offspring_escapes_count += 1
     offspring.sort(key=lambda item: item.eval)
-    if do_special_experiment:
-        expected_offspring_escapes_count = nchildren * all_escapes_count / (len(population) ** 2)
-        toolbox.f.write(f"{all_escapes_count}\t{offspring_escapes_count}\t{expected_offspring_escapes_count}\n")
-        if offspring_escapes_count or offspring[0].eval < 77.61253 - 0.00001 or toolbox.eval_count >= toolbox.max_evaluations // 2:
-            exit()        
+    if False:
+        if do_special_experiment:
+            expected_offspring_escapes_count = nchildren * all_escapes_count / (len(population) ** 2)
+            toolbox.f.write(f"{all_escapes_count}\t{offspring_escapes_count}\t{expected_offspring_escapes_count}\n")
     return offspring, None
 
 
 def refresh_toolbox_from_population(toolbox, population):
     toolbox.ind_str_set = {ind.deap_str for ind in population} # refresh set after deletion of non-fit individuals
-    toolbox.model_outputs_dict = dict()
+    toolbox.current_families_dict = dict()
     for ind in population:
-        if ind.model_outputs not in toolbox.model_outputs_dict:
-            toolbox.model_outputs_dict[ind.model_outputs] = []
-        toolbox.model_outputs_dict[ind.model_outputs].append(ind)
+        if ind.family_index not in toolbox.current_families_dict:
+            toolbox.current_families_dict[ind.family_index] = []
+        toolbox.current_families_dict[ind.family_index].append(ind)
 
 
-def consistency_check_ind(ind):
+def consistency_check_ind(toolbox, ind):
     if ind is not None:
         assert hasattr(ind, "deap_str")
         assert hasattr(ind, "parents")
         assert hasattr(ind, "eval")
-        assert hasattr(ind, "model_outputs")
+        assert hasattr(ind, "family_index")
         assert ind.deap_str == str(ind)
         assert ind.eval is not None
+        model_evals = toolbox.families_list[ind.family_index][2]
+        assert ind.eval < 0.1 or math.isclose(ind.eval, sum(model_evals))
 
 
-def consistency_check(inds):
+def consistency_check(toolbox, inds):
     for ind in inds:
-        consistency_check_ind(ind)
+        consistency_check_ind(toolbox, ind)
 
 
-def erase_suboptimum_parents(toolbox, population):
+def apply_taboo_metaevolution(toolbox, population):
     best_eval = population[0].eval
     if "taboo_set" in toolbox.metaevolution_strategies:
         toolbox.taboo_set.add(best_eval)
@@ -573,6 +581,16 @@ def erase_suboptimum_parents(toolbox, population):
     new_population = [ind for ind in population if ind.eval > best_eval]
     if len(new_population) == 0:
         return population
+    return new_population
+
+
+def apply_mix_with_leftovers_metaevolution(toolbox, population, stay_fraction, replace_style):
+    popN = toolbox.pop_size[toolbox.parachute_level]
+    new_population = population[:int(popN*stay_fraction)]
+    if replace_style == "random":
+        new_population += random.sample(toolbox.leftovers, k=popN - len(new_population))
+    else:
+        new_population += toolbox.leftovers[:popN - len(new_population)]
     return new_population
 
 
@@ -585,40 +603,76 @@ def ga_search_impl(toolbox):
         if solution:
             return solution, 0
         toolbox.parachute_count = len(population)
-        consistency_check(population)
+        consistency_check(toolbox, population)
         update_dynamic_weighted_evaluation(toolbox, population)
         population.sort(key=lambda item: item.eval)
         refresh_toolbox_from_population(toolbox, population)
         toolbox.gen = 0
         global parents_fraction
         prev_best = 1e9
-        stuck_count = 0
-        grote_opschudding_count = 0
+        stuck_count, stuck_count_since_last_meta_evolution = 0, 0
+        meta_evolution_count = 0
         for toolbox.parachute_level in range(len(toolbox.ngen)):
             popN = toolbox.pop_size[toolbox.parachute_level]
             while toolbox.gen < toolbox.ngen[toolbox.parachute_level]:
+                if False:
+                    do_special_experiment = False # math.isclose(population[0].eval, 77.61253, abs_tol=0.00001)
+                    if do_special_experiment and population[0].eval < 77.61253 - 0.00001:
+                        toolbox.f.write(f"exit because of escape\n")
+                        exit()
                 # track if we are stuck
                 if "parents_fraction" in toolbox.evolution_strategies:
-                    if math.isclose(population[0].eval, prev_best):
+                    if math.isclose(population[0].eval, prev_best):                        
                         parents_fraction = min(1.0, parents_fraction / 2) # stuck, gooi parents weg
                         stuck_count += 1
+                        stuck_count_since_last_meta_evolution += 1
                     else:
-                        # verbetering!
-                        parents_fraction = 1.0 # reset 
+                        # verandering!
+                        parents_fraction = 1.0
                         stuck_count = 0
+                        if population[0].eval < prev_best:
+                            # verbetering!
+                            meta_evolution_count = 0
+                            stuck_count_since_last_meta_evolution = 0
                 prev_best = population[0].eval
-                if "taboo_set" in toolbox.metaevolution_strategies or "taboo_value" in toolbox.metaevolution_strategies:
-                    if stuck_count >= 5:
+                if False:
+                    if do_special_experiment:
+                        if stuck_count > 5:
+                            toolbox.leftovers.sort(key=lambda item: item.eval)
+                            c = analyse_parents(toolbox, population)
+                            if c > 0:
+                                toolbox.f.write(f"exit because 200x200 analysis on pop returns > 0\n")
+                                exit()
+                            toolbox.f.write(f"0\n")
+                            c1 = analyse_parents(toolbox, apply_mix_with_leftovers_metaevolution(toolbox, population, 0.5, "random"))
+                            toolbox.f.write(f"{c1}\n")
+                            c2 = analyse_parents(toolbox, apply_mix_with_leftovers_metaevolution(toolbox, population, 0.33, "random"))
+                            toolbox.f.write(f"{c2}\n")
+                            c3 = analyse_parents(toolbox, apply_mix_with_leftovers_metaevolution(toolbox, population, 0.1, "random"))
+                            toolbox.f.write(f"xx\t{c1}\t{c2}\t{c3}\t\n")
+                            toolbox.f.write(f"exit special experiment\n")
+                            exit()
+                if stuck_count_since_last_meta_evolution >= 5 and len(toolbox.metaevolution_strategies) > 0:
+                    if meta_evolution_count >= 5:
+                        toolbox.f.write(f"exit 5x meta_evolution did not work\n")
+                        exit()
+                    meta_evolution_count += 1
+                    parents_fraction = 1.0
+                    stuck_count_since_last_meta_evolution = 0
+                    if "taboo_set" in toolbox.metaevolution_strategies or "taboo_value" in toolbox.metaevolution_strategies:
                         # Erase all parents with this value BEFORE making the children, ERASING it from the gene pool
-                        population = erase_suboptimum_parents(toolbox, population)
+                        population = apply_taboo_metaevolution(toolbox, population)
+                    if "mix_with_leftovers" in toolbox.metaevolution_strategies:
+                        population = apply_mix_with_leftovers_metaevolution(toolbox, population, 0.5, "random")
+
                 if toolbox.f and toolbox.verbose >= 1:
                     # code_str = interpret.convert_code_to_str(interpret.compile_deap(population[0].deap_str, toolbox.functions))
-                    toolbox.f.write(f"gen {toolbox.gen:2d} best {population[0].eval:7.3f} pf {parents_fraction:.3f} sc {stuck_count} goc {grote_opschudding_count} taboo {str(toolbox.taboo_set)}\n") #  {code_str}\n")
+                    toolbox.f.write(f"gen {toolbox.gen:2d} best {population[0].eval:7.3f} pf {parents_fraction:.3f} sc {stuck_count} goc {meta_evolution_count} taboo {str(toolbox.taboo_set)}\n") #  {code_str}\n")
                 log_population(toolbox, population, f"generation {toolbox.gen}, pop at start")
                 offspring, solution = generate_offspring(toolbox, population, toolbox.nchildren[toolbox.parachute_level])
                 if solution:
                     return solution, toolbox.gen+1
-                consistency_check(offspring)
+                consistency_check(toolbox, offspring)
                 if len(offspring) != toolbox.nchildren[toolbox.parachute_level]:
                     toolbox.f.write(f"{len(offspring)} offspring\n")
                 if toolbox.parachute_level == 0:
@@ -629,8 +683,10 @@ def ga_search_impl(toolbox):
                     population = random.sample(population, k=int(len(population)*parents_fraction))
                 population += offspring
                 population.sort(key=lambda item: item.eval)
+                if stuck_count == 0:
+                    toolbox.leftovers += population[popN:]
                 population[:] = population[:popN]
-                consistency_check(population)
+                consistency_check(toolbox, population)
                 update_dynamic_weighted_evaluation(toolbox, population)
                 refresh_toolbox_from_population(toolbox, population)
                 toolbox.gen += 1
@@ -689,7 +745,7 @@ def basinhopper(toolbox):
             toolbox.f.write(f"\t{best.deap_str}")
             toolbox.f.write(f"\n")
             if toolbox.verbose >= 1:
-                score = evaluate_individual_impl(toolbox, best, 4)
+                score, _, _ = evaluate_individual_impl(toolbox, best, 4)
                 assert score == 0
             if toolbox.verbose >= 1:
                 write_path(toolbox, best)
