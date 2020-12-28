@@ -227,7 +227,10 @@ Verklaring:
 	- werkt taboo_value dan misschien beter dan taboo_set?
 		- test
 
-============================= 
+============================= 09AC : 1000 runs met altijd 50% van de parents random wegggooien
+
+09AC_always = 09AA + fraction_parents fixed op 50% altijd, 
+	solved 155/1000, max evals 300000, p enter subopt 96.2%, p stuck at subopt 84.4%, avg min err 32.84
 
 
 

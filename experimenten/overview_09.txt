@@ -2,9 +2,11 @@
 	solved 134/1000, max evals 300000, p enter subopt 94.7, p stuck at subopt 88.8%, efficiency 0.0005168487587726782
 09ACA = 09AC + taboo, 
 	solved 135/991, max evals 300000, p enter subopt 65.5%, p stuck at subopt 88.5%
-09AC = 09AA + fraction_parents
+09AC_stuck = 09AA + fraction_parents increasing bij vastzitten
 	solved 130/1000, max evals 300000, p enter subopt 94.7%, p stuck at subopt 94.3%, efficiency 0.0004963964877310708
+09AC_always = 09AA + fraction_parents fixed op 50% altijd, 
+	solved 155/1000, max evals 300000, p enter subopt 96.2%, p stuck at subopt 84.4%, avg min err 32.84
 09AA = 09A
-	solved 40/1000, max evals 300000, p enter subopt 94.4%, p stuck at subopt 98.2%, efficiency 0.00042736402705339583
+	solved 40/1000, max evals 300000, p enter subopt 94.4%, p stuck at subopt 98.2%, avg min err 54.7
 
 
