@@ -10,8 +10,7 @@ def handle_file(filename, score_to_follow, precision, counts):
         prev_eval = None
         for line in f:
             # line = line.strip().lower().split(" ")
-
-            if len(line) > 0 and line[:3] ==  "gen":
+            if len(line) >= 3 and line[:3] ==  "gen":
                 # example : gen 124 best 38.75731
                 eval = float(line[12:19])
                 if local_error_max < eval:
@@ -34,14 +33,14 @@ def handle_file(filename, score_to_follow, precision, counts):
                         else:
                             count_stuck_at_subopt += 1
                 prev_eval = eval
-            elif len(line) > 0 and line[:7] == "stopped":
+            elif len(line) >= 7 and line[:7] == "stopped":
+                line = line.strip().lower().split("\t")
+                local_evals = int(line[4])
+            elif len(line) >= 6 and line[:6] == "solved":
                 line = line.strip().lower().split("\t")
                 local_evals = int(line[6])
-            elif len(line) > 0 and line[:6] == "solved":
-                line = line.strip().lower().split("\t")
-                local_evals = int(line[8])
-    if local_enter_subopt + local_miss_subopt != 1:
-        print("file", filename, "enter+miss", local_enter_subopt, "+", local_miss_subopt)
+    #if local_enter_subopt + local_miss_subopt != 1:
+    #    print("file", filename, "enter+miss", local_enter_subopt, "+", local_miss_subopt)
     if local_error_max > local_error_min and local_evals > 0:
         sum_delta += local_error_max - local_error_min
         sum_evals += local_evals
@@ -64,13 +63,13 @@ def follow_subopt(folder, score_to_follow, precision):
         count_files += 1
         counts = handle_file(folder + "/" + filename, score_to_follow, precision, counts)
     count_enter_subopt, count_miss_subopt, count_stuck_at_subopt, count_leave_subopt, sum_delta, sum_evals, sum_error_min, count_error_min = counts
-    print("count enter subopt", count_enter_subopt, "count through subopt", count_miss_subopt)
-    print("p enter subopt", count_enter_subopt / (count_enter_subopt + count_miss_subopt))
+    #print("count enter subopt", count_enter_subopt, "count through subopt", count_miss_subopt)
+    #print("p enter subopt", count_enter_subopt / (count_enter_subopt + count_miss_subopt))
     print("p stuck at subopt", count_stuck_at_subopt / (count_stuck_at_subopt + count_leave_subopt))
-    print("count stuck at subopt", count_stuck_at_subopt, "count leave subopt", count_leave_subopt)
-    print("count_files", count_files)
-    print("efficiency", sum_delta / sum_evals)
-    print("avg min error", sum_error_min / count_error_min)
+    #print("count stuck at subopt", count_stuck_at_subopt, "count leave subopt", count_leave_subopt)
+    #print("count_files", count_files)
+    #print("efficiency", sum_delta / sum_evals)
+    #print("avg min error", sum_error_min / count_error_min)
 
 
 if __name__ == "__main__":
