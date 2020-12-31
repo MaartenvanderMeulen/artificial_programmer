@@ -24,12 +24,24 @@ def cx(toolbox, parent1, parent2, final):
     else:
         child = crossover_with_local_search(toolbox, parent1, parent2)
     if child is not None:
+        if child.eval == parent1.eval and child.eval == parent2.eval:
+            toolbox.c6 += 1
         if child.eval < parent1.eval:
+            toolbox.c1 += 1
             return [parent1, parent2, ], [], child
         elif child.eval < parent2.eval:
+            if child.eval == parent1.eval:
+                toolbox.c2 += 1
+            else: 
+                toolbox.c3 += 1
             return [parent1, parent2, ], [parent1,], child
         elif final:
+            toolbox.c5 += 1
             return [parent1, parent2, ], [parent1, parent2], child
+        else:
+            toolbox.c4 += 1
+    else:
+        toolbox.c7 += 1
     return None, None, None
 
 
@@ -41,10 +53,18 @@ def mut(toolbox, parent, expr_mut, final):
         expr = gp.genFull(pset=toolbox.pset, min_=0, max_=2)
         child = replace_subtree_at_best_location(toolbox, parent, expr)
     if child is not None:
+        if child.eval == parent.eval:
+            toolbox.m4 += 1
         if child.eval < parent.eval:
+            toolbox.m1 += 1
             return [parent], [], child
         elif final:
+            toolbox.m2 += 1
             return [parent], [parent], child
+        else:
+            toolbox.m3 += 1
+    else:
+            toolbox.m5 += 1
     return None, None, None
 
 
@@ -73,6 +93,7 @@ def generate_next_generation_impl(toolbox, usable_parents, n_cx_children, n_mut_
                     usable_parents.remove(parent)
                 next_gen_parents += next_gen_parent
                 cx_children.append(child)
+                # toolbox.ind_str_set.add(child.deap_str)
                 result = True
     elif n_mut_children > 0:
         # select n_mut_children uit usable_parents
@@ -85,15 +106,20 @@ def generate_next_generation_impl(toolbox, usable_parents, n_cx_children, n_mut_
                     usable_parents.remove(parent)
                 next_gen_parents += next_gen_parent
                 mut_children.append(child)
+                # toolbox.ind_str_set.add(child.deap_str)
                 result = True
     return result
 
 
 def generate_next_generation(toolbox, parents, nchildren):
+    toolbox.c1, toolbox.c2, toolbox.c3, toolbox.c4, toolbox.c5, toolbox.c6, toolbox.c7 = 0, 0, 0, 0, 0, 0, 0
+    toolbox.m1, toolbox.m2, toolbox.m3, toolbox.m4, toolbox.m5 = 0, 0, 0, 0, 0
     nchildren = int(len(parents) / (toolbox.pcrossover + 1))
     n_cx_children = int(nchildren * toolbox.pcrossover)
     n_mut_children = nchildren - n_cx_children
-    # print("DEBUG 72: n_cx_children", n_cx_children, "n_mut_children", n_mut_children, "check", 2*n_cx_children+n_mut_children)
+    if toolbox.gen == 0:
+        # print("DEBUG 72: n_cx_children", n_cx_children, "n_mut_children", n_mut_children, "check", 2*n_cx_children+n_mut_children)
+        print(f"gen\terr\tpop\tcx c<a\tc=a<b\ta<c<b\trejb<=c\taccb<=c\ta=b=c\tmut c<a\treject overig")
     cx_children, mut_children, next_gen_parents = [], [], []
     iter, last_iter = 1, 20
     while iter <= last_iter and len(parents) > 1 and len(cx_children) + len(mut_children) < (n_cx_children + n_mut_children):
@@ -102,9 +128,13 @@ def generate_next_generation(toolbox, parents, nchildren):
         iter += 1
     next_gen = next_gen_parents + cx_children + mut_children + parents
     next_gen.sort(key=lambda ind: ind.eval)
-    count = sum([1 for ind in next_gen if ind.eval == next_gen[0].eval])
-    avg = sum([ind.eval for ind in next_gen]) / len(next_gen)
-    # print("DEBUG 98: ", f"eval {next_gen[0].eval:.3f}-{next_gen[-1].eval:.3f}, {len(next_gen)} (next_gen) = {len(cx_children)} (cxc) + {len(mut_children)} (mut) + {len(next_gen_parents)} (cxp) + {len(parents)} (p), count top {count}, avg {avg:.6f}, evals {toolbox.eval_count}")
+    #count = sum([1 for ind in next_gen if ind.eval == next_gen[0].eval])
+    #avg = sum([ind.eval for ind in next_gen]) / len(next_gen)
+    #print("DEBUG 98: ", f"eval {next_gen[0].eval:.3f}-{next_gen[-1].eval:.3f}, {len(next_gen)} (next_gen) = {len(cx_children)} (cxc) + {len(mut_children)} (mut) + {len(next_gen_parents)} (cxp) + {len(parents)} (p), count top {count}, avg {avg:.6f}, evals {toolbox.eval_count}")
+    c1, c2, c3, c4, c5, c6, c7 = toolbox.c1, toolbox.c2, toolbox.c3, toolbox.c4, toolbox.c5, toolbox.c6, toolbox.c7
+    m1, m2, m3, m4, m5 = toolbox.m1, toolbox.m2, toolbox.m3, toolbox.m4, toolbox.m5
+    popN = toolbox.pop_size[toolbox.parachute_level]
+    print(f"{toolbox.gen+1}\t{next_gen[0].eval:.3f}\t{popN}\t{c1}\t{c2}\t{c3}\t{c4}\t{c5}\t{c6}\t{m1}\t{c7+m5}")
     for ind in next_gen:
         if ind.eval == 0:
             return None, ind

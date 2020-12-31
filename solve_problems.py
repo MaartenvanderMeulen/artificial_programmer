@@ -83,10 +83,10 @@ def solve_problems(problems, functions, log_file, params, append_functions_to_fi
     return True
 
 
-def main(seed, param_file):
-    if param_file[:len("experimenten/params_")] != "experimenten/params_" or param_file[-len(".txt"):] != ".txt":
-        exit("param file must have format 'experimenten/params_id.txt'")
-    id = param_file[len("experimenten/params_"):-len(".txt")]    
+def main(seed, id):
+    param_file = f"experimenten/params_{id}.txt" 
+    if not os.path.exists(param_file):
+        exit(f"param file {param_file} does not exist")
     output_folder = f"tmp/{id}"
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -125,7 +125,7 @@ def main(seed, param_file):
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        exit(f"Usage: python search.py seed paramsfile")
+        exit(f"Usage: python search.py seed param_id")
     seed = int(sys.argv[1])
-    param_file = sys.argv[2]
-    exit(main(seed, param_file))
+    id = sys.argv[2]
+    exit(main(seed, id))
