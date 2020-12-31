@@ -256,7 +256,7 @@ def ga_search_impl(toolbox):
                     toolbox.parachute_offspring_count += len(offspring)
                 else:
                     toolbox.normal_offspring_count += len(offspring)
-                # parents_fraction = 0.5
+                parents_fraction = 0.5
                 if parents_fraction < 1.0:
                     population = random.sample(population, k=int(len(population)*parents_fraction))
                 population += offspring
