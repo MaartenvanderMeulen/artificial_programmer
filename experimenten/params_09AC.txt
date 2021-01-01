@@ -35,5 +35,6 @@
     "penalise_non_reacting_models": true,
     "evolution_strategies": ["parents_fraction"], 
     "metaevolution_strategies": [], 
+    "idea_victor": false,
     "hops": 1
 }

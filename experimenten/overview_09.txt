@@ -4,6 +4,8 @@
 	solved 135/991, max evals 300000, p enter subopt 65.5%, p stuck at subopt 88.5%
 09AC_stuck = 09AA + fraction_parents increasing bij vastzitten
 	solved 130/1000, max evals 300000, p enter subopt 94.7%, p stuck at subopt 94.3%, efficiency 0.0004963964877310708
+09ACV = 09AC_always met parent_selection_strategy==0
+	solved 24/1000, max evals 300000, p stuck at subopt 84.4%
 09AC_always = 09AA + fraction_parents fixed op 50% altijd, 
 	solved 155/1000, max evals 300000, p enter subopt 96.2%, p stuck at subopt 84.4%, avg min err 32.84
 09AA = 09A
