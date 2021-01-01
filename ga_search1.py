@@ -146,12 +146,12 @@ def generate_offspring(toolbox, population, nchildren):
 
 
 def apply_taboo_metaevolution(toolbox, population):
-    best_eval = population[0].eval
+    taboo_value = population[0].eval
     if "taboo_set" in toolbox.metaevolution_strategies:
-        toolbox.taboo_set.add(best_eval)
+        toolbox.taboo_set.add(taboo_value)
     elif "taboo_value" in toolbox.metaevolution_strategies:
-        toolbox.taboo_set = set([best_eval])
-    new_population = [ind for ind in population if ind.eval > best_eval]
+        toolbox.taboo_set = set([taboo_value])
+    new_population = [ind for ind in population if ind.eval != taboo_value]
     if len(new_population) == 0:
         return population
     return new_population

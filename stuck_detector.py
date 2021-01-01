@@ -59,6 +59,7 @@ def stuck_detector(folder):
     normalise(count_non_stuck, count_stuck)
     write_to_file(count_non_stuck, "tmp/count_non_stuck.txt")
     write_to_file(count_stuck, "tmp/count_stuck.txt")
+    
 
 
 if __name__ == "__main__":
