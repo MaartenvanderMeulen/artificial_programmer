@@ -241,4 +241,8 @@ for f in lo* ; do diff $f ../09AC_155 ; done
 
 1 Jan 2021 == OK
 
-==========
+========== dynamische "stuck" detectie
+
+
+
+

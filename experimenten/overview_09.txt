@@ -1,14 +1,14 @@
-09ACB = 09AC + mix_with_leftovers, 
-	solved 134/1000, max evals 300000, p enter subopt 94.7, p stuck at subopt 88.8%, efficiency 0.0005168487587726782
-09ACA = 09AC + taboo, 
-	solved 135/991, max evals 300000, p enter subopt 65.5%, p stuck at subopt 88.5%
-09AC_stuck = 09AA + fraction_parents increasing bij vastzitten
-	solved 130/1000, max evals 300000, p enter subopt 94.7%, p stuck at subopt 94.3%, efficiency 0.0004963964877310708
 09ACV = 09AC_always met parent_selection_strategy==0
-	solved 24/1000, max evals 300000, p stuck at subopt 84.4%
-09AC_always = 09AA + fraction_parents fixed op 50% altijd, 
-	solved 155/1000, max evals 300000, p enter subopt 96.2%, p stuck at subopt 84.4%, avg min err 32.84
+	solved 24/1000, max evals 300000, p stuck at subopt 98.94%
 09AA = 09A
-	solved 40/1000, max evals 300000, p enter subopt 94.4%, p stuck at subopt 98.2%, avg min err 54.7
+	solved 40/1000, max evals 300000, p stuck at subopt 98.2%
+09AC_stuck = 09AA + fraction_parents increasing bij vastzitten
+	solved 130/1000, max evals 300000, p stuck at subopt 94.3%
+09ACB = 09AC + mix_with_leftovers, 
+	solved 134/1000, max evals 300000, p stuck at subopt 88.8%
+09ACA = 09AC + taboo, 
+	solved 135/991, max evals 300000, p stuck at subopt 88.5%
+09AC_always = 09AA + fraction_parents fixed op 50% altijd, 
+	solved 155/1000, max evals 300000, p stuck at subopt 84.4%
 
 

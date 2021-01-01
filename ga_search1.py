@@ -16,10 +16,6 @@ from ga_search_tools import update_dynamic_weighted_evaluation
 from ga_search_tools import crossover_with_local_search, cxOnePoint, mutUniform, replace_subtree_at_best_location
 
 
-global parents_fraction
-parents_fraction = 1.0 # fractie van de oude populatie samen te voegen met de offspring
-
-
 def select_parents(toolbox, population):
     if toolbox.parent_selection_strategy == 0 or len(toolbox.current_families_dict) == 1:
         return [best_of_n(population, toolbox.best_of_n_cx), best_of_n(population, toolbox.best_of_n_cx)]
@@ -185,8 +181,8 @@ def ga_search_impl(toolbox):
         population.sort(key=lambda item: item.eval)
         refresh_toolbox_from_population(toolbox, population)
         toolbox.gen = 0
-        global parents_fraction
-        prev_best = 1e9
+        toolbox.best_eval = 1e9
+        toolbox.prev_eval = 1e9
         stuck_count, stuck_count_since_last_meta_evolution = 0, 0
         meta_evolution_count = 0
         for toolbox.parachute_level in range(len(toolbox.ngen)):
@@ -198,20 +194,20 @@ def ga_search_impl(toolbox):
                         toolbox.f.write(f"exit because of escape\n")
                         exit()
                 # track if we are stuck
-                if "parents_fraction" in toolbox.evolution_strategies:
-                    if math.isclose(population[0].eval, prev_best):                        
-                        parents_fraction = min(1.0, parents_fraction / 2) # stuck, gooi parents weg
-                        stuck_count += 1
-                        stuck_count_since_last_meta_evolution += 1
-                    else:
-                        # verandering!
-                        parents_fraction = 1.0
-                        stuck_count = 0
-                        if population[0].eval < prev_best:
-                            # verbetering!
-                            meta_evolution_count = 0
-                            stuck_count_since_last_meta_evolution = 0
-                prev_best = population[0].eval
+                if population[0].eval == toolbox.prev_eval:                        
+                    if stuck_count >= toolbox.max_stuck_count:
+                        raise RuntimeWarning("max stuck count exceeded")
+                    stuck_count += 1
+                    stuck_count_since_last_meta_evolution += 1
+                else:
+                    # verandering!
+                    stuck_count = 0
+                    if toolbox.best_eval > population[0].eval:
+                        # verbetering!
+                        toolbox.best_eval = population[0].eval
+                        meta_evolution_count = 0
+                        stuck_count_since_last_meta_evolution = 0
+                toolbox.prev_eval = population[0].eval
                 if False:
                     if do_special_experiment:
                         if stuck_count > 5:
@@ -231,10 +227,8 @@ def ga_search_impl(toolbox):
                             exit()
                 if stuck_count_since_last_meta_evolution >= 5 and len(toolbox.metaevolution_strategies) > 0:
                     if meta_evolution_count >= 5:
-                        toolbox.f.write(f"exit 5x meta_evolution did not work\n")
-                        exit()
+                        raise RuntimeWarning(f"5x meta_evolution did not work")
                     meta_evolution_count += 1
-                    parents_fraction = 1.0
                     stuck_count_since_last_meta_evolution = 0
                     if "taboo_set" in toolbox.metaevolution_strategies or "taboo_value" in toolbox.metaevolution_strategies:
                         # Erase all parents with this value BEFORE making the children, ERASING it from the gene pool
@@ -244,7 +238,7 @@ def ga_search_impl(toolbox):
 
                 if toolbox.f and toolbox.verbose >= 1:
                     # code_str = interpret.convert_code_to_str(interpret.compile_deap(population[0].deap_str, toolbox.functions))
-                    toolbox.f.write(f"gen {toolbox.gen:2d} best {population[0].eval:7.3f} pf {parents_fraction:.3f} sc {stuck_count} goc {meta_evolution_count} taboo {str(toolbox.taboo_set)}\n") #  {code_str}\n")
+                    toolbox.f.write(f"gen {toolbox.gen:2d} best {population[0].eval:7.3f} sc {stuck_count} goc {meta_evolution_count} taboo {str(toolbox.taboo_set)}\n") #  {code_str}\n")
                 log_population(toolbox, population, f"generation {toolbox.gen}, pop at start")
                 offspring, solution = generate_offspring(toolbox, population, toolbox.nchildren[toolbox.parachute_level])
                 if solution:
@@ -257,8 +251,7 @@ def ga_search_impl(toolbox):
                 else:
                     toolbox.normal_offspring_count += len(offspring)
                 parents_fraction = 0.5
-                if parents_fraction < 1.0:
-                    population = random.sample(population, k=int(len(population)*parents_fraction))
+                population = random.sample(population, k=int(len(population)*parents_fraction))
                 population += offspring
                 population.sort(key=lambda item: item.eval)
                 if stuck_count == 0:

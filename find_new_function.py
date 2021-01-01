@@ -128,6 +128,7 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.verbose = params["verbose"]
     toolbox.max_seconds = params["max_seconds"]
     toolbox.max_evaluations = params["max_evaluations"]
+    toolbox.max_stuck_count = params["max_stuck_count"]
     toolbox.pop_size = params["pop_size"]
     toolbox.nchildren = params["nchildren"]
     toolbox.ngen = params["ngen"]
