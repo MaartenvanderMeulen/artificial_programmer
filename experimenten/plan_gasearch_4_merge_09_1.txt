@@ -243,6 +243,13 @@ for f in lo* ; do diff $f ../09AC_155 ; done
 
 ========== dynamische "stuck" detectie
 
+09ACC : taboo_value en mix_with_left_behinds
+
+for seed in `seq 1000 1 1199` ; do tsp -n python solve_problems.py $seed 09ACD ; done
+for seed in `seq 1000 1 1199` ; do tsp -n python solve_problems.py $seed 09ACE ; done
+
+alle files die geen string "evals" bevatten:
+grep -L evals lo*
 
 
 

@@ -17,11 +17,11 @@
     "show_path_depth": 1,
     "pop_size": [
         4000,
-        200
+        300
     ],
     "nchildren": [
         4000,
-        100
+        150
     ],
     "ngen": [
         3,

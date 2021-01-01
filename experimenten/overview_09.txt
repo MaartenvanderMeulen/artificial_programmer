@@ -6,9 +6,19 @@
 	solved 130/1000, max evals 300000, p stuck at subopt 94.3%
 09ACB = 09AC + mix_with_leftovers, 
 	solved 134/1000, max evals 300000, p stuck at subopt 88.8%
-09ACA = 09AC + taboo, 
+09ACA = 09AC + taboo_set, 
 	solved 135/991, max evals 300000, p stuck at subopt 88.5%
 09AC_always = 09AA + fraction_parents fixed op 50% altijd, 
 	solved 155/1000, max evals 300000, p stuck at subopt 84.4%
+09ACC = 09AC + taboo_value, 
+	solved 49/281 = 17.4%, niet dignificant verschillend van 155/1000
+09ACD = 09AC + mixen, 
+	solved 37/200 = 18.5%, niet significante verbetering
+09ACE = 09AC + taboo_value + mixen, 
+	solved 28/200=14%, niet significante verslechtering
+09AC3 = 09AC met pop 300
+	solved 
+09AC4 = 09AC met pop 300
+	solved 
 
 

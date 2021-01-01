@@ -35,7 +35,7 @@
     "weight_complementairity": 0.3,
     "penalise_non_reacting_models": true,
     "evolution_strategies": ["parents_fraction"], 
-    "metaevolution_strategies": [], 
+    "metaevolution_strategies": ["taboo_value", "mix_with_leftovers"], 
     "idea_victor": false,
     "hops": 1
 }
