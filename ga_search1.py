@@ -51,7 +51,11 @@ def select_parents(toolbox, population):
         assert parent2.eval < 0.1 or math.isclose(parent2.eval, sum(model_evals2))
         p_fitness1 = (1 - parent1.eval/(max_eval*1.1))
         p_fitness2 = (1 - parent2.eval/(max_eval*1.1))
+        if p_fitness1 < 0 or 1 < p_fitness1:
+            print("p_fitness1", p_fitness1)
         assert 0 <= p_fitness1 and p_fitness1 <= 1
+        if p_fitness2 < 0 or 1 < p_fitness2:
+            print("p_fitness2", p_fitness2)
         assert 0 <= p_fitness2 and p_fitness2 <= 1
         estimate_improvement = sum([eval1-eval2 for eval1, eval2 in zip(model_evals1, model_evals2) if eval1 > eval2])
         assert estimate_improvement >= 0
@@ -166,7 +170,7 @@ def apply_mix_with_leftovers_metaevolution(toolbox, population, stay_fraction, r
         if k <= len(toolbox.leftovers):
             new_population += random.sample(toolbox.leftovers, k=k)
         else:
-            print("gen", toolbox.gen, "len(leftovers)", len(toolbox.leftovers), "stay_fraction", stay_fraction, "k", k)
+            print("gen", toolbox.gen, "len(leftovers)", len(toolbox.leftovers), "stay_fraction", stay_fraction, "k", k, "len(new_population)", len(new_population))
             new_population += toolbox.leftovers
     else:
         new_population += toolbox.leftovers[:popN - len(new_population)]
@@ -241,6 +245,7 @@ def ga_search_impl(toolbox):
                         population = apply_taboo_metaevolution(toolbox, population)
                     if "mix_with_leftovers" in toolbox.metaevolution_strategies:
                         population = apply_mix_with_leftovers_metaevolution(toolbox, population, 0.5, "random")
+                    refresh_toolbox_from_population(toolbox, population)
 
                 if toolbox.f and toolbox.verbose >= 1:
                     # code_str = interpret.convert_code_to_str(interpret.compile_deap(population[0].deap_str, toolbox.functions))

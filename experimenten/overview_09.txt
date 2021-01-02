@@ -9,23 +9,22 @@
 09ACA = 09AC_stuck + taboo_set, 
 	solved 135/991, max evals 300000, p stuck at subopt 88.5%
 09AC = 09AA + fraction_parents fixed op 50% altijd, 
-	solved 155/1000, 72/500, max evals 300000, p stuck at subopt 84.4%
+	solved 155/1000=15.5%, 72/500=14.4%, 29/200=14.5%, max evals 300000, p stuck at subopt 84.4%
 09ACE = 09AC + taboo_value + mixen, 
-	28/200=14%
-09AC3 = 09AC met pop 300
-	48/500=9.6%
-09AC4 = 09AC met pop 400
-	34/500=6.8%
-	
-09ACD = 09AC + mixen, 
-	86/466 = 18.5%
-	crash in 34 runs
+	28/200=14.0%
+09AC3 = 09AC popN 300 en childN 100
+	21/200=10.5%
+09AC4 = 09AC popN 400 en childN 100
+	9/200=4.5%
 
 09ACC = 09AC + taboo_value, 
-	49/281 = 17.4%
-09AC3 = 09AC met pop 300 en remove_fraction = childN/popN
-	/200
-09AC4 = 09AC met pop 400 en remove_fraction = childN/popN
-	/200
+	82/500=16.0%
+09ACD = 09AC + mixen, 
+	88/500=17.6%
+
+09AC2 = 09AC, controle, want 09AC3 is zo laag
+	85/500=17.0%, (per 100: 20, 20, 15, 12, 18), anders, maar blijft heel hoog
+
+
 
 
