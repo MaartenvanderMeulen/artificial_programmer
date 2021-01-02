@@ -159,9 +159,15 @@ def apply_taboo_metaevolution(toolbox, population):
 
 def apply_mix_with_leftovers_metaevolution(toolbox, population, stay_fraction, replace_style):
     popN = toolbox.pop_size[toolbox.parachute_level]
+    assert 0 <= stay_fraction and stay_fraction <= 1
     new_population = population[:int(popN*stay_fraction)]
     if replace_style == "random":
-        new_population += random.sample(toolbox.leftovers, k=popN - len(new_population))
+        k = popN - len(new_population)
+        if k <= len(toolbox.leftovers):
+            new_population += random.sample(toolbox.leftovers, k=k)
+        else:
+            print("gen", toolbox.gen, "len(leftovers)", len(toolbox.leftovers), "stay_fraction", stay_fraction, "k", k)
+            new_population += toolbox.leftovers
     else:
         new_population += toolbox.leftovers[:popN - len(new_population)]
     return new_population
@@ -250,7 +256,10 @@ def ga_search_impl(toolbox):
                     toolbox.parachute_offspring_count += len(offspring)
                 else:
                     toolbox.normal_offspring_count += len(offspring)
-                parents_fraction = 0.5
+                childN = toolbox.nchildren[toolbox.parachute_level]
+                parents_fraction = max(0, 1 - childN / popN)
+                if popN == 200:
+                    assert math.isclose(parents_fraction, 0.5)
                 population = random.sample(population, k=int(len(population)*parents_fraction))
                 population += offspring
                 population.sort(key=lambda item: item.eval)

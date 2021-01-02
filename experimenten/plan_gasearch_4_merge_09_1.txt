@@ -251,5 +251,9 @@ for seed in `seq 1000 1 1199` ; do tsp -n python solve_problems.py $seed 09ACE ;
 alle files die geen string "evals" bevatten:
 grep -L evals lo*
 
+for seed in `seq 1000 1 1399` ; do tsp -n python solve_problems.py $seed 09AC3 ; done
+for seed in `seq 1000 1 1399` ; do tsp -n python solve_problems.py $seed 09AC4 ; done
+
+tsp | head -33 ; grep solved lo* | wc ; grep evals lo* | wc ; grep -L evals lo* | wc ; ls lo* | wc
 
 

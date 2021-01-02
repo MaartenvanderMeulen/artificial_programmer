@@ -4,21 +4,28 @@
 	solved 40/1000, max evals 300000, p stuck at subopt 98.2%
 09AC_stuck = 09AA + fraction_parents increasing bij vastzitten
 	solved 130/1000, max evals 300000, p stuck at subopt 94.3%
-09ACB = 09AC + mix_with_leftovers, 
+09ACB = 09AC_stuck + mix_with_leftovers, 
 	solved 134/1000, max evals 300000, p stuck at subopt 88.8%
-09ACA = 09AC + taboo_set, 
+09ACA = 09AC_stuck + taboo_set, 
 	solved 135/991, max evals 300000, p stuck at subopt 88.5%
-09AC_always = 09AA + fraction_parents fixed op 50% altijd, 
-	solved 155/1000, max evals 300000, p stuck at subopt 84.4%
-09ACC = 09AC + taboo_value, 
-	solved 49/281 = 17.4%, niet dignificant verschillend van 155/1000
-09ACD = 09AC + mixen, 
-	solved 37/200 = 18.5%, niet significante verbetering
+09AC = 09AA + fraction_parents fixed op 50% altijd, 
+	solved 155/1000, 72/500, max evals 300000, p stuck at subopt 84.4%
 09ACE = 09AC + taboo_value + mixen, 
-	solved 28/200=14%, niet significante verslechtering
+	28/200=14%
 09AC3 = 09AC met pop 300
-	solved 
-09AC4 = 09AC met pop 300
-	solved 
+	48/500=9.6%
+09AC4 = 09AC met pop 400
+	34/500=6.8%
+	
+09ACD = 09AC + mixen, 
+	86/466 = 18.5%
+	crash in 34 runs
+
+09ACC = 09AC + taboo_value, 
+	49/281 = 17.4%
+09AC3 = 09AC met pop 300 en remove_fraction = childN/popN
+	/200
+09AC4 = 09AC met pop 400 en remove_fraction = childN/popN
+	/200
 
 

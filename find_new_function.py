@@ -142,7 +142,7 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.penalise_non_reacting_models = params["penalise_non_reacting_models"]
     toolbox.hops = params["hops"]
     toolbox.output_folder = params["output_folder"]
-    toolbox.final_pop_file = None # params["output_folder"] + "/pop_" + str(params["seed"]) + ".txt"
+    toolbox.final_pop_file = params["output_folder"] + "/pop_" + str(params["seed"]) + ".txt"
     toolbox.all_ind_file = None # params["output_folder"] + "/ind_" + str(params["seed"]) + ".txt"
     toolbox.best_ind_file = None # params["output_folder"] + "/best_" + str(params["seed"]) + ".txt"
     toolbox.new_initial_population = params["new_initial_population"]
