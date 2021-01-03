@@ -131,6 +131,7 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.max_stuck_count = params["max_stuck_count"]
     toolbox.pop_size = params["pop_size"]
     toolbox.nchildren = params["nchildren"]
+    toolbox.parents_keep_fraction = params["parents_keep_fraction"]
     toolbox.ngen = params["ngen"]
     toolbox.max_individual_size = params["max_individual_size"]
     toolbox.pcrossover = params["pcrossover"]

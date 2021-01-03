@@ -3,7 +3,7 @@ import math
 import sys
 
 
-def handle_file(filename, count_non_stuck, count_stuck):
+def handle_file(filename, count_non_stuck, count_stuck, count_stopped_early):
     with open(filename, "r") as f:
         prev_eval = None
         count_iters = 0
@@ -22,6 +22,9 @@ def handle_file(filename, count_non_stuck, count_stuck):
                 if count_iters not in count_stuck:
                     count_stuck[count_iters] = 0
                 count_stuck[count_iters] += 1
+                if count_iters <= 2:
+                    count_stopped_early[0] += 1
+                    print(filename, count_iters)
             elif len(line) >= 6 and line[:6] == "solved":
                 if count_iters not in count_non_stuck:
                     count_non_stuck[count_iters] = 0
@@ -48,17 +51,19 @@ def write_to_file(count_dict, file_name):
 def stuck_detector(folder):
     count_non_stuck = dict()
     count_stuck = dict()
+    count_stopped_early = [0]
     filenames = []
     for filename in os.listdir(folder):
         if filename[:3] == "log":
             filenames.append(filename)
     filenames.sort()
     for filename in filenames:
-        handle_file(folder + "/" + filename, count_non_stuck, count_stuck)
+        handle_file(folder + "/" + filename, count_non_stuck, count_stuck, count_stopped_early)
     
     normalise(count_non_stuck, count_stuck)
     write_to_file(count_non_stuck, "tmp/count_non_stuck.txt")
     write_to_file(count_stuck, "tmp/count_stuck.txt")
+    print("count_stopped_early", count_stopped_early)
     
 
 

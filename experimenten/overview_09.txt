@@ -8,22 +8,40 @@
 	solved 134/1000, max evals 300000, p stuck at subopt 88.8%
 09ACA = 09AC_stuck + taboo_set, 
 	solved 135/991, max evals 300000, p stuck at subopt 88.5%
-09AC = 09AA + fraction_parents fixed op 50% altijd, 
-	solved 155/1000=15.5%, 72/500=14.4%, 29/200=14.5%, max evals 300000, p stuck at subopt 84.4%
 09ACE = 09AC + taboo_value + mixen, 
 	28/200=14.0%
 09AC3 = 09AC popN 300 en childN 100
 	21/200=10.5%
 09AC4 = 09AC popN 400 en childN 100
 	9/200=4.5%
-
-09ACC = 09AC + taboo_value, 
-	82/500=16.0%
+09AC2B = 09AC met parents keep fraction [0.0, 10/100] en popsize [4000, 110]
+	20/200
+	/300
+09AC2C = 09AC met parents keep fraction [0.0, 20/120] en popsize [4000, 120]
+	32/200
+	/300
+09AC2A = 09AC met parents keep fraction [0.0, 0.0] en popsize [4000, 100]
+	34/200
+	/300
 09ACD = 09AC + mixen, 
 	88/500=17.6%
+09AC2M = 09AC + mixen, 
+	/200
+09AC2 = 09AC met parents keep fraction [0.0, 100/200] en popsize [4000, 200]
+	153/1000=15.3%, (per 100: 20, 20, 15, 12, 18, 8, 20, 11, 16, 13)
+09ACC = 09AC + taboo_value, 
+	82/500=16.4%, omslagpunt=6212
+09AC2T = 09AC2 + taboo_value, 
+	/200
 
-09AC2 = 09AC, controle, want 09AC3 is zo laag
-	85/500=17.0%, (per 100: 20, 20, 15, 12, 18), anders, maar blijft heel hoog
+09AC = 09AA +  parents keep fraction [0.5, 0.5]
+	solved 155/1000=15.5%, max evals 300000, p stuck at subopt 84.4%
+
+09AN2 = 09AC met N=[2000,100]
+	47/300=15.7%, 18+12+17
+09AN4 = 09AC met N=[4000,100]
+	13/100=13.0%, 13+
+
 
 
 

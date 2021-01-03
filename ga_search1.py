@@ -261,11 +261,8 @@ def ga_search_impl(toolbox):
                     toolbox.parachute_offspring_count += len(offspring)
                 else:
                     toolbox.normal_offspring_count += len(offspring)
-                childN = toolbox.nchildren[toolbox.parachute_level]
-                parents_fraction = max(0, 1 - childN / popN)
-                if popN == 200:
-                    assert math.isclose(parents_fraction, 0.5)
-                population = random.sample(population, k=int(len(population)*parents_fraction))
+                fraction = toolbox.parents_keep_fraction[toolbox.parachute_level]
+                population = random.sample(population, k=int(len(population)*fraction))
                 population += offspring
                 population.sort(key=lambda item: item.eval)
                 if stuck_count == 0:

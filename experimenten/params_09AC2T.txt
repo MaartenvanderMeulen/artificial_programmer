@@ -28,7 +28,7 @@
         1000
     ],
     "parents_keep_fraction": [
-        0.5,
+        0.0,
         0.5
     ],
     "max_individual_size": 40,
@@ -38,8 +38,8 @@
     "parent_selection_strategy": 2,
     "weight_complementairity": 0.3,
     "penalise_non_reacting_models": true,
-    "evolution_strategies": ["parents_fraction"], 
-    "metaevolution_strategies": [], 
+    "evolution_strategies": [], 
+    "metaevolution_strategies": ["taboo_value"], 
     "idea_victor": false,
     "hops": 1
 }

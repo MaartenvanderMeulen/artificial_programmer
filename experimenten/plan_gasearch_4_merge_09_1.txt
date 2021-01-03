@@ -256,4 +256,5 @@ for seed in `seq 1000 1 1399` ; do tsp -n python solve_problems.py $seed 09AC4 ;
 
 tsp | head -33 ; grep solved lo* | wc ; grep evals lo* | wc ; grep -L evals lo* | wc ; ls lo* | wc
 
+for id in `tsp | grep queued | grep 09AC2B | sed 's/ queued.*//'` ; do tsp -r $id ; done
 
