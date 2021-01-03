@@ -258,3 +258,10 @@ tsp | head -33 ; grep solved lo* | wc ; grep evals lo* | wc ; grep -L evals lo* 
 
 for id in `tsp | grep queued | grep 09AC2B | sed 's/ queued.*//'` ; do tsp -r $id ; done
 
+(if_then_else 
+	(len sorted_data)
+	(if_then_else
+		(le elem (first sorted_data))
+		(cons elem sorted_data) 
+		(const (first sorted_data) (merge_elem elem (rest sorted_data))))
+	(cons elem sorted_data))
