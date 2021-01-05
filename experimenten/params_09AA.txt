@@ -10,6 +10,7 @@
     "keep_path": false,
     "max_seconds": 3600,
     "max_evaluations": 300000,
+    "max_stuck_count": 99,
     "new_initial_population": true,
     "old_populations_folder": "tmp/08G",
     "analyse_best": false,
@@ -26,6 +27,10 @@
         3,
         1000
     ],
+    "parents_keep_fraction": [
+        1.0,
+        1.0
+    ],
     "max_individual_size": 40,
     "pcrossover": 0.4,
     "best_of_n_mut": 2,
@@ -35,5 +40,6 @@
     "penalise_non_reacting_models": true,
     "evolution_strategies": [], 
     "metaevolution_strategies": [], 
+    "idea_victor": false,
     "hops": 1
 }

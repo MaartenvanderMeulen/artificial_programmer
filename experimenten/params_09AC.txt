@@ -38,7 +38,7 @@
     "parent_selection_strategy": 2,
     "weight_complementairity": 0.3,
     "penalise_non_reacting_models": true,
-    "evolution_strategies": ["parents_fraction"], 
+    "evolution_strategies": [], 
     "metaevolution_strategies": [], 
     "idea_victor": false,
     "hops": 1
