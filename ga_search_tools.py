@@ -182,24 +182,25 @@ def load_initial_population_impl(toolbox, old_pops):
     population = []
     count_skipped = 0
     for old_pop in old_pops:
-        k = toolbox.pop_size[0] // len(old_pops)
-        # take sample of size k from the old population
-        codes = random.sample(old_pop, k=k) if k < len(old_pop) else old_pop
-        for code in codes:
-            deap_str = interpret.convert_code_to_deap_str(code, toolbox)
-            ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)
-            ind.deap_str = str(ind)
-            assert len(ind) == deap_len_of_code(code)
-            assert deap_str == ind.deap_str
-            if ind.deap_str in toolbox.ind_str_set or len(ind) > toolbox.max_individual_size:
-                count_skipped += 1
-                continue
-            toolbox.ind_str_set.add(ind.deap_str)
-            ind.parents = []
-            ind.eval = evaluate_individual(toolbox, ind)
-            if ind.eval == 0.0:
-                return None, ind
-            population.append(ind)
+        if len(old_pop) > 0:
+            k = max(1, toolbox.pop_size[0] // len(old_pops))
+            # take sample of size k from the old population
+            codes = random.sample(old_pop, k=k) if k < len(old_pop) else old_pop
+            for code in codes:
+                deap_str = interpret.convert_code_to_deap_str(code, toolbox)
+                ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)
+                ind.deap_str = str(ind)
+                assert len(ind) == deap_len_of_code(code)
+                assert deap_str == ind.deap_str
+                if ind.deap_str in toolbox.ind_str_set or len(ind) > toolbox.max_individual_size:
+                    count_skipped += 1
+                    continue
+                toolbox.ind_str_set.add(ind.deap_str)
+                ind.parents = []
+                ind.eval = evaluate_individual(toolbox, ind)
+                if ind.eval == 0.0:
+                    return None, ind
+                population.append(ind)
     return population, None
 
 

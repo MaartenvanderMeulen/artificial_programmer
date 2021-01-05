@@ -11,8 +11,8 @@
     "max_seconds": 3600,
     "max_evaluations": 1000000,
     "max_stuck_count": 13,
-    "new_initial_population": false,
-    "old_populations_folder": "tmp/09AN2",
+    "new_initial_population": true,
+    "old_populations_folder": "tmp/08G",
     "analyse_best": false,
     "show_path_depth": 1,
     "pop_size": [
