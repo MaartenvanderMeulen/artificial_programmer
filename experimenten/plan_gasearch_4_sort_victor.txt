@@ -2,14 +2,19 @@ Samenvatting resterende vragen
 done Elk individu is uniek (er komen geen dubbelen in de populatie voor).
      Verschillende individuals met dezelfde werking == dezelfde output staan in dezelfde familie
 done Hoeveel verschillende oplossingen.  Moeilijk te zeggen, maar van de kortste oplossing zijn er twee varianten
--    retrogade analyse.  TODO, bij alle oplossingen de parents erbij afdrukken
--    zie kopje "ANALYSE VAN DE ZOEKRUIMTE".
+done retrogade analyse.  TODO, bij alle oplossingen de parents erbij afdrukken
+	 Zie de email met de 3 eval kolommen : links de eval van de child, rechts de evals van de parets(s)
+	 daar kwam bijvoorbeels uit dat er 100 ontsnappingsroutes uit 77.6 zijn.
+done zie kopje "ANALYSE VAN DE ZOEKRUIMTE".
 	 een paar mogelijkheden:
 	 1) de ontsnapping uit het lokale optimum is wel mogelijk met de huidige populatie, maar die twee parents kruisen niet
 	 2) de beide parents voor de ontsnapping zitten steeds iet tegelijkertijd in de populatie
+	 Is onderzocht met de 200x200 analyse.  Conclusie : als ontsnappen mogelijk is, dan worden die parents gevonden en wordt ontsnapt.
 
 Focus op hoe te ontsnappen uit de 77.6
-- tests gaan doen van "opschuddingsmethoden" (operaties die meer muteren, crossen, generaties combineren, etc.) en dan zien of we wel uit die 77.6 ontsnappen.
+done tests gaan doen van "opschuddingsmethoden" (operaties die meer muteren, crossen, generaties combineren, etc.)
+	 en dan zien of we wel uit die 77.6 ontsnappen.
+	 Done : zie bijv de ontsnappingsroutes enail,
 
 
 ============================== 11 Dec
@@ -202,3 +207,262 @@ Vervolgens passen we dan weer dezelfde regel toe: als na die N evoluties zonder 
 Ik hoop dat dit helpt.
 
 Groeten, Victor.
+
+============================================ 19 Dec
+
+On Sat, 19 Dec 2020 at 18:45, Victor Allis <louis.victor.allis@gmail.com> wrote:
+
+    Beste Maarten,
+
+    Prachtige initiele restulaten! De 99.5% (dus 1/200) is 11 keer slechter dan de 94.6% (dus 11/200) en dat zien we in een 5x grotere oplossings kans. Dit bevestigt in elk geval dat ons concentreren op het meest flagrante voorbeeld van een slecht suboptimum (hoe slechter de waarde en hoe lastiger we eruit komen tellen beide mee), niet alleen effect heeft op dat suboptimum maar ook op de uiteindelijke oplossingskans.
+
+    Ik weet niet 100% zeker of ik je vraag volledig begrijp, maar ik denk dat je vraagt: "Hoe kwantificeer ik de mate van opschudding van een actie", zodat je op basis daarvan een vergelijking kan doen tussen verschillende opschudding. Als dat zo is, dan hieronder mijn mening daarover.
+
+    Het handigst is om dit te bekijken op drie niveau's, omdat er dan een logisch patroon ontstaat:
+    - Evolutie (dus: enkele normale iteratie)
+    - Meta-Evolutie (dus: enkelvoudige opschudding, gevolgd door normale iteraties)
+    - MetaMeta-Evolutie (dus: grote opschudding, gevolgd door normale iteraties en meerdere Meta-Evoluties).
+
+    Evolutie:
+    Een evolutiestap zelf bestaat in deze puzzel uit iets als "genereer 100 kinderen, en neem dan de beste 200 uit de 300 ouders+kinderen". Op die manier weet je zeker dat een evolutiestap nooit slechter wordt. ECHTER: je zou wel degelijk een evolutiestap kunnen klassificeren als "slechter, gelijk, beter", als je evaluatie daarvan alsvolgt is:
+    - Als de beste van de 100 kinderen slechter is dan de beste ouder, dan is de evolutiestap "slechter"
+    - Als de beste van de 100 kinderen gelijk is aan de beste ouder, dan is de evolutiestap "gelijk"
+    - Als de beste van de 100 kinderen beter is dan de beste ouder, dan is de evolutiestap "beter".
+    Hoewel "slechter" en "gelijk" leiden tot dezelfde evaluatie, je kunt toch verschil zien.
+
+    Als je op deze manier je evolutiestappen evalueert, dan kun je de stabiliteit van de evolutiestap definieren als het percentage gevallen dat "gelijk" is:
+    - Als functie EvolutieStap een functie is die geen crossover en geen mutatie doet, en simpelweg een van de ouders kiest, en je voldoende kinderen maakt, dan gaat de kans naar dat je gelijk blijft naar 100% als het aantal kinderen naar oneindig gaat. 
+    - Hoe minder kinderen je maakt en hoe sterker je crossover en mutatie zijn, hoe groter de kans dat je vooral nieuwe dingen onderzoekt. Als dat zo is, neemt het aantal gelijk af, en neemt het aantal slechter en beter toe. De vraag is nu hoeveel slechter en beter toenemen. Daar heb ik veel onderzoek naar gedaan.
+
+    Mijn Ervaring
+
+    Ik heb veel gekeken hiernaar bij mijn puzzels en het duurde een tijd voordat ik doorhad dat de toename van slechter en beter geheel afhankelijk is van waar je bent in de optimalisatie: 
+    - Als je de journey bekijkt van "random start oplossing" naar "optimum", dan geldt dat bij een random start oplossing, bijna elke oplossing die niet gelijk is, beter is. Het komt maar weinig voor dat een crossover die kiest uit de beste van 100 kinderen er niet in slaagt iets beters te zijn dan de random ouders. Dus, in het begin zijn bijna alle "niet-gelijk" oplossing beter en zeer weinig zijn slechter. Echter, als je vlak bij het optimum zit, dan is bijna elke afwijking van dat optimum een verslechtering, want er is maar heel weinig ruimte om beter te worden.
+    - Je kunt daarom niet een doel voor een hoeveelheid verbetering of verslechtering geven. Maar wat je verrassend wel kan doen: het aantal gelijke oplossingen als anchorpunt gebruiken: je wilt altijd ongeveer 50% gelijke oplossingen hebben. De logica daarachter is, dat de helft van je werk verliest, maar de waarde die je terugkrijgt is dat je stappen precies de juiste grootte zijn: de andere helft doet iets nuttigs.
+
+    Een kleine aanpassing hierin is nodig als "gelijk" niet een heel logische definitie heeft. De aanpassing dan is dat je wilt dat "gelijk en beter" maximaal 50% en dat "slechter" ongeveer 50% is. Dus, je doel is dat je je opschudding groter maakt, als minder dan 50% van je nieuwe oplossingen slechter zijn en de opschudding minder maakt, als meer dan 50% van je opschudding slechter zijn.
+
+    Parameteriseren van Evolutiestap
+
+    Je kunt jouw crossover+mutatie op verschillende manieren parameteriseren. Ik wil even 1 voorbeeld uitwerken:
+    - Laten we de 200 individuen in een generatie even als vast nemen (kunnen we ook varieren, maar dat kan later).
+    - Laten we de nieuwe kinderen als N (parameter) nemen en de procedure is: genereer N kinderen en kies dan de beste 200 uit de 200+N.
+
+    Als jij 0 kinderen genereert dan is elk generatie vreselijk.
+    Als je oneindig veel kinderen genereert dan zal minimaal 1 van hen gelijk of beter dan de beste oplossing zijn, dus dan is elke generatie perfect.
+
+    Dus, veel nieuwe kinderen is teveel en 0 nieuwe kinderen is te weinig. Je procedure van aanpassen kan nu zijn:
+    - Elke keer als ik een generatie doe en mijn beste kind is slechter dan mijn beste ouder, dan N:=N+1.
+    - Elke keer als ik een generatie doe en mijn beste kind is gelijk aan of beter dan mijn beste ouder, dan N:=N-1.
+
+    Het effect zal zijn dat in het begin je maar heel weinig nieuwe kinderen hoeft te genereren per generatie en pas als je een beetje vast komt te zitten, ga je grotere groepen kinderen maken.
+
+    META EVOLUTIE
+
+    Voor meta evolutie het idee is hetzelfde. Echter, de evaluatie is niet direct na de meta stap. Het is pas na de stabilisatie van de opvolgende evolutiestappen.
+
+    Dus, stel dat we een metaevolutie doen, zodra we N generaties van evoluties hebben gedaan zonder verbetering. Dan, na die ene metaevolutie is als het goed is het resultaat minder goed. Echter, dat betekent nog niets. Pas als we dan voldoende evolutiestappen hebben gedaan om weer N zonder verbetering te hebben, kunnen we pas evalueren of het beter, gelijk of slechter is.
+
+    Vervolgens passen we dan weer dezelfde regel toe: als na die N evoluties zonder verbetering de overall score beter/gelijk/slechter is dan kunnen we een conclusie trekken. Opnieuw: we will ongeveer 50% van de gevallen slechter worden  en 50% beter/gelijk.
+
+    Ik hoop dat dit helpt.
+
+    Groeten, Victor.
+
+============================================ 23 Dec
+
+Beste Maarten,
+
+Bedankt voor de update! Hier even een paar opmerkingen gegeven dat we deze week niet met elkaar spreken.
+
+1) Volgende stappen. Geheel mee eens. Alles suggesties voor veranderingen zijn in feite suggesties als: "dit soort dingen werkt meestal, dus laten we het proberen". Echter, waar mogelijk is echt snappen wat er gebeurt vaak veel handiger om vervolgens te begrijpen welke actie waarschijnlijk het probleem oplost.
+
+2) Iteraties/wall-time. Hoewel het op dit moment natuurlijk prima is dat je gewoon het afkapt op een bepaalde tijd, uiteindelijk vermoed ik dat je wel degelijk naar een logisch stopcriterium toe wilt, dat in feite zegt: "ik zit vast in een suboptimum, kan er niet uit ontsnappen, dus laten we maar stoppen.". Dat wil je zeker als je door middel van evoluties, metaevoluties, metametaevoluties EN autotuning van de grote van de stappen, ervoor kan zorgen dat zodra je gemakkelijk verbeteringen vindt, je kleine snelle stappen doet, en zodra je wat vast begint te lopen de stappen groter worden.  Als metafoor: stel dat je alle parachutes even lang laat zoeken en je hebt eindelijk een parachute die bij Everest Base Camp is aangekomen, een toppoging doet, en bij de Hillary steps te horen krijgt "time is up". Dat zou zonde zijn. Daarom wil je graag dat je criterium niet tijd wordt, maar "hoe groot is de kans dat ik nu in een suboptimum zit en dus de rest van de tijd niet veel zal doen". Overigens: dat zou ook betekenen dat sommige andere pogingen mogelijk korter kunnen duren.
+
+3) Dingen die niet werken. Ik ben benieuwd om daar verder over te praten wanneer we elkaar weer spreken. De post-mortem van dat soort zaken om ofwel te snappen waarom het niet werkt (wat helpt bij volgende stappen), of om te ontdekken welke tweak nodig was om het wel te laten werken is altijd razend interessant.
+
+Gefeliciteerd met je laatste dag morgen en prettige kerstdagen!
+
+Groeten, Victor.
+
+
+
+========================================= 25 Dec
+
+Beste Maarten,
+
+Dit is een cool experiment! Mooie manier om niet alleen te zien wat er gebeurt, maar ook wat er potentieel kan gebeuren. 
+
+Wat je in feite aantoont is dat in 60% van de runs de "genen" aanwezig waren om te ontsnappen en dat het dan niet al te lang (maximaal 5 iteraties) duurde om die genen in werking te krijgen. In die andere 40% waren de genen niet aanwezig, en hoewel het dan nog altijd mogelijk is om op de een of andere manier geluk te hebben, is het hoogst onwaarschijnlijk.
+
+Voor deze puzzel kunnen we natuurlijk 5 even als hardcoded "magic number" gebruiken. Voor de toekomst is het aardige dat je die 5 gemakkelijk via auto-tuning kunt krijgen (maar dat is van later zorg).
+
+Ik ben benieuwd naar welke ideeen het meest elegant zijn en tegelijkertijd een mooie opschuddingskans hebben.
+
+Om dat te onderzoeken kun je misschien het volgende doen:
+- Neem elk van de 12 runs die niet kunnen ontsnappen.
+- Probeer verschillende opschuddingsmethoden op elk van die 12 runs.
+- Onderzoek dan de 400,000 combinaties om te zien of er nu wel een ontsnapping inzit.
+
+Dat zou dan snel inzicht moeten geven van welke opschuddingen de beste kansen hebben.
+
+Groeten, Victor.
+
+====================================== 26 Dec
+
+Beste Maarten,
+
+Nadenkend over je email realiseerde ik me dat ik denk dat die 100 kinderen verbeterd kan worden door het te autotunen. Dat zou mogelijk een behoorlijk effect kunnen hebben op de evoluties (maar niet direct op het opschudden). Hier is het idee.
+
+Als je begint vast te zitten, vermoed ik dat het aantal kinderen dat je kiest van de 100 steeds kleiner wordt: in extremum heb je 200 parents die allemaal 77.6 zijn en de kinderen zijn of hetzelfde of minder goed en je kiest dan steeds minder van die 100 als kinderen. In het begin, als je random parents hebt, dan is bijna elk kind beter dan zijn parents en kies je waarschijnlijk telkens alle 100 kinderen. Mijn vermoeden is dus dat als je begint van de 100 kinderen vrijwel alle bij de nieuwe generatie horen en als je in een local optimum komt, het aantal kinderen dat door mag naar de volgende ronde steeds kleiner wordt.
+
+Mijn gevoel is nu dat dat geen goede situatie is. Het betekent in feite dat je generaties steeds minder efficient worden: als je van 200 de helft vervangt, dat is vrij efficient. Als je uiteindelijk maar 10% vervangt: niet zo efficient. 
+
+Waarom verander je de generatie niet met de volgende regel:
+- Genereer net zoveel kinderen als nodig is om te komen tot N kinderen die in de nieuwe generatie terecht komen. N kan dan 50 zijn, of 100, whatever het beste getal lijkt. 
+
+Het zou dan betekenen dat in het begin je in feite slechts N kinderen genereert of zo, maar naarmate je dichter bij een lokaal optimum komt, je generaties langzamer worden, omdat je meer kinderen moet maken, maar je voorkomt daarmee inefficientie.
+
+
+Een tweede punt waar ik mee zat was hoe je de genenpool diverse houdt. Wat een risico is dat er een sterke parent tussen zit die allemaal kinderen genereert die op de parent lijken en allemaal goede scores hebben. Andere parents krijgen dan geen kans.
+
+Stel nu dat je het volgende zou doen:
+- Als A en B kind C krijgen, en kind C is slechter dan A en B --> verwerp C (ook al zit C in de top 200)
+- Als A en B kind C krijgen en C is beter dan B (en B is slechter dan A) houdt C en elimineer B (ook al is er een andere parent D die slechter is dan C)
+
+Op deze manier is er dan zeker dat je de genenpool verbetert.
+
+
+Je zou deze ideeen als volgt kunnen combineren in een process:
+- Neem de 200 parents.
+- Splits ze in 100 groepjes van 2.
+- Pas de procedure hierboven erop toe: elke keer dan het kind beter is dan de slechste ouder, dan heb je je nieuwe 2 (beste ouder en het kind)
+- Stel dat 20 groepjes, produceren een kind dat slechter is. Hergroepeer die 20 groepjes in 20 nieuwe (random) groepjes van 2 parents. 
+- Herhaal dit totdat elk groepje van parents een goed kind opleverde of dat je het N keer geprobeerd hebt, of dat je minder dan 10 parents over hebt of zo.
+
+Dit leidt dan altijd tot (bijna) 100 nieuwe kinderen en het betekent ook dat terwijl de totale pool beter wordt, het lastig is voor 1 individu om te gaan overheersen.
+
+Groeten, Victor.
+
+=========================================  28 Dec
+
+Beste Maarten,
+
+Erg interessante resultaten.
+
+DETAILS
+
+Sommige van de resultaten klinken redelijk logisch, hetgeen dan suggereert dat de implementatie waarschijnlijk ook correct is. Voor wat betreft de 0/30 voor de nieuwe methode: laten we even de 1000 afwachten (maar de kans dat dit nog hersteld is klein). Afhankelijk van de uitkomst is de kans wat groter dat er een implementatiefout in zit. Wat ik daarmee bedoel is: zelfs als dit niet zou werken, zou ik verwachten dat het in elk geval een beetje werkt.
+
+Inge's idee is een uitstekende, niet alleen wat betreft de resultaten, die erg goed zijn, maar het is in lijn met dat in het algemeen meer randomisation is beter dan meer gerichte acties. Wat ik daarmee bedoel is dat elke stap die selectief is, vaak als klein positief effect kan hebben dat je iets efficienter bent, maar als groot negatief effect kan hebben, dat je een deel van de zoekruimte niet ziet. Dat laatste kan maken dat je nooit bij je eindoplossing komt.
+
+HIGH-LEVEL
+
+Het goede nieuws is natuurlijk dat je baseline 40/1000 is en dat de beste nu 155/1000 is. Dus, dat is een enorme vooruitgang. In ons zoeken naar oplossingen kunnen we dus binnenkort een nieuwe baseline zetten met die methode en dan weer de plot maken van oplossingswaarden en frequenties en zien of we nu een ander beeld hebben van wat het belangrijkste lokale optimum is.
+
+Daarnaast kunnen we nadenken over wat we nu precies verandert hebben, wat we vrijwel zeker zien als de grootste bijdrage, en welke dingen niet werken. Met wat variatie kunnen we dan zien of we ook echt begrijpen waarom dit beter is. Dat geeft vaak inzicht in wat de volgende stap moet zijn.
+
+Wat betreft het nog draaiende experiment, zonder op enige wijze te willen beargumenteren dat er een implementatiefout in zit, een opmerking uit mijn QA-AE (Quality Assurance Algorithm Expert) rol bij Quintiq. Ik adviseerde daar bij vele projecten waar we optimizers implementeerden en regelmatig hoorde ik dat een bepaald idee niet werkte. Soms was dat logisch, maar af en toe ook totaal niet. Wanneer ik dan in meer detail keek bleek in de overgrote meerderheid van de gevallen dat ofwel het idee niet helemaal was begrepen, of dat er gewoon een implementatiefout in zat. 
+
+Dat leidde tot 1 van mijn lijfspreuken die was "Optimizers Typically Don't Work because the Correct Idea was Implemented Incorrectly, instead of An Incorrect Idea that was Implemented Correctly". Dus, telkens als we dachten "X is een goed idee!" en dan werd X geimplementeerd en het resultaat was slecht, in plaats van meteen door te schakelen naar "Misschien is Y een goed idee", besteedden we behoorlijk wat tijd om uit te zoeken waarom X niet werkte, door wat extra details af te drukken en te laten begrijpen wat er gebeurd. Heel vaak vonden we dan dat het algorithm niet echt "X" deed. Regelmatig bleek na fixen dat X het wel degelijk deed.
+
+Dus, als het idee van de marriage van 2 parents, 1-kind policy en dan 2 bewaren niet goed werkt, zouden we even wat extra stats/data moeten verzamelen om te snappen wat er niet goed werkt.
+
+EEN DETAIL VRAAG
+
+Ik heb naar aanleiding van Inge's randomization een vraag over de 2 parents die je kiest: doordat we nu met de 2-parent strategie al zorgen dat we niet teveel genen verliezen, denk ik dat je mogelijk daar geen familiestrategie nodig hebt:
+- Neem gewoon willekeurige groepjes van 2 parents zonder op enige manier voorrang te geven aan wie ook. Dus, als je 200 parents hebt, 40 mutaties doet, en 80 paren maakt, dan werkelijk "sort 200 parents in random order, neem telkens de 2 voorraan de wachtrij en stop ze in gedwongen huwelijk, en stuur de 40 laatste naar de mutatiecode".
+
+Anyway, erg interessant allemaal weer!
+
+Groeten, Victor.
+
+
+============================================ 30 Dec
+
+Beste Maarten,
+
+Dit is ongeveer wat ik beschreef, dus als het dit doet en niet geweldig werkt, dan ben ik benieuwd naar een paar van de statistieken:
+- Er zijn vijf soorten uitkomsten van een paring: kind is beste van de drie, gelijk aan beste parent, tussen de parents, gelijk aan slechtste parent, of slechter dan de parents. Hoe vaak komt elk van deze voor en hoe verandert deze verdeling van het begin (alles random) tot het einde (convergentie in suboptimum).
+- Ik ben verbaasd dat het nodig is om dit 20 keer te doen. Het suggereert dat een groot aantal paringen via crossover alleen maar slechtere kinderen produceert. Is dat zo? De stats zouden dat moeten uitwijzen. Het suggereert dat de crossover een relatief lage success rate heeft.
+
+Groeten, Victor.
+
+=========================================== 1 Jan
+
+Beste Maarten,
+
+Dit zijn interessante details! Als ik er even high-level naar kijk, dan zou je het volgende kunnen zeggen:
+1) Elke situatie waarin c=a of c=b of beide is eigenlijk een mislukking, omdat je dan geen variantie krijgt. In feite is je operatie dan te oppervlakkig en heb je geen beweging meer. Elke situatie waarin c < a is success, omdat we een echte verbetering hebben. a < c < b is een goede, maar mislukte poging en b < c is een slechte en mislukte poging. 
+2) Echter, het is belangrijk dat de som van deze drie "pogingen" een minimaal percentage is, in mijn streven zo'n 50%. Dus, als som{c<a, a<c<b, b<c} <= 50%, dan zou je de crossover en/of mutatie willen vergroten.
+ 3) Als ik nu kijk naar de getallen (na de eerste 3 generaties van 4000 individuen), dan is me niet helemaal duidelijk hoe ik de situatie b<c kan tellen (er zijn verschillende colummen en 1 daarvan lijkt mutatie te zijn). Echter, mijn indruk is dat de som van deze getallen heel snel naar 0 gaat. Dat betekent dat de crossover en/of mutatie samen niet genoeg lijken te doen! Dus, we moeten harder schudden, niet alleen als "opschudding" maar ook als normale operaties.
+4) Als de laatste kolom de mutatie is, dan lijkt het erop dat de mutatie de grootste positieve impact heeft, omdat het de enige is die na verloop van tijd nog wat doet.
+
+Kortom, als ik dit goed interpreteer dan denk ik dat de evolutie te weinig impact heeft, dat we niet aggressief genoeg mutereren/crossoveren. 
+
+Ik ben benieuwd wat jij denkt!
+
+Groeten, Victor.
+
+P.S. Happy New Year!
+
+
+============================================ 2 Jan
+
+este Maarten,
+
+Bedankt voor je uitgebreide email.
+
+Het is duidelijk dat we langzamerhand puzzelstukjes aan het verzamelen zijn voor deze puzzel en dat al de experimenten en de verzameling van gegevens over experimenten ons helpt om de puzzel langzaam op te lossen. Tegelijkertijd, zoals je zegt: er zijn nog een hoop stukjes die je aan het verzamelen bent en dat duurt nog even, wat natuurlijk prima is.
+
+Dit is het onderdeel van het onderzoek dat ik erg leuk vindt: je hebt een hoop experimenten te doen en dan vervolgens te kijken wat eruit komt om te bepalen of we het snappen en dat het in lijn is met verwachtingen, of juist niet. 
+
+Ik wacht rustig even af wat je verdere resultaten zijn en hoop dat binnenkort de stukjes gezamenlijk inzicht in het overall plaatje geven.
+
+Tot de volgende email!
+
+Groeten, Victor.
+
+============================================ 3 Jan
+
+Victor Allis
+	
+3 Jan 2021, 17:56 (2 days ago)
+	
+to me
+Beste Maarten,
+
+Bedankt voor de update!
+
+Die 800 euro of zo die je aan die nieuwe chip hebt besteed lijk je er al bijna uit te hebben :-). Geweldig dat je een prive supercomputer kunt hebben die continue bezig is met nuttige dingen. Zeker nu verschillende van de verbeteringen maar zeer klein, is het erg belangrijk dat we statistisch relevante resultaten krijgen (dus: 1000 runs).
+
+De komende stappen die je beschrijft geven weer belangrijke puzzelstukjes, dus ik kijk uit naar de uitkomst.
+
+Voor wat betreft de 14 iteraties: dat is in lijn met mijn eerdere comments hierover (ik nam altijd 5 iteraties als voorbeeld, maar jouw analyze van waarom 14 lijkt logisch). Ik denk dat dat erg belangrijk is. Voor wat betreft de variatie in duur van iteraties: die O(n^2) is lastig en ik denk dat het daarom goed kan zijn om dat te linearizeren. Ik bedoel hiermee het volgende:
+
+- Stel dat normaal gesproken je N=10 hebt en dus 100 vergelijkingen moet maken. Als je ze dan alle 100 doet, dan weet je zeker dat de beste optie ertussen zit.
+- Stel nu dat je in plaats daarvan, zeg, slecht 10 random opties bekijkt. Dan is de beste daarvan gemiddeld onderdeel van de beste 10% van de kinderen.
+- Als N=20, dan zit je bij de 5% van de kinderen.
+- Als N=100 dan bekijk je maar 100 van de 10,000 opties, maar toch vind je een kind dat bij de beste 1% zit (gemiddeld).
+Dus, als je linear toeneemt met de lengte van de individuen, dan mis je een steeds groter factor, maar zit je toch steeds dichter bij de optimale.
+
+De vraag is nu: hoe erg is het dat je niet het optimale kind zult vinden? Dat weet ik niet, maar dat kunnen we natuurlijk eenvoudig testen:
+- Als je bij een van je experimenten een paar dingen hiervan bijhoudt, dan vertelt ons dat snel genoeg iets. Bijv:
+- Houd bij welk percentage van de kinderen allemaal dezelfde optimale kind waarde hebben.
+- Houd bij voor de 1%, 2%, 5% en 10% kinderen wat hun gemiddelde afwijking is van de optimale waarde. Dus: als je 100 kinderen hebt, sorteer de uitkomst op 0-99 met 0 de optimale en vraag voor 1, 2, 5 en 10 wat hun afwijking is percentueel van nummer 0.
+
+We zouden kunnen vinden dat meestal het beste kind veel beter is dan de anderen en dat daarom niet alle opties bekijken vreselijk is. We kunnen ook vinden dat meestal er vele verschillende optimale zijn, zodat zolang we 1 van de kinderen in de top-5% vinden, we meestal success hebben. In dat geval kunnen we dit deel veel efficienter maken.
+
+GO
+
+And now for something completely different ...
+
+Ik merkte dat in mijn dagelijkse ritueel hier in Florida ik meestal rond een uur of 8-9 's avonds wel even genoeg had van mijn ActiVote bezigheden. Een tijdje lang las ik dan een boek 's avonds of keek ik wat televisie, maar dat kon me niet echt boeien. Sinds een paar dagen heb ik mijn Go-Programma uit 2017 afgestoft en ben eens gaan kijken waar ik was blijven hangen, met het idee om een uurtje per dag daaraan te besteden. Dat heb ik gedaan en ik maak dagelijks een beetje voortgang, wat erg leuk is. 
+
+Op dit moment ben ik nog bezig het 3x3 bordje op te lossen. Dat is op zich erg eenvoudig, maar het aardige is dat als beide spelers wat minder optimale zetten doen het erg gemakkelijk is om allerlei herhaling van zetten te krijgen, wat leidt tot het Graphy History Interaction Problem. Ik probeer dat in mijn graaf goed op te lossen zodat het efficient hiermee omgaat en toch altijd de juiste oplossing geeft. Uiteindelijk is dat belangrijk bij diepere problemen.
+
+In any case, als je geinteresseerd ben, zal ik je laten weten wat ik tegenkom tijdens ons volgende gesprek. Dat is donderdag, toch?
+
+Groeten, Victor. 
+
+
