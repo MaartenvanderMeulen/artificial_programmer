@@ -278,7 +278,8 @@ rerun 09AA met 300000 evaluaties : 22 Dec
 09AA : 6 Jan, maar 47 solved ??
 	oplijsten van oplossingen in archive/09AA_47, 09AA_40, en 09AA. Waar lijkt 09AA op?
 
-In 09AC: 23,24 komt door aanpassing math.isclose naar ==.  Maar het regel 45 verschil snap ik niet
+In 09AC: 23,24 komt door aanpassing math.isclose naar ==.  Maar het regel 45 verschil snap ik niet.
+Is verder niet zo belangrijk, er zal wel een verklaring voor zijn, de andere 999 runs zijn gelijk.
 (base) :) for f in lo* ; do diff $f ../09AC_155/$f ; done
 23,24c23,24
 < gen 19 best  45.360 sc 0 goc 0 taboo set()
@@ -290,3 +291,17 @@ In 09AC: 23,24 komt door aanpassing math.isclose naar ==.  Maar het regel 45 ver
 < stopped	merge_elem	40	gen	262559	evals
 ---
 > stopped	merge_elem	40	gen	261861	evals
+
+Anyway, er is blijkbaar een verschil tussen 09AA met maxevals 300000 van 19-22 Dec en nu.
+Bij 09AA kunnen we 19 dec output vergelijken met nu.
+
+Oorzaak mogelijk:
+er is een verschil tussen:
+                population = random.sample(population, k=int(len(population)*fraction))
+en
+                if fraction < 1:
+                    population = random.sample(population, k=int(len(population)*fraction))
+
+Om 12:39 zijn er 7 solved's, en die komen overeen met de 09AA_40 versie van 22 Dec.  Pff.
+Resultaten van 09BY* moeten even overnieuw, maar zullen niet verschillen.
+

@@ -1,0 +1,41 @@
+beschrijving experimenten met "samenvoegen vastgelopen eindpopulaties en doorgaan met zoeken"
+
+Eindpopulaties.
+Ik heb twee zoektechnieken gebruikt om eindpopulaties te maken
+- '40/1000'
+- en '155/1000', dit is de 40/1000 maar met iedere iteratie 50% van de parents weggooien ("idee Inge")
+Dit geeft twee sets eindpopulaties:
+- 960 vastgelopen eindpopulaties van de 40/1000 versie en
+- 845 vastgelopen eindpopulaties van de 155/1000 versie
+
+Op deze 2 eindpopulaties zijn 4 verschillende zoektechnieken onderzocht:
+- 155/1000
+- 155/1000 zonder parachuting
+- 40/1000
+- 40/1000 zonder parachuting
+
+Resultaten van deze 8 combinaties
+eindpop  daarna        parachuting      score
+155/1000 155/1000      Ja               1000/1000
+155/1000 155/1000      Nee              2/100      error loopt op per generatie!
+155/1000 40/1000       Ja               100/100
+155/1000 40/1000       Nee              14/100
+40/1000  155/1000      Ja               1000/1000
+40/1000  155/1000      Nee              3/50       error loopt op per iteratie!
+40/1000  40/1000       Ja               48/50
+40/1000  40/1000       Nee              9/50       1e versie van deze techniek rond 17 December
+
+
+bespreking resultaten "doorgaan op samengevoegde vastlopers"
+- parachuting is essentieel bij doorgaan met zoeken op samengevoegde vastlopers
+  Parachuting ontbrak in de eerste test met "doorgaan op samengevoegde vastlopers" rond 17 dec
+- als parachuting gebruikt wordt is er haast geen verschil meer bij "doorgaan" tussen 40/1000 en 155/1000.
+- Zeer gespecialiseerde vastlopers (resultaten van 155/1000) samenvoegen zonder parachuting
+  werkt niet als 50% van de parents random verwijderd wordt ("methode Inge").
+  Het lukt dan blijkbaar niet om voldoende genetisch materiaal door te geven aan de kinderen,
+  kinderen zijn slechter dan de ouders.  En als de ouders verwijderd worden, dan neemt de chaos toe.
+
+===================================== oorzaak 10:
+- quantilen experiment.  Alle 4 de quantielen waren 100/100
+- 77.6 experiment.  37/100 op (3) runs gevult met eindpopulaties met waarde 77.6 
+- 42.0 experiment.  ??/100 op (16) runs gevult met eindpopulaties met waarde 77.6 

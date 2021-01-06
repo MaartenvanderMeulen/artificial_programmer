@@ -163,14 +163,29 @@ def generate_initial_population_impl(toolbox):
     return population, None
 
 
-def read_old_populations(old_populations_folder, prefix):
+def read_old_populations(toolbox, old_populations_folder, prefix):
     old_pops = []
+    evals = []
     for filename in os.listdir(old_populations_folder):
         if filename[:len(prefix)] == prefix:
             old_pop = interpret.compile(interpret.load(old_populations_folder + "/" + filename))
             if len(old_pop) > 0:
-                old_pops.append(old_pop)
-    return old_pops
+                code = old_pop[0]
+                deap_str = interpret.convert_code_to_deap_str(code, toolbox)
+                ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)
+                ind.deap_str = str(ind)
+                v = evaluate_individual(toolbox, ind)
+                old_pops.append((old_pop, v))
+                evals.append(v)
+    evals.sort()
+    for v in evals[-40:]:
+        print(v)
+    hi_index = len(evals) * toolbox.old_populations_quartile // 4
+    lo_index = hi_index - len(evals) // 4
+    lo = evals[lo_index]
+    hi = evals[hi_index-1]
+    result = [old_pop for old_pop, v in old_pops if v > 42.0]
+    return result
 
 
 def deap_len_of_code(code):
@@ -260,7 +275,7 @@ def generate_initial_population(toolbox):
     if toolbox.new_initial_population:
         return generate_initial_population_impl(toolbox)
     else:
-        old_pops = read_old_populations(toolbox.old_populations_folder, "pop")
+        old_pops = read_old_populations(toolbox, toolbox.old_populations_folder, "pop")
         return load_initial_population_impl(toolbox, old_pops)
 
 
