@@ -43,5 +43,19 @@
 09AN2S = 09AN2 met max_stuck_count=13 en max_evaluations=1000000
 	57/300, 15+18+24
 
+09BX1 : als 09B op 09AC, maar zonder parachuten
+	2/100, maar ALLE runs hebben een steeds slechtere evaluatie, in dat proces vinden 2% toevallig wel de oplossing
+09BX2 : als 09B op 09AC, maar met parent_keep_fraction 1.0
+	100/100
+09BX3 : als 09B op 09AC, maar zonder parachuten en met parent_keep_fraction 1.0
+	14/100, dit lijkt op het 11 Dec experiment, ze blijven meestal meteen hangen.
+
+09BY1 : als 09BX1 maar op 09AA
+	3/50 : ook hier steeds slechtere evaluaties
+09BY2 : als 09BX2 op 09AA
+	48/50 : solved 29 op generatie 5, 16 ervoor, 3 erna; stopped blijft hangen in 14.185 suboptimum
+09BY3 : als 09BX3 op 09AA
+	9/50 : solved gen's 7 9 10 11 13 23 25 28 28; stopped blijft hangen in 14.185 suboptimum
+
 
 

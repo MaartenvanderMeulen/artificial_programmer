@@ -1,20 +1,16 @@
-Samenvatting resterende vragen
-done Elk individu is uniek (er komen geen dubbelen in de populatie voor).
-     Verschillende individuals met dezelfde werking == dezelfde output staan in dezelfde familie
-done Hoeveel verschillende oplossingen.  Moeilijk te zeggen, maar van de kortste oplossing zijn er twee varianten
-done retrogade analyse.  TODO, bij alle oplossingen de parents erbij afdrukken
-	 Zie de email met de 3 eval kolommen : links de eval van de child, rechts de evals van de parets(s)
-	 daar kwam bijvoorbeels uit dat er 100 ontsnappingsroutes uit 77.6 zijn.
-done zie kopje "ANALYSE VAN DE ZOEKRUIMTE".
-	 een paar mogelijkheden:
-	 1) de ontsnapping uit het lokale optimum is wel mogelijk met de huidige populatie, maar die twee parents kruisen niet
-	 2) de beide parents voor de ontsnapping zitten steeds iet tegelijkertijd in de populatie
-	 Is onderzocht met de 200x200 analyse.  Conclusie : als ontsnappen mogelijk is, dan worden die parents gevonden en wordt ontsnapt.
+TODO
+- 09B op 09AC (eerst die afmaken), en op 09AA
+- 09B zonder parachuting, dat ging heel vreemd op 09AS2S.  Is dat ook bij 09AA en 09AC?  Hoe komt dat gedrag?
 
-Focus op hoe te ontsnappen uit de 77.6
-done tests gaan doen van "opschuddingsmethoden" (operaties die meer muteren, crossen, generaties combineren, etc.)
-	 en dan zien of we wel uit die 77.6 ontsnappen.
-	 Done : zie bijv de ontsnappingsroutes enail,
+EXTRA OUTPUT
+- graag cx c<a<b, c=a<b, a<c<b, a<b=c, a<b<c,  c<a=b, c=a=b, a=b<c, mut c < a, c=a, a<c in de uitvoer
+- en aantal individuals met de hoogste waarde
+- aantal families met de hoogste waarde, en totaal aantal families
+
+SOMEDAY
+- local seach : ipv beste kind, child.eval + weight * family_size_relative_or_ranked.
+  Weight zodanig dat 50% van de child.evals gelijk aan een weight==0 child.eval.
+
 
 
 ============================== 11 Dec

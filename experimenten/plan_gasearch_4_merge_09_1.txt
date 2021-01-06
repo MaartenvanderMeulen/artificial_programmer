@@ -265,3 +265,28 @@ for id in `tsp | grep queued | grep 09AC2B | sed 's/ queued.*//'` ; do tsp -r $i
 		(cons elem sorted_data) 
 		(const (first sorted_data) (merge_elem elem (rest sorted_data))))
 	(cons elem sorted_data))
+
+================================ 6 Jan
+uitklaren hoe het zit met 09AA.
+
+archive/09A : 10 Dec
+probleem met reproduceren 09A.  Uiteindelijk gelukt (oorzaak verschil in toegestane functies in problem file)
+archive/09AA_47 : 13 Dec
+de params_09AA.txt van 18 dec had nog max seconds 1200
+rerun 09AA met 300000 evaluaties : 22 Dec
+09AA_40 : 29 Dec
+09AA : 6 Jan, maar 47 solved ??
+	oplijsten van oplossingen in archive/09AA_47, 09AA_40, en 09AA. Waar lijkt 09AA op?
+
+In 09AC: 23,24 komt door aanpassing math.isclose naar ==.  Maar het regel 45 verschil snap ik niet
+(base) :) for f in lo* ; do diff $f ../09AC_155/$f ; done
+23,24c23,24
+< gen 19 best  45.360 sc 0 goc 0 taboo set()
+< gen 20 best  45.360 sc 0 goc 0 taboo set()
+---
+> gen 19 best  45.360 sc 3 goc 0 taboo set()
+> gen 20 best  45.360 sc 4 goc 0 taboo set()
+45c45
+< stopped	merge_elem	40	gen	262559	evals
+---
+> stopped	merge_elem	40	gen	261861	evals

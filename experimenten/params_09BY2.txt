@@ -28,8 +28,8 @@
         1000
     ],
     "parents_keep_fraction": [
-        0.5,
-        0.5
+        1.0,
+        1.0
     ],
     "max_individual_size": 40,
     "pcrossover": 0.4,
