@@ -165,7 +165,6 @@ def generate_initial_population_impl(toolbox):
 
 def read_old_populations(toolbox, old_populations_folder, prefix):
     old_pops = []
-    evals = []
     for filename in os.listdir(old_populations_folder):
         if filename[:len(prefix)] == prefix:
             old_pop = interpret.compile(interpret.load(old_populations_folder + "/" + filename))
@@ -176,15 +175,12 @@ def read_old_populations(toolbox, old_populations_folder, prefix):
                 ind.deap_str = str(ind)
                 v = evaluate_individual(toolbox, ind)
                 old_pops.append((old_pop, v))
-                evals.append(v)
-    evals.sort()
-    for v in evals[-40:]:
-        print(v)
-    hi_index = len(evals) * toolbox.old_populations_quartile // 4
-    lo_index = hi_index - len(evals) // 4
-    lo = evals[lo_index]
-    hi = evals[hi_index-1]
-    result = [old_pop for old_pop, v in old_pops if v > 42.0]
+    old_pops = random.sample(old_pops, k=toolbox.old_populations_samplesize)
+    values = [v for old_pop, v in old_pops]
+    vmin = min(values)
+    vavg = sum(values) / toolbox.old_populations_samplesize
+    toolbox.f.write(f"oldpops_info\t{toolbox.old_populations_samplesize}\t{vmin:.3f}\t{vavg:.3f}\n")
+    result = [old_pop for old_pop, v in old_pops]
     return result
 
 

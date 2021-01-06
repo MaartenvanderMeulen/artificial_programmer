@@ -14,6 +14,7 @@
     "new_initial_population": false,
     "old_populations_folder": "tmp/09AC",
     "old_populations_quartile": 1,
+    "old_populations_samplesize": 1,
     "analyse_best": false,
     "show_path_depth": 1,
     "pop_size": [

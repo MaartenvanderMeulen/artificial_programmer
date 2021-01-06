@@ -36,6 +36,12 @@ bespreking resultaten "doorgaan op samengevoegde vastlopers"
   kinderen zijn slechter dan de ouders.  En als de ouders verwijderd worden, dan neemt de chaos toe.
 
 ===================================== oorzaak 10:
-- quantilen experiment.  Alle 4 de quantielen waren 100/100
-- 77.6 experiment.  37/100 op (3) runs gevult met eindpopulaties met waarde 77.6 
-- 42.0 experiment.  ??/100 op (16) runs gevult met eindpopulaties met waarde 77.6 
+- quantilen experiment.  Zat bug in, moet overniew.
+- 77.6 experiment.  37/100 op (3) runs gevult met eindpopulaties met waarde >= 77.6 
+- 42.0 experiment.  51/100 op (16) runs gevult met eindpopulaties met waarde >= 42.0
+- samplesize experiment : 
+  1 50/200=25.0%
+  2 81/200=40.5%
+  3 56/100=56.0%
+  4 73/100=73.0%
+  8 ~92%
