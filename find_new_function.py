@@ -11,7 +11,6 @@ import time
 import json
 from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull, gp.from_string
 import ga_search1
-import ga_search2
 import ga_search_tools
 
 
