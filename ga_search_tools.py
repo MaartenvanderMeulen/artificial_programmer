@@ -167,15 +167,20 @@ def read_old_populations(toolbox, old_populations_folder, prefix):
     old_pops = []
     for filename in os.listdir(old_populations_folder):
         if filename[:len(prefix)] == prefix:
-            old_pop = interpret.compile(interpret.load(old_populations_folder + "/" + filename))
-            if len(old_pop) > 0:
-                code = old_pop[0]
-                deap_str = interpret.convert_code_to_deap_str(code, toolbox)
-                ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)
-                ind.deap_str = str(ind)
-                v = evaluate_individual(toolbox, ind)
-                old_pops.append((old_pop, v))
-    old_pops = random.sample(old_pops, k=toolbox.old_populations_samplesize)
+            if toolbox.old_populations_samplesize != 1 or filename == f"{prefix}_{toolbox.seed}.txt":
+                old_pop = interpret.compile(interpret.load(old_populations_folder + "/" + filename))
+                if len(old_pop) > 0:
+                    code = old_pop[0]
+                    deap_str = interpret.convert_code_to_deap_str(code, toolbox)
+                    ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)
+                    ind.deap_str = str(ind)
+                    v = evaluate_individual(toolbox, ind)
+                    old_pops.append((old_pop, v))
+                elif toolbox.old_populations_samplesize == 1:
+                    toolbox.f.write("RuntimeWarning: stopped because already solved, 0 evals\n")
+                    exit()
+    if toolbox.old_populations_samplesize != 1:
+        old_pops = random.sample(old_pops, k=toolbox.old_populations_samplesize)
     values = [v for old_pop, v in old_pops]
     vmin = min(values)
     vavg = sum(values) / toolbox.old_populations_samplesize

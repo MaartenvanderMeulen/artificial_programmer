@@ -12,7 +12,7 @@
     "max_evaluations": 1000000,
     "max_stuck_count": 13,
     "new_initial_population": false,
-    "old_populations_folder": "tmp/09AC",
+    "old_populations_folder": "tmp/09ACS",
     "old_populations_quartile": 1,
     "old_populations_samplesize": 1,
     "analyse_best": false,
