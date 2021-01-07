@@ -83,7 +83,11 @@ def basinhopper(toolbox):
         if toolbox.idea_victor:
             best, gen = ga_search2.ga_search_impl(toolbox)
         else:
-            best, gen = ga_search1.ga_search_impl(toolbox)
+            if "reenter_parachuting_phase" in toolbox.metaevolution_strategies:
+                import ga_search1p
+                best, gen = ga_search1p.ga_search_impl(toolbox)
+            else:
+                best, gen = ga_search1.ga_search_impl(toolbox)
         if toolbox.best_ind_file:
             ga_search_tools.write_population(toolbox.best_ind_file, [best], toolbox.functions)
         seconds = round(time.time() - toolbox.t0)

@@ -40,8 +40,10 @@ bespreking resultaten "doorgaan op samengevoegde vastlopers"
 - 77.6 experiment.  37/100 op (3) runs gevult met eindpopulaties met waarde >= 77.6 
 - 42.0 experiment.  51/100 op (16) runs gevult met eindpopulaties met waarde >= 42.0
 - samplesize experiment : 
-  1  76/300=25.3%
-  2 130/300=43.3%
-  3 184/300=61.3%
-  4 215/300=71.7%
-  8 276/300=92.0%
+  1  76/300= 25.3%
+  2 130/300= 43.3%
+  3 184/300= 61.3%
+  4 215/300= 71.7%
+  8 276/300= 92.0%
+ 16  48/ 50= 96.0%
+ 32  50/ 50=100.0%
