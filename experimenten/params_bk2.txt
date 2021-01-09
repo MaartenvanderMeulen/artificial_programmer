@@ -12,9 +12,9 @@
     "max_evaluations": 1000000,
     "max_stuck_count": 13,
     "new_initial_population": false,
-    "old_populations_folder": "tmp/09AC",
-    "old_populations_quartile": 4,
-    "old_populations_samplesize": 4,
+    "old_populations_folder": "tmp/acs",
+    "old_populations_quartile": 2,
+    "old_populations_samplesize": 2,
     "analyse_best": false,
     "show_path_depth": 1,
     "pop_size": [
@@ -22,7 +22,7 @@
         200
     ],
     "nchildren": [
-        2000,
+        4000,
         100
     ],
     "ngen": [

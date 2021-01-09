@@ -20,7 +20,7 @@ def f():
 
 
 class Toolbox(object):
-    def __init__(self, problem, functions):
+    def __init__(self, problem, functions, seed):
         problem_name, formal_params, example_inputs, evaluation_function, hints, _ = problem
         int_hints, var_hints, func_hints, solution_hints = hints
         pset = gp.PrimitiveSet("MAIN", len(formal_params))
@@ -53,10 +53,6 @@ class Toolbox(object):
         self.evaluation_function = evaluation_function
         self.functions = functions
         self.pset = pset
-        self.eval_cache = dict()
-        self.families_list = []
-        self.families_dict = dict()
-        self.leftovers = []
         self.solution_code_str = interpret.convert_code_to_str(solution_hints) # for monkey test
         deap_str = interpret.convert_code_to_deap_str(solution_hints, self)
         self.solution_deap_ind = gp.PrimitiveTree.from_string(deap_str, pset) # for finding shortest solution
@@ -65,37 +61,37 @@ class Toolbox(object):
             print("deap_str2", str(self.solution_deap_ind))
             raise RuntimeError(f"Check if function hints '{str(func_hints)}' contain all functions of solution hint '{str(solution_hints)}'")
         self.taboo_set = set()
+        self.seed = seed
+        self.reset()
+
+    def reset(self):
+        self.eval_cache = dict()
+        self.families_list = []
+        self.families_dict = dict()
+        random.seed(self.seed)
 
 
 def basinhopper(toolbox):
     for _ in range(toolbox.hops):
-        toolbox.eval_cache = dict()
         toolbox.eval_count = 0
         toolbox.eval_lookup_count = 0
-        toolbox.parachute_count = 0
-        toolbox.parachute_offspring_count = 0
-        toolbox.normal_offspring_count = 0
         toolbox.t0 = time.time()
         toolbox.t_interpret = 0
         toolbox.t_eval = 0
 
-        if toolbox.idea_victor:
-            best, gen = ga_search2.ga_search_impl(toolbox)
-        else:
-            best, gen = ga_search1.ga_search_impl(toolbox)
-        if toolbox.best_ind_file:
+        best, gen = ga_search1.ga_search_impl(toolbox)
+        if best and toolbox.best_ind_file:
             ga_search_tools.write_population(toolbox.best_ind_file, [best], toolbox.functions)
         seconds = round(time.time() - toolbox.t0)
         ga_search_tools.write_seconds(toolbox, seconds)
-        if best.eval == 0:
+        if best and best.eval == 0:
             code = interpret.compile_deap(best.deap_str, toolbox.functions)
             result = ["function", toolbox.problem_name, toolbox.problem_params, code]
             toolbox.f.write(f"solved\t{toolbox.problem_name}")
             if toolbox.extensive_statistics:                
                 toolbox.f.write(f"\t{gen}\tgen\t{len(best)}\tlen")
                 toolbox.f.write(f"\t{toolbox.eval_count}\tevals")
-                toolbox.f.write(f"\t{toolbox.eval_lookup_count}\telc\t{toolbox.parachute_count}\tpac")
-                toolbox.f.write(f"\t{toolbox.parachute_offspring_count}\tpoc\t{toolbox.normal_offspring_count}\tnoc")
+                toolbox.f.write(f"\t{toolbox.eval_lookup_count}")
             toolbox.f.write(f"\t{best.deap_str}")
             toolbox.f.write(f"\n")
             if toolbox.verbose >= 1:
@@ -113,7 +109,7 @@ def basinhopper(toolbox):
 
     
 def solve_by_new_function(problem, functions, f, params):
-    toolbox = Toolbox(problem, functions)
+    toolbox = Toolbox(problem, functions, params["seed"])
     toolbox.problem_name, toolbox.problem_params, _, _, _, _ = problem
     toolbox.monkey_mode = False
     toolbox.dynamic_weights = False # not toolbox.monkey_mode
@@ -151,7 +147,6 @@ def solve_by_new_function(problem, functions, f, params):
         toolbox.analyse_best = params["analyse_best"]
         toolbox.old_populations_quartile = params["old_populations_quartile"]
         toolbox.old_populations_samplesize = params["old_populations_samplesize"]
-        toolbox.seed = params["seed"]
     else:
         toolbox.analyse_best = False
     toolbox.optimise_solution_length = params["optimise_solution_length"]

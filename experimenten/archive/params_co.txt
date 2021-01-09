@@ -4,29 +4,27 @@
     "functions_file": "experimenten/functions_leeg.txt",
     "seed_prefix": 0,
     "skip_seeds": [],
-    "verbose": 1,
+    "verbose": 2,
     "optimise_solution_length": false,
     "extensive_statistics": true,
     "keep_path": false,
     "max_seconds": 3600,
     "max_evaluations": 1000000,
-    "max_stuck_count": 13,
-    "new_initial_population": false,
-    "old_populations_folder": "tmp/09AC",
-    "old_populations_quartile": 3,
-    "old_populations_samplesize": 3,
+    "max_stuck_count": 1,
+    "new_initial_population": true,
+    "old_populations_folder": "tmp/08G",
     "analyse_best": false,
     "show_path_depth": 1,
     "pop_size": [
-        4000,
-        200
+        20,
+        20
     ],
     "nchildren": [
-        2000,
-        100
+        10,
+        10
     ],
     "ngen": [
-        3,
+        1,
         1000
     ],
     "parents_keep_fraction": [
@@ -41,7 +39,7 @@
     "weight_complementairity": 0.3,
     "penalise_non_reacting_models": true,
     "evolution_strategies": [], 
-    "metaevolution_strategies": [], 
+    "metaevolution_strategies": ["reenter_parachuting_phase"], 
     "idea_victor": false,
     "hops": 1
 }
