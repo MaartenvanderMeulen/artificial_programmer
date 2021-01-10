@@ -11,8 +11,9 @@ import time
 import json
 from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull, gp.from_string
 from ga_search_tools import write_population, consistency_check, log_population
-from ga_search_tools import best_of_n, generate_initial_population, generate_initial_population_impl, refresh_toolbox_from_population
-from ga_search_tools import update_dynamic_weighted_evaluation
+from ga_search_tools import best_of_n, generate_initial_population, generate_initial_population_impl
+from ga_search_tools import update_dynamic_weighted_evaluation, refresh_toolbox_from_population
+from ga_search_tools import load_initial_population_impl, evaluate_individual, consistency_check_ind
 from ga_search_tools import crossover_with_local_search, cxOnePoint, mutUniform, replace_subtree_at_best_location
 
 
@@ -30,7 +31,8 @@ def select_parents(toolbox, population):
         
     # second attempt, hint of Victor:
     # * hoe beter de evaluatie hoe meer kans.  p_fitness = (1 - eval) ** alpha
-    # * hoe verder de outputs uit elkaar liggen hoe meer kans.  p_complementair = verschillende_outputs(parent1, parent2) / aantal_outputs
+    # * hoe verder de outputs uit elkaar liggen hoe meer kans.
+    # p_complementair = verschillende_outputs(parent1, parent2) / aantal_outputs
     # * p = (p_fitness(parent1) * p_fitness(parent2)) ^ alpha * p_complementair(parent1, parent2) ^ beta
     best_p = -1
     assert toolbox.best_of_n_cx > 0
@@ -141,143 +143,87 @@ def generate_offspring(toolbox, population, nchildren):
                         toolbox.f.write(f"\t{parent.eval:.3f}")
                     toolbox.f.write(f"\n")
                 offspring_escapes_count += 1
-    offspring.sort(key=lambda item: item.eval)
     if False:
         if do_special_experiment:
             expected_offspring_escapes_count = nchildren * all_escapes_count / (len(population) ** 2)
             toolbox.f.write(f"{all_escapes_count}\t{offspring_escapes_count}\t{expected_offspring_escapes_count}\n")
+    consistency_check(toolbox, offspring)
     return offspring, None
 
 
-def apply_taboo_metaevolution(toolbox, population):
-    taboo_value = population[0].eval
-    if "taboo_set" in toolbox.metaevolution_strategies:
-        toolbox.taboo_set.add(taboo_value)
-    elif "taboo_value" in toolbox.metaevolution_strategies:
-        toolbox.taboo_set = set([taboo_value])
-    new_population = [ind for ind in population if ind.eval != taboo_value]
-    if len(new_population) == 0:
-        return population
-    return new_population
-
-
-def apply_mix_with_leftovers_metaevolution(toolbox, population, stay_fraction, replace_style):
-    popN = toolbox.pop_size[toolbox.parachute_level]
-    assert 0 <= stay_fraction and stay_fraction <= 1
-    new_population = population[:int(popN*stay_fraction)]
-    if replace_style == "random":
-        k = popN - len(new_population)
-        if k <= len(toolbox.leftovers):
-            new_population += random.sample(toolbox.leftovers, k=k)
-        else:
-            print("gen", toolbox.gen, "len(leftovers)", len(toolbox.leftovers), "stay_fraction", stay_fraction, "k", k, "len(new_population)", len(new_population))
-            new_population += toolbox.leftovers
+def track_stuck(toolbox, population):
+    # track if we are stuck
+    if population[0].eval == toolbox.prev_eval:                        
+        toolbox.stuck_count += 1
+        if toolbox.stuck_count >= toolbox.max_stuck_count + 1:            
+            if "reenter_parachuting_phase" not in toolbox.metaevolution_strategies or toolbox.count_opschudding > 0:
+                raise RuntimeWarning("max stuck count exceeded")
+            if "reenter_parachuting_phase" in toolbox.metaevolution_strategies:
+                toolbox.f.write("reenter_parachuting_phase\n")
+                toolbox.parachute_level = 0
+                toolbox.gen = 0
+                toolbox.prev_eval = 1e9
+                toolbox.stuck_count = 0
+                toolbox.count_opschudding += 1
+                toolbox.reset()
+                for ind in population:
+                    ind.parents = []
+                    ind.eval = evaluate_individual(toolbox, ind)
+                    consistency_check_ind(toolbox, ind)
+                refresh_toolbox_from_population(toolbox, population)
     else:
-        new_population += toolbox.leftovers[:popN - len(new_population)]
-    return new_population
+        # verandering!
+        toolbox.stuck_count = 0
 
 
 def ga_search_impl(toolbox):
-    if toolbox.final_pop_file:
+    if toolbox.final_pop_file: # clear the file to avoid confusion with older output
         write_population(toolbox.final_pop_file, [], toolbox.functions)
     try:
-        toolbox.taboo_set = set()
+        population, solution = [], None # generate_initial_population may throw exception
         population, solution = generate_initial_population(toolbox)
+        if not toolbox.new_initial_population:
+            write_population(f"b_196.txt", population, toolbox.functions)
         if solution:
             return solution, 0
-        toolbox.parachute_count = len(population)
         consistency_check(toolbox, population)
         update_dynamic_weighted_evaluation(toolbox, population)
         population.sort(key=lambda item: item.eval)
         refresh_toolbox_from_population(toolbox, population)
-        toolbox.gen = 0
-        toolbox.best_eval = 1e9
         toolbox.prev_eval = 1e9
-        stuck_count, stuck_count_since_last_meta_evolution = 0, 0
-        meta_evolution_count = 0
-        for toolbox.parachute_level in range(len(toolbox.ngen)):
-            popN = toolbox.pop_size[toolbox.parachute_level]
+        toolbox.stuck_count, toolbox.count_opschudding = 0, 0
+        toolbox.parachute_level = 0
+        toolbox.gen = 0
+        toolbox.real_gen = 0
+        while toolbox.parachute_level < len(toolbox.ngen):
             while toolbox.gen < toolbox.ngen[toolbox.parachute_level]:
-                if False:
-                    do_special_experiment = False # math.isclose(population[0].eval, 77.61253, abs_tol=0.00001)
-                    if do_special_experiment and population[0].eval < 77.61253 - 0.00001:
-                        toolbox.f.write(f"exit because of escape\n")
-                        exit()
-                # track if we are stuck
-                if population[0].eval == toolbox.prev_eval:                        
-                    if stuck_count >= toolbox.max_stuck_count:
-                        raise RuntimeWarning("max stuck count exceeded")
-                    stuck_count += 1
-                    stuck_count_since_last_meta_evolution += 1
-                else:
-                    # verandering!
-                    stuck_count = 0
-                    if toolbox.best_eval > population[0].eval:
-                        # verbetering!
-                        toolbox.best_eval = population[0].eval
-                        meta_evolution_count = 0
-                        stuck_count_since_last_meta_evolution = 0
+                track_stuck(toolbox, population)
                 toolbox.prev_eval = population[0].eval
-                if False:
-                    if do_special_experiment:
-                        if stuck_count > 5:
-                            toolbox.leftovers.sort(key=lambda item: item.eval)
-                            c = analyse_parents(toolbox, population)
-                            if c > 0:
-                                toolbox.f.write(f"exit because 200x200 analysis on pop returns > 0\n")
-                                exit()
-                            toolbox.f.write(f"0\n")
-                            c1 = analyse_parents(toolbox, apply_mix_with_leftovers_metaevolution(toolbox, population, 0.5, "random"))
-                            toolbox.f.write(f"{c1}\n")
-                            c2 = analyse_parents(toolbox, apply_mix_with_leftovers_metaevolution(toolbox, population, 0.33, "random"))
-                            toolbox.f.write(f"{c2}\n")
-                            c3 = analyse_parents(toolbox, apply_mix_with_leftovers_metaevolution(toolbox, population, 0.1, "random"))
-                            toolbox.f.write(f"xx\t{c1}\t{c2}\t{c3}\t\n")
-                            toolbox.f.write(f"exit special experiment\n")
-                            exit()
-                if stuck_count_since_last_meta_evolution >= 5 and len(toolbox.metaevolution_strategies) > 0:
-                    if meta_evolution_count >= 5:
-                        raise RuntimeWarning(f"5x meta_evolution did not work")
-                    meta_evolution_count += 1
-                    stuck_count_since_last_meta_evolution = 0
-                    if "taboo_set" in toolbox.metaevolution_strategies or "taboo_value" in toolbox.metaevolution_strategies:
-                        # Erase all parents with this value BEFORE making the children, ERASING it from the gene pool
-                        population = apply_taboo_metaevolution(toolbox, population)
-                    if "mix_with_leftovers" in toolbox.metaevolution_strategies:
-                        population = apply_mix_with_leftovers_metaevolution(toolbox, population, 0.5, "random")
-                    refresh_toolbox_from_population(toolbox, population)
-
                 if toolbox.f and toolbox.verbose >= 1:
-                    # code_str = interpret.convert_code_to_str(interpret.compile_deap(population[0].deap_str, toolbox.functions))
-                    toolbox.f.write(f"gen {toolbox.gen:2d} best {population[0].eval:7.3f} sc {stuck_count} goc {meta_evolution_count} taboo {str(toolbox.taboo_set)}\n") #  {code_str}\n")
-                log_population(toolbox, population, f"generation {toolbox.gen}, pop at start")
+                    count_best = sum([1 for ind in population if ind.eval == population[0].eval])
+                    toolbox.f.write(f"gen {toolbox.real_gen:2d} best {population[0].eval:7.3f} ")
+                    toolbox.f.write(f"sc {toolbox.stuck_count:2d} count_best {count_best:4d}\n")
+                log_population(toolbox, population, f"generation {toolbox.real_gen}, pop at start")
                 offspring, solution = generate_offspring(toolbox, population, toolbox.nchildren[toolbox.parachute_level])
                 if solution:
-                    return solution, toolbox.gen+1
-                consistency_check(toolbox, offspring)
-                if len(offspring) != toolbox.nchildren[toolbox.parachute_level]:
-                    toolbox.f.write(f"{len(offspring)} offspring\n")
-                if toolbox.parachute_level == 0:
-                    toolbox.parachute_offspring_count += len(offspring)
-                else:
-                    toolbox.normal_offspring_count += len(offspring)
+                    return solution, toolbox.real_gen + 1
+                log_population(toolbox, offspring, f"generation {toolbox.real_gen}, offspring")
                 fraction = toolbox.parents_keep_fraction[toolbox.parachute_level]
                 if fraction < 1:
                     population = random.sample(population, k=int(len(population)*fraction))
                 population += offspring
                 population.sort(key=lambda item: item.eval)
-                if stuck_count == 0:
-                    toolbox.leftovers += population[popN:]
-                population[:] = population[:popN]
+                population[:] = population[:toolbox.pop_size[toolbox.parachute_level]]
                 consistency_check(toolbox, population)
                 update_dynamic_weighted_evaluation(toolbox, population)
                 refresh_toolbox_from_population(toolbox, population)
                 toolbox.gen += 1
+                toolbox.real_gen += 1
+            toolbox.parachute_level += 1
     except RuntimeWarning as e:
         toolbox.f.write("RuntimeWarning: " + str(e) + "\n")
-    if toolbox.final_pop_file:
+    if toolbox.final_pop_file: # write the set covering input files
         write_population(toolbox.final_pop_file, population, toolbox.functions)
-    best = population[0]
-    return best, toolbox.gen+1
+    return (population[0] if len(population) > 0 else None), toolbox.real_gen + 1
 
 

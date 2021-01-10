@@ -12,7 +12,7 @@
     "max_evaluations": 1000000,
     "max_stuck_count": 13,
     "new_initial_population": false,
-    "old_populations_folder": "tmp/09AC",
+    "old_populations_folder": "tmp/acso",
     "old_populations_quartile": 1,
     "old_populations_samplesize": 1,
     "analyse_best": false,
@@ -22,7 +22,7 @@
         200
     ],
     "nchildren": [
-        2000,
+        4000,
         100
     ],
     "ngen": [

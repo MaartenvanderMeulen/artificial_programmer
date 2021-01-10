@@ -93,10 +93,6 @@ def log_population(toolbox, population, label):
         toolbox.f.write(f"write_population {label}\n")
         for i, ind in enumerate(population):
             toolbox.f.write(f"    ind {i} {ind.eval:.3f} {len(ind)} {ind.deap_str}\n")
-            if toolbox.gen == 0:
-                evaluate_individual_impl(toolbox, ind, toolbox.verbose)
-            if toolbox.verbose == 2 and i >= 10:
-                break
         toolbox.f.write("\n")
         toolbox.f.flush()
 
@@ -167,21 +163,16 @@ def read_old_populations(toolbox, old_populations_folder, prefix):
     old_pops = []
     for filename in os.listdir(old_populations_folder):
         if filename[:len(prefix)] == prefix:
-            old_pop = interpret.compile(interpret.load(old_populations_folder + "/" + filename))
-            if len(old_pop) > 0:
-                code = old_pop[0]
-                deap_str = interpret.convert_code_to_deap_str(code, toolbox)
-                ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)
-                ind.deap_str = str(ind)
-                v = evaluate_individual(toolbox, ind)
-                old_pops.append((old_pop, v))
-    old_pops = random.sample(old_pops, k=toolbox.old_populations_samplesize)
-    values = [v for old_pop, v in old_pops]
-    vmin = min(values)
-    vavg = sum(values) / toolbox.old_populations_samplesize
-    toolbox.f.write(f"oldpops_info\t{toolbox.old_populations_samplesize}\t{vmin:.3f}\t{vavg:.3f}\n")
-    result = [old_pop for old_pop, v in old_pops]
-    return result
+            if toolbox.old_populations_samplesize != 1 or filename == f"{prefix}_{toolbox.seed}.txt":
+                old_pop = interpret.compile(interpret.load(old_populations_folder + "/" + filename))
+                if len(old_pop) > 0:
+                    old_pops.append(old_pop)
+                elif toolbox.old_populations_samplesize == 1:
+                    toolbox.f.write("RuntimeWarning: stopped because no set covering needed, 0 evals\n")
+                    exit()
+    if toolbox.old_populations_samplesize != 1:
+        old_pops = random.sample(old_pops, k=toolbox.old_populations_samplesize)
+    return old_pops
 
 
 def deap_len_of_code(code):
@@ -198,11 +189,16 @@ def load_initial_population_impl(toolbox, old_pops):
             # take sample of size k from the old population
             codes = random.sample(old_pop, k=k) if k < len(old_pop) else old_pop
             for code in codes:
-                deap_str = interpret.convert_code_to_deap_str(code, toolbox)
-                ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)
-                ind.deap_str = str(ind)
-                assert len(ind) == deap_len_of_code(code)
-                assert deap_str == ind.deap_str
+                if hasattr(code, "family_index"):
+                    # old_pop is list of gp individuals
+                    ind = code
+                else:
+                    # old_pop is list of lists/ints/strings making 
+                    deap_str = interpret.convert_code_to_deap_str(code, toolbox)
+                    ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)
+                    ind.deap_str = str(ind)
+                    assert len(ind) == deap_len_of_code(code)
+                    assert deap_str == ind.deap_str
                 if ind.deap_str in toolbox.ind_str_set or len(ind) > toolbox.max_individual_size:
                     count_skipped += 1
                     continue
@@ -262,17 +258,28 @@ def analyse_population_impl(toolbox, old_pops):
     return None
 
 
-def generate_initial_population(toolbox):
+def generate_initial_population(toolbox, old_pops=None):
     if toolbox.analyse_best:
-        bests = read_old_populations(toolbox.old_populations_folder, "best")
+        bests = read_old_populations(toolbox, toolbox.old_populations_folder, "best")
         analyse_population_impl(toolbox, bests)    
         exit()
     evaluate.init_dynamic_error_weight_adjustment()
     if toolbox.new_initial_population:
-        return generate_initial_population_impl(toolbox)
+        population, solution = generate_initial_population_impl(toolbox)
     else:
-        old_pops = read_old_populations(toolbox, toolbox.old_populations_folder, "pop")
-        return load_initial_population_impl(toolbox, old_pops)
+        # zorg dat de bron van de populatie niet uitmaakt voor de eindtoestand
+        # dit was nodig om bij interne opschuddingen hetzelfde resultaat te krijgen als bij set covering op 1 vastloper
+        toolbox.reset() # zorgt voor reproduceerbare toolbox
+        if old_pops:
+            # old_pops is list of individuals
+            population, solution = load_initial_population_impl(toolbox, old_pops)
+        else:
+            # 
+            old_pops = read_old_populations(toolbox, toolbox.old_populations_folder, "pop")
+            # old_pops is list of deap strings
+            population, solution = load_initial_population_impl(toolbox, old_pops)
+        random.seed(toolbox.seed) # zorgt voor reproduceerbare state
+    return population, solution
 
 
 def copy_individual(toolbox, ind):
