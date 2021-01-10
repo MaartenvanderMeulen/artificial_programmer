@@ -58,4 +58,14 @@
 	9/50 : solved gen's 7 9 10 11 13 23 25 28 28; stopped blijft hangen in 14.185 suboptimum
 
 
+acs == acso - wc reparachute
+	187/1000
+acso == 09ACS + opschudding
+	+120
+	307/1000
+acsob1 == bk1 op acso
+	+88
+	44/500
+
+    
 

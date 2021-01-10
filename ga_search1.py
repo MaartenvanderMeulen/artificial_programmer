@@ -171,9 +171,14 @@ def track_stuck(toolbox, population):
                     ind.eval = evaluate_individual(toolbox, ind)
                     consistency_check_ind(toolbox, ind)
                 refresh_toolbox_from_population(toolbox, population)
-    else:
-        # verandering!
+    elif toolbox.best_eval > population[0].eval:
+        # betere oplossing dan ooit gevonden!
+        toolbox.best_eval = population[0].eval
         toolbox.stuck_count = 0
+    else:
+        # verandering t.o.v. vorige iteratie
+        pass
+    toolbox.prev_eval = population[0].eval
 
 
 def ga_search_impl(toolbox):
@@ -182,8 +187,6 @@ def ga_search_impl(toolbox):
     try:
         population, solution = [], None # generate_initial_population may throw exception
         population, solution = generate_initial_population(toolbox)
-        if not toolbox.new_initial_population:
-            write_population(f"b_196.txt", population, toolbox.functions)
         if solution:
             return solution, 0
         consistency_check(toolbox, population)
@@ -191,6 +194,7 @@ def ga_search_impl(toolbox):
         population.sort(key=lambda item: item.eval)
         refresh_toolbox_from_population(toolbox, population)
         toolbox.prev_eval = 1e9
+        toolbox.best_eval = 1e9
         toolbox.stuck_count, toolbox.count_opschudding = 0, 0
         toolbox.parachute_level = 0
         toolbox.gen = 0
@@ -198,16 +202,17 @@ def ga_search_impl(toolbox):
         while toolbox.parachute_level < len(toolbox.ngen):
             while toolbox.gen < toolbox.ngen[toolbox.parachute_level]:
                 track_stuck(toolbox, population)
-                toolbox.prev_eval = population[0].eval
                 if toolbox.f and toolbox.verbose >= 1:
                     count_best = sum([1 for ind in population if ind.eval == population[0].eval])
                     toolbox.f.write(f"gen {toolbox.real_gen:2d} best {population[0].eval:7.3f} ")
                     toolbox.f.write(f"sc {toolbox.stuck_count:2d} count_best {count_best:4d}\n")
-                log_population(toolbox, population, f"generation {toolbox.real_gen}, pop at start")
+                if toolbox.verbose >= 3:
+                    log_population(toolbox, population, f"generation {toolbox.real_gen}, pop at start")
                 offspring, solution = generate_offspring(toolbox, population, toolbox.nchildren[toolbox.parachute_level])
                 if solution:
                     return solution, toolbox.real_gen + 1
-                log_population(toolbox, offspring, f"generation {toolbox.real_gen}, offspring")
+                if toolbox.verbose >= 4:
+                    log_population(toolbox, offspring, f"generation {toolbox.real_gen}, offspring")
                 fraction = toolbox.parents_keep_fraction[toolbox.parachute_level]
                 if fraction < 1:
                     population = random.sample(population, k=int(len(population)*fraction))

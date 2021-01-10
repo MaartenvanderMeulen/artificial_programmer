@@ -27,14 +27,14 @@ def is_solved_by_function(example_inputs, evaluation_function, fname, functions,
     if len(used_example_inputs) == 0:
         return False
     error, _ = evaluate.evaluate_all(used_example_inputs, actual_outputs, evaluation_function, log_file, verbose)
-    if verbose >= 2:
+    if verbose >= 3:
         log_file.write(f"is_solved_by_function({fname}), actual_outputs {actual_outputs}, error {error}\n")
     return error <= 0.0
 
 
 def solve_by_existing_function(problem, functions, log_file, verbose):
     problem_label, _, example_inputs, evaluation_function, _, _ = problem
-    if verbose >= 2:
+    if verbose >= 3:
         log_file.write(f"solve_by_existing_function {problem_label}\n")
     build_in_functions = interpret.get_build_in_functions()
     for fname in build_in_functions:
@@ -44,7 +44,7 @@ def solve_by_existing_function(problem, functions, log_file, verbose):
     for fname, (_, _) in functions.items():
         if is_solved_by_function(example_inputs, evaluation_function, fname, functions, log_file, verbose):
             return fname
-    if verbose >= 2:
+    if verbose >= 3:
         log_file.write(f"solve_by_existing_function {problem_label} fails\n")
     return None
 

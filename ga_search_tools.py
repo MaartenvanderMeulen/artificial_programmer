@@ -89,12 +89,11 @@ def update_dynamic_weighted_evaluation(toolbox, individuals):
 
 
 def log_population(toolbox, population, label):
-    if toolbox.verbose >= 2:
-        toolbox.f.write(f"write_population {label}\n")
-        for i, ind in enumerate(population):
-            toolbox.f.write(f"    ind {i} {ind.eval:.3f} {len(ind)} {ind.deap_str}\n")
-        toolbox.f.write("\n")
-        toolbox.f.flush()
+    toolbox.f.write(f"write_population {label}\n")
+    for i, ind in enumerate(population):
+        toolbox.f.write(f"    ind {i} {ind.eval:.3f} {len(ind)} {ind.deap_str}\n")
+    toolbox.f.write("\n")
+    toolbox.f.flush()
 
 
 def write_population(file_name, population, functions):
@@ -118,22 +117,21 @@ def write_final_population(toolbox, population):
 
 
 def write_path(toolbox, ind, indent=0):
-    if toolbox.verbose >= 1:
-        #indent_str = "\t" * indent
-        # operator_str = ["", "mutatie", "crossover"][len(ind.parents)]
-        code = interpret.compile_deap(ind.deap_str, toolbox.functions)
-        code_str = interpret.convert_code_to_str(code)
-        if False:
-            if indent:
-                toolbox.f.write(f"parent\t{ind.eval:.3f}\tcode\t{code_str}\n")
-            else:
-                toolbox.f.write(f"child\t{ind.eval:.3f}\tcode\t{code_str}\n")
+    #indent_str = "\t" * indent
+    # operator_str = ["", "mutatie", "crossover"][len(ind.parents)]
+    code = interpret.compile_deap(ind.deap_str, toolbox.functions)
+    code_str = interpret.convert_code_to_str(code)
+    if False:
+        if indent:
+            toolbox.f.write(f"parent\t{ind.eval:.3f}\tcode\t{code_str}\n")
         else:
-            toolbox.f.write(f"{code_str} {ind.eval:.3f} \n")
-        # evaluate_individual_impl(toolbox, ind, toolbox.verbose)
-        if indent == 0:
-            for parent in ind.parents:
-                write_path(toolbox, parent, indent+1)
+            toolbox.f.write(f"child\t{ind.eval:.3f}\tcode\t{code_str}\n")
+    else:
+        toolbox.f.write(f"{code_str} {ind.eval:.3f} \n")
+    # evaluate_individual_impl(toolbox, ind, toolbox.verbose)
+    if indent == 0:
+        for parent in ind.parents:
+            write_path(toolbox, parent, indent+1)
 
 
 def generate_initial_population_impl(toolbox):

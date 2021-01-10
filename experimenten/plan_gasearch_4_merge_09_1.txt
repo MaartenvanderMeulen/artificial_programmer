@@ -306,3 +306,7 @@ Om 12:39 zijn er 7 solved's, en die komen overeen met de 09AA_40 versie van 22 D
 Resultaten van 09BY* moeten even overnieuw, maar zullen niet verschillen.
 
 =================== analyse 
+
+=================== finale merge experimenten 10 Jan.
+
+Betere vastzit detectie: iteraties dat beste ooit niet veranderd.
