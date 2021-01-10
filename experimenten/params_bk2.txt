@@ -12,7 +12,7 @@
     "max_evaluations": 1000000,
     "max_stuck_count": 13,
     "new_initial_population": false,
-    "old_populations_folder": "tmp/acs",
+    "old_populations_folder": "tmp/acso",
     "old_populations_quartile": 2,
     "old_populations_samplesize": 2,
     "analyse_best": false,
