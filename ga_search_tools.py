@@ -23,18 +23,18 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
     if toolbox.monkey_mode: # if the solution can be found in monkey mode, the real search could in theory find it also
         code_str = interpret.convert_code_to_str(code)
         weighted_error = evaluate.evaluate_code(code_str, toolbox.solution_code_str)
-        model_outputs = ()
+        model_outputs = (weighted_error,)
         model_evals = (weighted_error,)
         if weighted_error == 0.0:
             # now check that this also evaluates 
-            model_outputs = []
+            model_outputs_tmp = []
             for input in toolbox.example_inputs:
-                model_output = interpret.run([toolbox.problem_name] + input, dict(), toolbox.functions)
-                model_outputs.append(model_output)        
-            weighted_error, model_evals = evaluate.evaluate_all(toolbox.example_inputs, model_outputs, toolbox.evaluation_function, toolbox.f, debug, toolbox.penalise_non_reacting_models)
-            if weighted_error != 0:
-                weighted_error, model_evals = evaluate.evaluate_all(toolbox.example_inputs, model_outputs, toolbox.evaluation_function, toolbox.f, 4, toolbox.penalise_non_reacting_models)
-            assert weighted_error == 0
+                model_output_tmp = interpret.run([toolbox.problem_name] + input, dict(), toolbox.functions)
+                model_outputs_tmp.append(model_output_tmp)        
+            weighted_error_tmp, model_evals_tmp = evaluate.evaluate_all(toolbox.example_inputs, model_outputs_tmp, toolbox.evaluation_function, toolbox.f, debug, toolbox.penalise_non_reacting_models)
+            if weighted_error_tmp != 0:
+                weighted_error_tmp, model_evals_tmp = evaluate.evaluate_all(toolbox.example_inputs, model_outputs_tmp, toolbox.evaluation_function, toolbox.f, 4, toolbox.penalise_non_reacting_models)
+            assert weighted_error_tmp == 0
     else:
         t0 = time.time()
         model_outputs = []
@@ -393,6 +393,10 @@ def consistency_check_ind(toolbox, ind):
         assert ind.deap_str == str(ind)
         assert ind.eval is not None
         model_evals = toolbox.families_list[ind.family_index][2]
+        if not (ind.eval < 0.1 or math.isclose(ind.eval, sum(model_evals))):
+            print("ind.eval", ind.eval, "sum(model_evals)", sum(model_evals))
+            print("ind.deap_str", ind.deap_str)
+            print("model_evals", model_evals)
         assert ind.eval < 0.1 or math.isclose(ind.eval, sum(model_evals))
 
 

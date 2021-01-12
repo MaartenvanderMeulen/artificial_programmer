@@ -17,26 +17,28 @@
             (84 (79 80 81 82 83))
         )
         (eval_merge_elem ())
-        ((0 1) (i j k l) (
-                len sum not first rest
-                eq ne
-                add sub mul div 
-                lt le ge gt
-                and or
-                extend append cons
-                if 
-                if_then_else
-                for
-                assign
-                list1
-                list2 last2 at2
-                last3
+        (() (i k)
+            (
+                append for if_then_else le last3 assign 
+                #len sum not first rest
+                #eq ne
+                #add sub mul div 
+                #lt le ge gt
+                #and or
+                #extend append cons
+                #if 
+                #if_then_else
+                #for
+                #assign
+                #list1
+                #list2 last2 at2
+                #last3
             )
             (append
                 (for i sorted_data
                     (if_then_else
                         (le elem i)
-                        (last 
+                        (last3 
                             (assign k elem)
                             (assign elem i)
                             k
