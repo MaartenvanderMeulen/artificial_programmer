@@ -193,7 +193,7 @@ def load_initial_population_impl(toolbox, old_pops):
                 else:
                     # old_pop is list of lists/ints/strings making 
                     deap_str = interpret.convert_code_to_deap_str(code, toolbox)
-                    ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)
+                    ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)                    
                     ind.deap_str = str(ind)
                     assert len(ind) == deap_len_of_code(code)
                     assert deap_str == ind.deap_str

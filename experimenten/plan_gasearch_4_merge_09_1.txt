@@ -310,3 +310,66 @@ Resultaten van 09BY* moeten even overnieuw, maar zullen niet verschillen.
 =================== finale merge experimenten 10 Jan.
 
 Betere vastzit detectie: iteraties dat beste ooit niet veranderd.
+
+===================  11 Jan, harder problem
+
+list2(
+	var(
+		or(eq(sorted_data, elem), and(sorted_data, sorted_data)),
+		list1(list2(elem, sorted_data)),
+		mul(add(elem, sorted_data), gt(sorted_data, sorted_data))
+	),
+	div(
+		merge_elem(
+			mul(elem, elem),
+			if_then_else(elem, sorted_data, elem)
+		),
+		at2(len(sorted_data), first(sorted_data))
+	)
+)
+
+
+list2(
+	var(
+		_,
+		list1(list2(elem, sorted_data)),
+		mul(add(elem, sorted_data), gt(sorted_data, sorted_data))
+	),
+		div(merge_elem(mul(elem, elem), if_then_else(elem, sorted_data, elem)), at2(len(sorted_data), first(sorted_data))))
+
+================== 12 Jan, harder problem
+
+recursieve merge, zonder assign: 2/200~1%, en bk32 88/196~50%
+
+niet recursieve merge, met assign: 
+
+de software komt weer met een weirde oplossing:
+	if_then_else(
+		gt(elem, at2(rest(rest(sorted_data)), 1)),
+		if_then_else(
+			gt(elem, first(sorted_data)), 
+			append(sorted_data, elem),
+			cons(elem, sorted_data)
+		),
+		cons(first(sorted_data), cons(elem, rest(sorted_data)))
+	)
+
+	if elem > sorted_data[3]:
+		if elem > sorted_data[0]:
+			return sorted_data + [elem]
+		else:
+			return [elem] + sorted_data
+	else:
+		return [sorted_data[0]] + [elem] + sorted_data[1:]
+
+input
+            (66 (61 70 75 84)) # OK
+			(66 (61 66 70 75 84)) # OK
+            (84 (43 61 66 70 75)) # OK
+            (84 (43 61 66 70 75 84)) # OK
+            (10 (12 13)) # OK
+            (10 (10 13 14)) # OK
+            (84 ()) # OK
+            (84 (74)) # OK
+            (84 (84)) # OK
+            (84 (99)) # OK

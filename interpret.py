@@ -182,6 +182,8 @@ def _run(program, variables, functions, debug, depth):
                     result = a - b
                 elif program[0] == "mul":
                     result = a * b
+                    if result > 1000000000:
+                        result = 0
                 elif program[0] == "div":
                     result = a // b if b != 0 else 0
                 else:
@@ -402,7 +404,7 @@ def _run(program, variables, functions, debug, depth):
 
         result = copy.deepcopy(variables[identifyer]) if identifyer in variables else 0
     elif type(program) == type(1):
-        result = program
+        result = program if abs(program) < 1000000000 else 0
     else:
         raise RuntimeError(f"list, identifyer or int expected instead of '{program}'")
     if debug:
@@ -496,10 +498,11 @@ def get_build_in_functions():
         "if_then_else", # arity 3
         "for", # artity 3, but 1st operand must be a variable name
         "var", # artity 3, but 1st operand must be a variable name
+        "assign", # artity 2, but 1st operand must be a variable name
 
         "list1", # arity 1
         "list2", "last2", "at2", # arity 2
-        # "list3", "last3", "at3", # arity 3
+        "list3", "last3", "at3", # arity 3
         ]
 
 
@@ -518,10 +521,11 @@ def get_build_in_function_param_types(fname):
         "if_then_else":(1,1,1), # arity 3
         "for":("v",1,1), # artity 3, but 1st operand must be a variable name
         "var":("v",1,1), # artity 3, but 1st operand must be a variable name
+        "assign":("v",1,), # artity 2, but 1st operand must be a variable name
 
         "list1":(1,), # arity 1
         "list2":(1,1,), "last2":(1,1,), "at2":(1,1,), # arity 2
-        # "list3":(1,1,1,), "last3":(1,1,1,), "at3":(1,1,1,), # arity 3
+        "list3":(1,1,1,), "last3":(1,1,1,), "at3":(1,1,1,), # arity 3
         }
     return arity_dict[fname]
 

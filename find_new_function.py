@@ -23,15 +23,14 @@ class Toolbox(object):
     def __init__(self, problem, functions, seed):
         problem_name, formal_params, example_inputs, evaluation_function, hints, _ = problem
         int_hints, var_hints, func_hints, solution_hints = hints
-        pset = gp.PrimitiveSet("MAIN", len(formal_params))
-        for i, param in enumerate(formal_params):
+        var_name_set = set(formal_params)
+        var_name_set.update(var_hints)
+        pset = gp.PrimitiveSet("MAIN", len(var_name_set))
+        for i, param in enumerate(var_name_set):
             rename_cmd = f'pset.renameArguments(ARG{i}="{param}")'
             eval(rename_cmd)
         for constant in int_hints: 
             pset.addTerminal(constant)
-        for variable in var_hints:
-            if variable not in formal_params:
-                pset.addTerminal(variable)
         for function in interpret.get_build_in_functions():
             if function in func_hints:
                 param_types = interpret.get_build_in_function_param_types(function)
