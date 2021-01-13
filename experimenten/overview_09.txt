@@ -77,4 +77,4 @@ bk4
 ============ merge zonder recursie, is moeilijker
 acsh 2/1000
 bk1000 91/300
-bk32
+bk32 6/100
