@@ -169,7 +169,8 @@ def read_old_populations(toolbox, old_populations_folder, prefix):
                     toolbox.f.write("RuntimeWarning: stopped because no set covering needed, 0 evals\n")
                     exit()
     if toolbox.old_populations_samplesize != 1:
-        old_pops = random.sample(old_pops, k=toolbox.old_populations_samplesize)
+        if toolbox.old_populations_samplesize < len(old_pops):
+            old_pops = random.sample(old_pops, k=toolbox.old_populations_samplesize)
     return old_pops
 
 

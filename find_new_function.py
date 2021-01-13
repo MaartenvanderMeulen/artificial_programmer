@@ -110,7 +110,7 @@ def basinhopper(toolbox):
 def solve_by_new_function(problem, functions, f, params):
     toolbox = Toolbox(problem, functions, params["seed"])
     toolbox.problem_name, toolbox.problem_params, _, _, _, _ = problem
-    toolbox.monkey_mode = True
+    toolbox.monkey_mode = False
     toolbox.dynamic_weights = False # not toolbox.monkey_mode
     toolbox.child_creation_retries = 99
     toolbox.f = f

@@ -73,3 +73,8 @@ bk3
 bk4
 	op acs maxevals : 215/300=71.6%
 	op acs global stuck : 229/500=45.8%
+
+============ merge zonder recursie, is moeilijker
+acsh 2/1000
+bk1000 91/300
+bk32

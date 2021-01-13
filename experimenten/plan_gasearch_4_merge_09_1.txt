@@ -373,3 +373,34 @@ input
             (84 (74)) # OK
             (84 (84)) # OK
             (84 (99)) # OK
+
+Oplossing gevonden:
+(append
+	(for k sorted_data
+		(if_then_else
+			(le elem k)
+			(if_then_else
+				(le elem (assign elem k))
+				elem
+				k)
+			k
+		)
+	)
+	elem
+)
+
+Oplossing Maarten:
+(append
+	(for i sorted_data
+		(if_then_else
+			(le elem i)
+			(last3 
+				(assign k elem)
+				(assign elem i)
+				k
+			)
+			i
+		)
+	)
+	elem
+)
