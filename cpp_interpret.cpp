@@ -1,6 +1,6 @@
 // compile on Windows with:
 // call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"
-// Cl /nologo /EHsc /F 8000000 /D NDEBUG /O2 /Ob1 /MD /LD upstream_area.cpp
+// Cl /nologo /EHsc /F 8000000 /D NDEBUG /O2 /Ob1 /MD /LD cpp_interpret.cpp
 // compile on Linux with:
 // g++ -shared -fPIC -O2 -o upstream_area.so upstream_area.cpp
 
@@ -18,6 +18,7 @@ using namespace std;
 
 static const int CODEITEM_INT = 1;
 static const int CODEITEM_FCALL = 2;
+static const int CODEITEM_VAR = 3;
 
 static const int F_LT = 1;
 static const int F_LE = 2;
@@ -131,17 +132,26 @@ vector<CodeItem> run_impl(int& sp, vector<CodeItem>& program, vector<int>& varia
                 break;
             }
         }
-    } else {
-        assert(program[sp]._type == CODEITEM_INT);
+    } else if (program[sp]._type == CODEITEM_INT) {
         assert(program[sp]._arity == 0);
-        result.push_back({CODEITEM_INT, program[sp]._value, 0});
+        result = {{CODEITEM_INT, program[sp]._value, 0}};
         sp += 1;
+    } else if (program[sp]._type == CODEITEM_VAR) {
+        assert(program[sp]._arity == 0);
+        if (0 <= program[sp]._value && program[sp]._value < variables.size()) {
+            result = {{CODEITEM_INT, variables[program[sp]._value], 0}};
+        } else {
+            throw runtime_error("error: unknown variable");        
+        }
+        sp += 1;
+    } else {
+        throw runtime_error("error: cannot parse code snippet");        
     }
     return result;
 }
 
 
-vector<CodeItem> run(vector<CodeItem>& program, vector<int>& variables, map<string, Function>& functions, bool debug) {
+static vector<CodeItem> run(vector<CodeItem>& program, vector<int>& variables, map<string, Function>& functions, bool debug) {
     vector<CodeItem> result;
     try {
         int sp = 0;
@@ -156,10 +166,6 @@ vector<CodeItem> run(vector<CodeItem>& program, vector<int>& variables, map<stri
     return result;
 }
 
-
-
-//extern "C"
-//void run(void* program, )
 
 int self_test() {
     int err_count = 0;
@@ -286,6 +292,14 @@ int self_test() {
             err_count += 1;
         }
 
+        a = 3; b = 17; c = 4; expected = a * b + c;
+        variables = {a, b, c};
+        program = {{CODEITEM_FCALL, F_ADD, 2}, {CODEITEM_FCALL, F_MUL, 2}, {CODEITEM_VAR, 0, 0}, {CODEITEM_VAR, 1, 0}, {CODEITEM_VAR, 2, 0}};
+        result = run(program, variables, functions, debug);        
+        if (result[0]._type != CODEITEM_INT || result[0]._value != expected) {
+            printf("expected %d instead of %d\n", expected, result[0]._value);
+            err_count += 1;
+        }
     }
     catch (const exception& e) {
         printf("exception %s\n", e.what());
@@ -295,7 +309,34 @@ int self_test() {
 }
 
 
-int main() {
+extern "C"
+#if defined(_MSC_VER)
+__declspec(dllexport)
+#endif
+void run_code(int n, void*  pv_types, void* pv_values, void* pv_arities) {
+    int* pi_types = (int*) pv_types;
+    int* pi_values = (int*) pv_values;
+    int* pi_arities = (int*) pv_arities;
+    vector<CodeItem> program;
+    program.resize(n);
+    printf("run_code result:\n");
+    for (int i = 0; i < n; ++i) {
+        program[i]._type = pi_types[i];
+        program[i]._value = pi_values[i];
+        program[i]._arity = pi_arities[i];
+        printf("    %d (%d,%d,%d)\n", i, program[i]._type, program[i]._value, program[i]._arity);
+    }
+    vector<int> variables;
+    map<string, Function> functions;
+    vector<CodeItem> result = run(program, variables, functions, false);
+    printf("run_code result:\n");
+    for (int i = 0; i < int(result.size()); ++i) {
+        printf("    %d (%d,%d,%d)\n", i, result[i]._type, result[i]._value, result[i]._arity);
+    }
+}
+
+
+int main(int argc, char* argv[]) {
     if (!self_test()) {
         return 1;
     }
