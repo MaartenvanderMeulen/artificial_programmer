@@ -245,4 +245,21 @@
     )
     (assert (eq (mysort4 x) (0 1 2 2 3 4)))
     (assert (eq (mysort4 y) (0 1 2 2 3 5)))
+    #(print (for i 0 i))
+    #(print (for i () i))
+    #(print (for i 0 0))
+    #(print (for i () 0))
+    #(print (for i 0 ()))
+    #(print (for i () ()))
+    (assign v0 84)
+    (assign v1 ( 79 80 81 82 83))
+    (or (assign v2 0) 1)
+    (or (assign v3 0) 1)
+    (or
+     (print 
+        (append (append (append (append v1 v2) (for v0 v0 v3)) 1) 0)
+     )
+     1
+    )
+    1
 )

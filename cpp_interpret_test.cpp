@@ -594,6 +594,23 @@ void test5() {
         printf("%d ok\n", __LINE__);
     }
     
+    a = 17; b = 3;
+    expected = b + c;
+    program = {{ITEM_FCALL, F_SUM, 1}, {ITEM_LIST, 0, 2},
+        {ITEM_FCALL, F_IF, 3}, {ITEM_INT, 0, 0}, {ITEM_INT, a, 0}, {ITEM_INT, b, 0},
+        {ITEM_INT, c, 0}};
+    if (debug) {
+        printf("%d run ...\n", __LINE__);
+    }
+    result = run(&program[0], int(program.size()), variables, functions, debug);        
+    if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
+        printf("%d: expected %d instead of ", __LINE__, expected);
+        print_code(result);
+        err_count += 1;
+    } else if (debug) {
+        printf("%d ok\n", __LINE__);
+    }
+    
     expected = b + c;
     program = {{ITEM_FCALL, F_SUM, 1}, {ITEM_LIST, 0, 2},
         {ITEM_FCALL, F_IF, 3}, {ITEM_INT, 0, 0}, {ITEM_INT, a, 0}, {ITEM_INT, b, 0},

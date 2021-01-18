@@ -9,12 +9,13 @@ from evaluate import recursive_tuple
 import math
 import time
 import json
-from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull, gp.from_string
 from ga_search_tools import write_population, consistency_check, log_population
 from ga_search_tools import best_of_n, generate_initial_population, generate_initial_population_impl
 from ga_search_tools import update_dynamic_weighted_evaluation, refresh_toolbox_from_population
 from ga_search_tools import load_initial_population_impl, evaluate_individual, consistency_check_ind
 from ga_search_tools import crossover_with_local_search, cxOnePoint, mutUniform, replace_subtree_at_best_location
+
+from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull, gp.from_string
 
 
 def select_parents(toolbox, population):

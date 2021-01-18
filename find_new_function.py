@@ -3,15 +3,18 @@
 import os
 import random
 import copy
-import interpret
-import evaluate
-from evaluate import recursive_tuple
 import math
 import time
 import json
-from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull, gp.from_string
+
+import interpret
+import evaluate
+from evaluate import recursive_tuple
 import ga_search1
 import ga_search_tools
+from cpp_coupling import get_cpp_handle, run_on_all_inputs
+
+from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull, gp.from_string
 
 
 def f():
@@ -23,10 +26,10 @@ class Toolbox(object):
     def __init__(self, problem, functions, seed):
         problem_name, formal_params, example_inputs, evaluation_function, hints, _ = problem
         int_hints, var_hints, func_hints, solution_hints = hints
-        var_name_set = set(formal_params)
-        var_name_set.update(var_hints)
-        pset = gp.PrimitiveSet("MAIN", len(var_name_set))
-        for i, param in enumerate(var_name_set):
+        var_names = formal_params + var_hints
+        assert len(set(var_names)) == len(var_names)
+        pset = gp.PrimitiveSet("MAIN", len(var_names))
+        for i, param in enumerate(var_names):
             rename_cmd = f'pset.renameArguments(ARG{i}="{param}")'
             eval(rename_cmd)
         for constant in int_hints: 
@@ -35,6 +38,7 @@ class Toolbox(object):
             if function in func_hints:
                 param_types = interpret.get_build_in_function_param_types(function)
                 arity = sum([1 for t in param_types if t in [1, "v", []]])
+                #print(function, arity)
                 pset.addPrimitive(f, arity, name=function)
         for function, (params, _) in functions.items():
             if function in func_hints:
@@ -60,6 +64,7 @@ class Toolbox(object):
             print("deap_str2", str(self.solution_deap_ind))
             raise RuntimeError(f"Check if function hints '{str(func_hints)}' contain all functions of solution hint '{str(solution_hints)}'")
         self.taboo_set = set()
+        self.cpp_handle = get_cpp_handle(example_inputs, formal_params, var_hints)
         self.seed = seed
         self.reset()
 
@@ -76,6 +81,7 @@ def basinhopper(toolbox):
         toolbox.eval_lookup_count = 0
         toolbox.t0 = time.time()
         toolbox.t_interpret = 0
+        toolbox.t_cpp_interpret = 0
         toolbox.t_eval = 0
 
         best, gen = ga_search1.ga_search_impl(toolbox)

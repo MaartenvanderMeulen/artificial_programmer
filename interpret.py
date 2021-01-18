@@ -314,11 +314,10 @@ def _run(program, variables, functions, debug, depth):
             result = 0
             if len(program) == 3:
                 local_variable = program[1]
+                result = _run(program[2], variables, functions, debug, depth+1)
+                check_depth(result, 0)
                 if type(local_variable) == type(""):
-                    expr = _run(program[2], variables, functions, debug, depth+1)
-                    check_depth(expr, 0)
-                    variables[local_variable] = copy.deepcopy(expr)
-                    result = expr
+                    variables[local_variable] = copy.deepcopy(result)
         elif program[0] == "function":
             result = 0
             if len(program) >= 4:
@@ -445,6 +444,8 @@ def run(program, variables, functions, debug=False):
     try:
         t0 = time.time()
         result = _run(program, variables, functions, debug, 0)
+        #if len(program) < 40:
+        #    print("DEBUG interpret.py, 448", program, functions, result)
         t1 = time.time()
         if longest_run < t1 - t0:
             longest_run = t1 - t0

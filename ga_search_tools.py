@@ -3,13 +3,17 @@
 import os
 import random
 import copy
-import interpret
-import evaluate
-from evaluate import recursive_tuple
 import math
 import time
 import json
+
+import interpret
+import evaluate
+from evaluate import recursive_tuple
+from cpp_coupling import get_cpp_handle, run_on_all_inputs
+
 from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull, gp.from_string
+
 
 
 def evaluate_individual_impl(toolbox, ind, debug=0):
@@ -42,6 +46,17 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
             model_output = interpret.run([toolbox.problem_name] + input, dict(), toolbox.functions, debug=toolbox.verbose >= 5)
             model_outputs.append(model_output)        
         toolbox.t_interpret += time.time() - t0
+        if True:
+            t0 = time.time()
+            cpp_model_outputs = run_on_all_inputs(toolbox.cpp_handle, ind)
+            toolbox.t_cpp_interpret += time.time() - t0
+            print("t_py", toolbox.t_interpret, "t_cpp", toolbox.t_cpp_interpret, toolbox.t_interpret / toolbox.t_cpp_interpret)
+            if model_outputs != cpp_model_outputs:
+                print("model_outputs", model_outputs)
+                print("cpp_model_outputs", cpp_model_outputs)
+                print("toolbox.eval_count", toolbox.eval_count)
+                print("ind", ind.deap_str)
+            assert model_outputs == cpp_model_outputs
         t0 = time.time()
         weighted_error, model_evals = evaluate.evaluate_all(toolbox.example_inputs, model_outputs, toolbox.evaluation_function, toolbox.f, debug, toolbox.penalise_non_reacting_models)
         assert math.isclose(weighted_error, sum(model_evals))
@@ -277,6 +292,7 @@ def generate_initial_population(toolbox, old_pops=None):
             old_pops = read_old_populations(toolbox, toolbox.old_populations_folder, "pop")
             # old_pops is list of deap strings
             population, solution = load_initial_population_impl(toolbox, old_pops)
+        print("ga_search_tools, 292, random.seed(", toolbox.seed, ")")
         random.seed(toolbox.seed) # zorgt voor reproduceerbare state
     return population, solution
 

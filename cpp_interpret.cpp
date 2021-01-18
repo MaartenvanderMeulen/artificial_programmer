@@ -1,9 +1,11 @@
-// compile on Windows with:
-// call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"
-// Cl /nologo /EHsc /F 8000000 /D NDEBUG /O2 /Ob1 /MD /LD cpp_interpret.cpp
+/* compile on Windows with:
+call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"
+Cl /nologo /EHsc /F 8000000 /D NDEBUG /O2 /Ob1 /MD /LD cpp_interpret.cpp
 // Uitleg : /LD create DLL; /MD use multithreaded runtime for DLL's
-// compile on Linux with:
-// g++ -shared -fPIC -O2 -o upstream_area.so upstream_area.cpp
+*/
+/* compile on Linux with:
+g++ -shared -fPIC -O2 -o cpp_interpret.so cpp_interpret.cpp
+*/
 
 #include <vector>
 #include <string>
@@ -123,6 +125,8 @@ List first(const List& aa) {
             i++;
             n--;
         }
+    } else {
+        result = {{ITEM_INT, 0, 0}};
     }
     return result;
 }
@@ -171,55 +175,72 @@ List cons(const List& aa, const List& bb) {
 
 
 void print_indent(int depth) {
-    for (int i = 0; i < depth; ++i) {
+    for (int i = 0; i < depth+2; ++i) {
         printf("    ");
     }
 }
     
     
-void print_code_impl(const Item*& item) {
-    if (item->_type == ITEM_LIST || item->_type == ITEM_FCALL || item->_type == ITEM_FUSERCALL) {
+void print_vcode_impl(const List& code, int& i, int len) {
+    Assert(i < len, "print_code index out of range");
+    if (code[i]._type == ITEM_LIST || code[i]._type == ITEM_FCALL || code[i]._type == ITEM_FUSERCALL) {
         printf("(");
-        if (item->_type == ITEM_FCALL) {
-            printf("%s", g_fname[item->_value]);
-        } else if (item->_type == ITEM_FUSERCALL) {
-            printf("f%d", item->_value);
-        }            
-        int n = item->_arity;
-        item++;
+        if (code[i]._type == ITEM_FCALL) {
+            printf("%s", g_fname[code[i]._value]);
+        } else if (code[i]._type == ITEM_FUSERCALL) {
+            printf("f%d", code[i]._value);
+        }           
+        int n = code[i]._arity;
+        i++;
         while (n > 0) {
             printf(" ");
-            print_code_impl(item);
+            print_vcode_impl(code, i, len);
             n--;
         }
         printf(")");
-    } else if (item->_type == ITEM_INT) {
-        printf("%d", item->_value);
-        item++;
-    } else if (item->_type == ITEM_VAR) {
-        printf("v%d", item->_value);
-        item++;
+    } else if (code[i]._type == ITEM_INT) {
+        printf("%d", code[i]._value);
+        i++;
+    } else if (code[i]._type == ITEM_VAR) {
+        printf("v%d", code[i]._value);
+        i++;
     } else {
-        printf("?");
-        item++;
+        printf("?%d", code[i]._type);
+        i++;
     }
 }
 
 
-void print_code(const List& program) {
+void print_vcode(const List& program) {
     if (program.size() > 0) {
-        const Item* sp = &program[0];
-        print_code_impl(sp);
-    } else {
-        printf("None");
+        int i = 0;
+        print_vcode_impl(program, i, int(program.size()));
+    } else {        
+        printf("None // List.size()==0");
     }
     printf("\n");
 }
 
 
-void print_code(const Item* program) {
+void print_code_impl2(const Item* code, int& i, int len) {
+    Assert(i < len, "print_code index out of range");
+    while (i < len) {
+        switch (code[i]._type) {
+            case ITEM_INT : printf(" %d", code->_value); break;
+            case ITEM_FCALL : printf(" %s", g_fname[code[i]._value]); break;
+            case ITEM_VAR : printf(" v%d", code[i]._value); break;
+            case ITEM_LIST : printf(" L%d", code[i]._arity); break;
+            case ITEM_FUSERCALL : printf(" f%d", code[i]._value); break;
+            default : printf(" ?%d", code[i]._type); break;
+        }
+        i++;
+    }
+}
+
+
+void print_code(const Item* program, int i, int len) {
     const Item* sp = program;
-    print_code_impl(sp);
+    print_code_impl2(program, i, len);
     printf("\n");
 }
 
@@ -250,13 +271,15 @@ bool is_eq(const List& aa, const List& bb) {
 
 List extend(const List& aa, const List& bb) {
     List result;
-    if (aa[0]._type == ITEM_LIST && bb[0]._type == ITEM_LIST) {
+    if (aa.size() > 0 && aa[0]._type == ITEM_LIST && bb.size() > 0 && bb[0]._type == ITEM_LIST) {
         result.reserve(int(aa.size()) + int(bb.size()) - 1);
         result = aa;
         for (int i = 1; i < int(bb.size()); ++i) {
             result.push_back(bb[i]);
         }
         result[0]._arity += bb[0]._arity;
+    } else {
+        result = {{ITEM_INT, 0, 0}};
     }
     return result;
 }
@@ -264,20 +287,22 @@ List extend(const List& aa, const List& bb) {
 
 List append(const List& aa, const List& bb) {
     List result;
-    if (aa[0]._type == ITEM_LIST) {
+    if (aa.size() > 0 && aa[0]._type == ITEM_LIST) {
         result.reserve(aa.size() + bb.size());
         result = aa;
         for (int i = 0; i < int(bb.size()); ++i) {
             result.push_back(bb[i]);
         }
         result[0]._arity += 1;
+    } else {
+        result = {{ITEM_INT, 0, 0}};
     }
     return result;
 }
 
 
 void append_inplace(List& result, const List& bb) {
-    if (result[0]._type == ITEM_LIST) {
+    if (result.size() > 0 && result[0]._type == ITEM_LIST) {
         for (int i = 0; i < int(bb.size()); ++i) {
             result.push_back(bb[i]);
         }
@@ -413,6 +438,13 @@ List for_loop(int& sp, const Item* program, int program_size,
          vector<List>& variables, vector<Function>& functions, bool debug, int depth);
 
 
+void check_depth(const List& data, int current_depth) {
+    if (int(data.size()) > 1000) {
+        throw runtime_error("warning: data size exceeded");
+    }
+}
+
+
 List
 run_impl(int& sp, const Item* program, int program_size,
          vector<List>& variables, vector<Function>& functions, bool debug, int depth
@@ -427,16 +459,19 @@ run_impl(int& sp, const Item* program, int program_size,
     }
     if (debug) {
         print_indent(depth);
-        print_code(&program[sp]);        
-        for (int i = 0; i < int(variables.size()); ++i) {
-            print_indent(depth);
-            printf("v%d=", i);
-            print_code(variables[i]);
+        printf("run_impl depth %d on code:", depth);
+        print_code(program, sp, program_size);        
+        if (false) {
+            for (int i = 0; i < int(variables.size()); ++i) {
+                print_indent(depth);
+                printf("v%d=", i);
+                print_vcode(variables[i]);
+            }
         }
         for (int i = 0; i < int(functions.size()); ++i) {
             print_indent(depth);
             printf("f%d(%d,%d)=", i, functions[i]._params_count, functions[i]._locals_count);
-            print_code(functions[i]._code);
+            print_vcode(functions[i]._code);
         }
     }
     Assert(sp < program_size, "Stack pointer outside the program");
@@ -560,15 +595,35 @@ run_impl(int& sp, const Item* program, int program_size,
                 }
                 case F_IF : {
                     bool cond = is_true(run_impl(sp, program, program_size, variables, functions, debug, depth+1));
-                    if (cond) {
+                    if (cond) {                        
                         result = run_impl(sp, program, program_size, variables, functions, debug, depth+1);
+                        if (debug) {
+                            print_indent(depth);
+                            printf("DEBUG %d, if true then result", __LINE__);
+                            print_vcode(result);
+                        }
                         if (arity > 2) {
                             skip_subtree(program, sp); // skip else
                         }
                     } else {
+                        if (debug) {
+                            print_indent(depth);
+                            printf("DEBUG %d, sp before skip 'then'", __LINE__);
+                            print_code(program, sp, program_size);
+                        }
                         skip_subtree(program, sp); // skip then
+                        if (debug) {
+                            print_indent(depth);
+                            printf("DEBUG %d, sp after skip 'then'", __LINE__);
+                            print_code(program, sp, program_size);
+                        }
                         if (arity > 2) {
                             result = run_impl(sp, program, program_size, variables, functions, debug, depth+1);
+                            if (debug) {
+                                print_indent(depth);
+                                printf("DEBUG %d, else result ", __LINE__);
+                                print_vcode(result);
+                            }
                         } else {
                             result = {{ITEM_INT, 0, 0}};
                         }
@@ -576,12 +631,12 @@ run_impl(int& sp, const Item* program, int program_size,
                     break;
                 }
                 case F_FOR : result = for_loop(sp, program, program_size, variables, functions, debug, depth); break;
-                case F_PRINT : result = params[0]; print_code(params[0]); break;
+                case F_PRINT : result = params[0]; print_vcode(params[0]); break;
                 case F_ASSERT : {
                     result = params[0];
                     if (!is_true(params[0])) {
                         printf("Assertion failed: ");
-                        print_code(&program[orig_sp]);
+                        print_code(program, orig_sp, program_size);
                     }
                     break;
                 }
@@ -640,8 +695,9 @@ run_impl(int& sp, const Item* program, int program_size,
     if (debug) {
         print_indent(depth);
         printf("result: ");
-        print_code(result);
+        print_vcode(result);
     }
+    check_depth(result, 0);
     return result;
 }
 
@@ -653,6 +709,7 @@ List assign(int& sp, const Item* program, int program_size,
     List variable;
     get_subtree(variable, program, sp);
     result = run_impl(sp, program, program_size, variables, functions, debug, depth+1);
+    check_depth(result, 0);
     if (variable.size() == 1 && variable[0]._type == ITEM_VAR) {
         variables[variable[0]._value] = result;
     }
@@ -685,17 +742,21 @@ List var(int& sp, const Item* program, int program_size,
 List for_loop(int& sp, const Item* program, int program_size,
          vector<List>& variables, vector<Function>& functions, bool debug, int depth
 ) {
+    //printf("DEBUG cpp 736 code"); print_code(program, sp, program_size);
     List result = {{ITEM_LIST, 0, 0}};
     List old_value;
     List loop_variable;
     get_subtree(loop_variable, program, sp); // don't evaluate, we need the identifyer id
-    if (loop_variable.size() == 1 && loop_variable[0]._type == ITEM_VAR) {
-        old_value = variables[loop_variable[0]._value];
-        variables[loop_variable[0]._value] = {{ITEM_INT, 0, 0}}; // make sure the old value cannot be accessed anymore
-    }
     List steps = run_impl(sp, program, program_size, variables, functions, debug, depth+1);
+    //printf("DEBUG cpp 741 loop variable"); print_vcode(loop_variable);
+    if (loop_variable.size() == 1 && loop_variable[0]._type == ITEM_VAR) {
+        //printf("DEBUG cpp 743 real loop variable : yes\n");
+        old_value = variables[loop_variable[0]._value];
+    }
+    //printf("DEBUG cpp 748 steps"); print_vcode(steps);
     if (steps.size() == 1 && steps[0]._type == ITEM_INT) {
         int n = steps[0]._value;
+        //printf("DEBUG cpp 750 int steps %d\n", n);
         if (n > 1000) {
             throw runtime_error("warning: for loop max iterations exceeded");
         }
@@ -704,6 +765,7 @@ List for_loop(int& sp, const Item* program, int program_size,
             steps.push_back({ITEM_INT, i, 0});
         }
     }
+    //printf("DEBUG cpp 755 steps[0]._arity = %d\n", steps[0]._arity);
     Assert(steps[0]._type == ITEM_LIST, "For loop steps must be of List type");
     int steps_sp = 1;
     int for_iteration = 0;
@@ -720,6 +782,10 @@ List for_loop(int& sp, const Item* program, int program_size,
         append_inplace(result, iter_result);
         for_iteration += 1;
     }
+    if (sp == sp_begin_for_body) {
+        // body not executed, sp needs to be advanced
+        skip_subtree(program, sp);        
+    }
     if (loop_variable.size() == 1 && loop_variable[0]._type == ITEM_VAR) {
         variables[loop_variable[0]._value] = old_value;
     }
@@ -731,11 +797,23 @@ static List run(const Item* program, int program_size, vector<List>& variables, 
     List result;
     try {
         int sp = 0;
-        result = run_impl(sp, program, program_size, variables, functions, debug, 0);
-        Assert(sp == program_size, (sp < program_size ? "Garbage after end of program" : "Unexpected end of program"));
+        g_count_runs_calls = 0;
+        result = run_impl(sp, program, program_size, variables, functions, debug, 0);        
+        const char* msg = "Unexpected end of program";
+        if (sp < program_size) {
+            List garbage;
+            int i = sp;
+            while (i < program_size) {
+                garbage.push_back(program[sp]);
+                i += 1;
+            }
+            print_vcode(garbage);
+            msg = "Garbage at end of program";
+        }
+        Assert(sp == program_size, msg);
     }
     catch (const exception& e) {
-        if (strncmp(e.what(), "warning", 7) != 0) {
+        if (debug || strncmp(e.what(), "warning", 7) != 0) {
             printf("exception %s\n", e.what());
         }
     }
@@ -753,41 +831,41 @@ int run_non_recursive_level1_function(
         Item* function_body, int function_body_size, // 
         int output_bufsize, Item* output_buf, int* n_output
 ) {
-    bool debug = true;
+    bool debug = false;
     if (debug) {
-        printf("C++\n");
-        printf("    n_params %d\n", n_params);        
-        for (int i = 0; i < n_params; ++i) {
-            printf("    param size %d = %d ", i, param_sizes[i]);        
-            print_code(params);
-        }
+        printf("C++ start\n");
     }
     vector<List> variables;
     variables.resize(n_params + n_local_variables);
     for (int i = 0; i < n_params; ++i) {
         variables[i].resize(param_sizes[i]);
         for (int j = 0; j < param_sizes[i]; ++j) {
-            variables[i][j] = *params++;
+            variables[i][j] = *params;
+            params++;
         }
-    }
-    if (debug) {
-        for (int i = 0; i < n_params; ++i) {
-            printf("    param ");        
-            print_code(variables[i]);
-        }
-        printf("    body ");        
-        print_code(function_body);
-        printf("    body size %d\n", function_body_size);        
     }
     for (int i = 0; i < n_local_variables; ++i) {
         variables[n_params + i] = {{ITEM_INT, 0, 0}};
     }
+    if (debug) {
+        for (int i = 0; i < int(variables.size()); ++i) {
+            printf("    v%d=", i);        
+            print_vcode(variables[i]);
+        }
+        printf("    body ");        
+        List body;
+        body.resize(function_body_size);
+        for (int i = 0; i < function_body_size; ++i) {
+            body[i] = function_body[i];
+        }
+        print_vcode(body);
+    }
     vector<Function> functions;
     List result = run(function_body, function_body_size, variables, functions, false);
     if (debug) {
-        printf("    output buf size %d\n", output_bufsize);        
         printf("    output ");        
-        print_code(result);
+        print_vcode(result);
+        printf("C++ ends (%d run calls)\n", g_count_runs_calls);
     }
     *n_output = int(result.size());
     if (*n_output > output_bufsize) {
