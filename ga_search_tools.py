@@ -50,11 +50,11 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
             t0 = time.time()
             cpp_model_outputs = run_on_all_inputs(toolbox.cpp_handle, ind)
             toolbox.t_cpp_interpret += time.time() - t0
-            print("t_py", toolbox.t_interpret, "t_cpp", toolbox.t_cpp_interpret, toolbox.t_interpret / toolbox.t_cpp_interpret)
             if model_outputs != cpp_model_outputs:
+                print("t_py", toolbox.t_interpret, "t_cpp", toolbox.t_cpp_interpret, toolbox.t_interpret / toolbox.t_cpp_interpret)
                 print("model_outputs", model_outputs)
                 print("cpp_model_outputs", cpp_model_outputs)
-                print("toolbox.eval_count", toolbox.eval_count)
+                print("toolbox.eval_count OK", toolbox.eval_count - 1)
                 print("ind", ind.deap_str)
             assert model_outputs == cpp_model_outputs
         t0 = time.time()
