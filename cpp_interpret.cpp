@@ -829,9 +829,9 @@ int run_non_recursive_level1_function(
         int n_params, int* param_sizes, Item* params, // actual params, param[i] = params[sum(param_sizes[:i]):sum(param_sizes[:i+1])
         int n_local_variables,
         Item* function_body, int function_body_size, // 
-        int output_bufsize, Item* output_buf, int* n_output
+        int output_bufsize, Item* output_buf, int* n_output,
+        int debug
 ) {
-    bool debug = false;
     if (debug) {
         printf("C++ start\n");
     }
@@ -861,7 +861,7 @@ int run_non_recursive_level1_function(
         print_vcode(body);
     }
     vector<Function> functions;
-    List result = run(function_body, function_body_size, variables, functions, false);
+    List result = run(function_body, function_body_size, variables, functions, debug > 1);
     if (debug) {
         printf("    output ");        
         print_vcode(result);

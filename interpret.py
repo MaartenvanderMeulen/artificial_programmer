@@ -225,20 +225,24 @@ def _run(program, variables, functions, debug, depth):
                 result = x[1:] if type(x) == type([]) else 0
         elif program[0] == "extend": # example (extend (1 2) (3 4))
             result = 0
+            values = []
             for i in range(1, len(program)):
-                value = _run(program[i], variables, functions, debug, depth+1)
+                values.append(_run(program[i], variables, functions, debug, depth+1)) # NO LAZY EVALUATION!
+            for i, value in enumerate(values):
                 if type(value) != type([]):
                     result = 0
                     break
-                if i == 1:
+                if i == 0:
                     result = value
                 else:
                     result += value
         elif program[0] == "append":
             result = 0
+            values = []
             for i in range(1, len(program)):
-                value = _run(program[i], variables, functions, debug, depth+1)
-                if i == 1:
+                values.append(_run(program[i], variables, functions, debug, depth+1)) # NO LAZY EVALUATION!
+            for i, value in enumerate(values):
+                if i == 0:
                     if type(value) != type([]):
                         result = 0
                         break
@@ -247,9 +251,11 @@ def _run(program, variables, functions, debug, depth):
                     result.append(value)
         elif program[0] == "cons":
             result = 0
+            values = []
             for i in range(1, len(program)):
-                value = _run(program[i], variables, functions, debug, depth+1)
-                if i == 1:
+                values.append(_run(program[i], variables, functions, debug, depth+1)) # NO LAZY EVALUATION!
+            for i, value in enumerate(values):
+                if i == 0:
                     result = [value]
                 else:
                     if type(value) != type([]):

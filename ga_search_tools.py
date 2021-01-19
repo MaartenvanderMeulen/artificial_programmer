@@ -51,11 +51,21 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
             cpp_model_outputs = run_on_all_inputs(toolbox.cpp_handle, ind)
             toolbox.t_cpp_interpret += time.time() - t0
             if model_outputs != cpp_model_outputs:
-                print("t_py", toolbox.t_interpret, "t_cpp", toolbox.t_cpp_interpret, toolbox.t_interpret / toolbox.t_cpp_interpret)
+                run_on_all_inputs(toolbox.cpp_handle, ind, debug=2)
+                t = time.time()
+                t_total = t - toolbox.t0
+                t_other = t_total - toolbox.t_cpp_interpret - toolbox.t_interpret
+                t_new = t_other + toolbox.t_cpp_interpret
+                t_old = t_other + toolbox.t_interpret
+                print("t_py", toolbox.t_interpret, "t_cpp", toolbox.t_cpp_interpret, "t_other", t_other)
+                print("t_old", t_old, "t_new", t_new)
+                print("old t_other%", int(100*t_other/t_old))
+                print("new t_other%", int(100*t_other/t_new))
                 print("model_outputs", model_outputs)
                 print("cpp_model_outputs", cpp_model_outputs)
                 print("toolbox.eval_count OK", toolbox.eval_count - 1)
-                print("ind", ind.deap_str)
+                code_str = interpret.convert_code_to_str(code)
+                print(code_str)
             assert model_outputs == cpp_model_outputs
         t0 = time.time()
         weighted_error, model_evals = evaluate.evaluate_all(toolbox.example_inputs, model_outputs, toolbox.evaluation_function, toolbox.f, debug, toolbox.penalise_non_reacting_models)

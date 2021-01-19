@@ -257,7 +257,16 @@
     (or (assign v3 0) 1)
     (or
      (print 
-        (append (append (append (append v1 v2) (for v0 v0 v3)) 1) 0)
+
+        #(le
+        #    (append (append (last sorted_data i k) (le k sorted_data)) (le (assign elem sorted_data) k))
+            (last
+                (last (assign k sorted_data) (le k i) sorted_data)
+                (le (if_then_else k elem sorted_data) elem)
+                (append (append elem k) k)
+            )
+        #)
+
      )
      1
     )

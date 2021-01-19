@@ -149,7 +149,7 @@ def convert_c_output_to_python(output_buf, n_output):
     return result 
 
 
-def run_once(lib, c_param_sizes, c_params, n_local_variables, c_code, output_bufsize, output_buf):
+def run_once(lib, c_param_sizes, c_params, n_local_variables, c_code, output_bufsize, output_buf, debug):
     c_n_params = ctypes.c_int(len(c_param_sizes))
     n_output = ctypes.c_int()
     n_output.value = 0
@@ -157,7 +157,7 @@ def run_once(lib, c_param_sizes, c_params, n_local_variables, c_code, output_buf
         c_n_params, ctypes.byref(c_param_sizes), ctypes.byref(c_params), \
         ctypes.c_int(n_local_variables), \
         ctypes.byref(c_code), ctypes.c_int(len(c_code)), \
-        ctypes.c_int(output_bufsize), ctypes.byref(output_buf), ctypes.byref(n_output))
+        ctypes.c_int(output_bufsize), ctypes.byref(output_buf), ctypes.byref(n_output), ctypes.c_int(debug))
     return convert_c_output_to_python(output_buf, n_output.value)
 
 
@@ -174,14 +174,14 @@ def get_cpp_handle(inputs, param_names, local_variable_names):
     return cpp_handle
 
 
-def run_on_all_inputs(cpp_handle, deap_code, get_item_value=None):
+def run_on_all_inputs(cpp_handle, deap_code, get_item_value=None, debug=0):
     result = []
     lib, c_inputs, symbol_table, n_local_variables, output_bufsize, output_buf = cpp_handle
     if get_item_value is None:
         get_item_value = lambda x : x.name if isinstance(x, gp.Primitive) else x.value
     c_code = compile_deap(deap_code, symbol_table, get_item_value)
     for c_param_sizes, c_params in c_inputs:
-        result.append(run_once(lib, c_param_sizes, c_params, n_local_variables, c_code, output_bufsize, output_buf))
+        result.append(run_once(lib, c_param_sizes, c_params, n_local_variables, c_code, output_bufsize, output_buf, debug))
     return result
 
 
