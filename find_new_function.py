@@ -75,20 +75,28 @@ class Toolbox(object):
         random.seed(self.seed)
 
 
+def write_timings(toolbox):
+    ga_search_tools.write_seconds(toolbox, toolbox.t_total, "total")
+    ga_search_tools.write_seconds(toolbox, toolbox.t_cpp_interpret, "cpp_interpret")
+    if toolbox.t_py_interpret > 0:
+        ga_search_tools.write_seconds(toolbox, toolbox.t_py_interpret, "py_interpret")
+    ga_search_tools.write_seconds(toolbox, toolbox.t_eval, "eval")
+
+
 def basinhopper(toolbox):
     for _ in range(toolbox.hops):
         toolbox.eval_count = 0
         toolbox.eval_lookup_count = 0
         toolbox.t0 = time.time()
-        toolbox.t_interpret = 0
+        toolbox.t_py_interpret = 0
         toolbox.t_cpp_interpret = 0
         toolbox.t_eval = 0
 
         best, gen = ga_search1.ga_search_impl(toolbox)
         if best and toolbox.best_ind_file:
             ga_search_tools.write_population(toolbox.best_ind_file, [best], toolbox.functions)
-        seconds = round(time.time() - toolbox.t0)
-        ga_search_tools.write_seconds(toolbox, seconds)
+        toolbox.t_total = time.time() - toolbox.t0
+        write_timings(toolbox)
         if best and best.eval == 0:
             code = interpret.compile_deap(best.deap_str, toolbox.functions)
             result = ["function", toolbox.problem_name, toolbox.problem_params, code]

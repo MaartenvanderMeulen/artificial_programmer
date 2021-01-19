@@ -15,58 +15,63 @@ from cpp_coupling import get_cpp_handle, run_on_all_inputs
 from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull, gp.from_string
 
 
-
-def evaluate_individual_impl(toolbox, ind, debug=0):
+def test_against_python_interpreter(toolbox, cpp_model_outputs, ind):
+    t0 = time.time()
     deap_str = ind.deap_str
     assert deap_str == str(ind)
+    code = interpret.compile_deap(deap_str, toolbox.functions)
+    toolbox.functions[toolbox.problem_name] = [toolbox.formal_params, code]
+    py_model_outputs = []
+    for input in toolbox.example_inputs:
+        model_output = interpret.run([toolbox.problem_name] + input, dict(), toolbox.functions, debug=toolbox.verbose >= 5)
+        py_model_outputs.append(model_output)        
+    toolbox.t_py_interpret += time.time() - t0
+    if py_model_outputs != cpp_model_outputs:
+        run_on_all_inputs(toolbox.cpp_handle, ind, debug=2)
+        print("py_model_outputs", py_model_outputs)
+        print("cpp_model_outputs", cpp_model_outputs)
+        print("toolbox.eval_count OK", toolbox.eval_count - 1)
+        code_str = interpret.convert_code_to_str(code)
+        print(code_str)
+    assert py_model_outputs == cpp_model_outputs
+
+
+def eval_monkey_mode(toolbox, ind, debug):
+    '''if the solution can be found in monkey mode, the real search could in theory find it also'''
+    deap_str = ind.deap_str
+    assert deap_str == str(ind)
+    code = interpret.compile_deap(deap_str, toolbox.functions)
+    toolbox.functions[toolbox.problem_name] = [toolbox.formal_params, code]
+    code_str = interpret.convert_code_to_str(code)
+    weighted_error = evaluate.evaluate_code(code_str, toolbox.solution_code_str)
+    model_outputs = (weighted_error,)
+    model_evals = (weighted_error,)
+    if weighted_error == 0.0:
+        # now check that this also evaluates 
+        model_outputs_tmp = []
+        for input in toolbox.example_inputs:
+            model_output_tmp = interpret.run([toolbox.problem_name] + input, dict(), toolbox.functions)
+            model_outputs_tmp.append(model_output_tmp)        
+        weighted_error_tmp, model_evals_tmp = evaluate.evaluate_all(toolbox.example_inputs, model_outputs_tmp, toolbox.evaluation_function, toolbox.f, debug, toolbox.penalise_non_reacting_models)
+        if weighted_error_tmp != 0:
+            weighted_error_tmp, model_evals_tmp = evaluate.evaluate_all(toolbox.example_inputs, model_outputs_tmp, toolbox.evaluation_function, toolbox.f, 4, toolbox.penalise_non_reacting_models)
+        assert weighted_error_tmp == 0
+    return weighted_error, model_outputs, model_evals
+
+
+def evaluate_individual_impl(toolbox, ind, debug=0):
     if toolbox.eval_count >= toolbox.max_evaluations:
         raise RuntimeWarning("max evaluations reached")
     toolbox.eval_count += 1
-    code = interpret.compile_deap(deap_str, toolbox.functions)
-    toolbox.functions[toolbox.problem_name] = [toolbox.formal_params, code]
-    if toolbox.monkey_mode: # if the solution can be found in monkey mode, the real search could in theory find it also
-        code_str = interpret.convert_code_to_str(code)
-        weighted_error = evaluate.evaluate_code(code_str, toolbox.solution_code_str)
-        model_outputs = (weighted_error,)
-        model_evals = (weighted_error,)
-        if weighted_error == 0.0:
-            # now check that this also evaluates 
-            model_outputs_tmp = []
-            for input in toolbox.example_inputs:
-                model_output_tmp = interpret.run([toolbox.problem_name] + input, dict(), toolbox.functions)
-                model_outputs_tmp.append(model_output_tmp)        
-            weighted_error_tmp, model_evals_tmp = evaluate.evaluate_all(toolbox.example_inputs, model_outputs_tmp, toolbox.evaluation_function, toolbox.f, debug, toolbox.penalise_non_reacting_models)
-            if weighted_error_tmp != 0:
-                weighted_error_tmp, model_evals_tmp = evaluate.evaluate_all(toolbox.example_inputs, model_outputs_tmp, toolbox.evaluation_function, toolbox.f, 4, toolbox.penalise_non_reacting_models)
-            assert weighted_error_tmp == 0
+    if toolbox.monkey_mode: 
+        weighted_error, model_outputs, model_evals = eval_monkey_mode(toolbox, ind, debug)
     else:
         t0 = time.time()
-        model_outputs = []
-        for input in toolbox.example_inputs:
-            model_output = interpret.run([toolbox.problem_name] + input, dict(), toolbox.functions, debug=toolbox.verbose >= 5)
-            model_outputs.append(model_output)        
-        toolbox.t_interpret += time.time() - t0
-        if True:
-            t0 = time.time()
-            cpp_model_outputs = run_on_all_inputs(toolbox.cpp_handle, ind)
-            toolbox.t_cpp_interpret += time.time() - t0
-            if model_outputs != cpp_model_outputs:
-                run_on_all_inputs(toolbox.cpp_handle, ind, debug=2)
-                t = time.time()
-                t_total = t - toolbox.t0
-                t_other = t_total - toolbox.t_cpp_interpret - toolbox.t_interpret
-                t_new = t_other + toolbox.t_cpp_interpret
-                t_old = t_other + toolbox.t_interpret
-                print("t_py", toolbox.t_interpret, "t_cpp", toolbox.t_cpp_interpret, "t_other", t_other)
-                print("t_old", t_old, "t_new", t_new)
-                print("old t_other%", int(100*t_other/t_old))
-                print("new t_other%", int(100*t_other/t_new))
-                print("model_outputs", model_outputs)
-                print("cpp_model_outputs", cpp_model_outputs)
-                print("toolbox.eval_count OK", toolbox.eval_count - 1)
-                code_str = interpret.convert_code_to_str(code)
-                print(code_str)
-            assert model_outputs == cpp_model_outputs
+        cpp_model_outputs = run_on_all_inputs(toolbox.cpp_handle, ind)
+        toolbox.t_cpp_interpret += time.time() - t0
+        model_outputs = cpp_model_outputs
+        if False:
+            test_against_python_interpreter(toolbox, cpp_model_outputs, ind)
         t0 = time.time()
         weighted_error, model_evals = evaluate.evaluate_all(toolbox.example_inputs, model_outputs, toolbox.evaluation_function, toolbox.f, debug, toolbox.penalise_non_reacting_models)
         assert math.isclose(weighted_error, sum(model_evals))
@@ -432,9 +437,9 @@ def consistency_check(toolbox, inds):
         consistency_check_ind(toolbox, ind)
 
 
-def write_seconds(toolbox, seconds):
+def write_seconds(toolbox, seconds, label):
     file_name = toolbox.params["output_folder"] + "/time_" + str(toolbox.params["seed"]) + ".txt"
-    with open(file_name, "w") as f:
-        f.write(f"{seconds}\n")
+    with open(file_name, "a") as f:
+        f.write(f"{label} {seconds}\n")
 
 
