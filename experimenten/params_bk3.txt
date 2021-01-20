@@ -1,6 +1,6 @@
 {
     "do_not_overwrite_logfile": false,
-    "problems_file": "experimenten/problems_merge_elem.txt",
+    "problems_file": "experimenten/problems_merge_elem_hard.txt",
     "functions_file": "experimenten/functions_leeg.txt",
     "seed_prefix": 0,
     "skip_seeds": [],
@@ -12,7 +12,7 @@
     "max_evaluations": 1000000,
     "max_stuck_count": 13,
     "new_initial_population": false,
-    "old_populations_folder": "tmp/acs",
+    "old_populations_folder": "tmp/acsh",
     "old_populations_quartile": 3,
     "old_populations_samplesize": 3,
     "analyse_best": false,

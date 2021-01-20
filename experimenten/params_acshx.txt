@@ -12,10 +12,9 @@
     "max_evaluations": 1000000,
     "max_stuck_count": 13,
     "new_initial_population": false,
-    "old_populations_folder": "tmp/bk1",
-    "old_populations_quartile": 1,
-    "old_populations_samplesize": 1,
-    "analyse_best": false,
+    "old_populations_folder": "tmp/acsh",
+    "analyse_best": true,
+    "old_populations_samplesize": 1000,
     "show_path_depth": 1,
     "pop_size": [
         4000,

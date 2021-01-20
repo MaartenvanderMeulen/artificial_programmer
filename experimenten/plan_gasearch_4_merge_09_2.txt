@@ -1,0 +1,58 @@
+
+
+for f in po* ; do grep '\#' $f | head -1 | sed 's/.*\# //'; done | sort -n | uniq -c
+
+======== email naar Victor 20 Jan
+
+
+Analyse suboptima van de 996 runs die van scratch beginnen en zonder oplossing stoppen.
+Ze stoppen na 14 iteraties geen verbetering, ze doen geen grote opschudding.
+De verschillende suboptima hieronder, de linker kolom is de frequentie.
+for f in po* ; do grep '\#' $f | head -1 | sed 's/.*\# //'; done | sort -n | uniq -c
+      1 0.600
+      1 2.366
+      1 2.766
+      2 6.610
+      1 8.015
+      8 9.919
+      7 10.719
+     11 10.919
+     18 11.885
+     14 12.085
+     50 13.053
+    300 15.384
+      1 17.800
+    581 18.275
+Suboptimum met waarde 18.275 komt het meest voor.
+grep -h -e 'gen  0 best' lo* | sed 's/sc.*//' | sort | uniq -c
+      1 gen  0 best  15.384 
+    999 gen  0 best  18.275 
+Er zijn 999 runs met een initiele populatie met waarde 18.275, 1 run begint met 15.384.
+Die 581 runs beginnen dus in 18.275 en komen nooit verder!
+
+
+Effect opschudding via her-parachuten op de 18.275 suboptima.
+Ik was benieuwd wat het effect was van opschudding via re-entering-parachuting-fase op de 18.275 populaties.
+Dat heb ik onderzocht met samenvoegen van 18.275 suboptima.  Samenvoegen van de 581 suboptima met waarde 18.275 geeft:
+	1/200=~0.5%.
+Voor dit experiment zijn dus 200 runs gedaan, en iedere run had een startpopulatie met 4000/581=6 random
+individuals uit ieder van de 581 suboptima.  Conclusie: ontsnappen uit 18.275 via her-parachuten lukt niet.
+
+Ter vergelijking, samenvoegen van alle suboptima gaf:
+	47/200=~23.5%
+Voor dit experiment zijn 1000 runs gedaan, en iedere run had een startpopulatie met 4000/996=4 random
+individuals uit ieder van de 996 suboptima.
+
+Een significant verschil in performance.
+
+
+Resterende vragen voor vervolganalyses die in me opgekomen zijn: 
+- hoeveel families hebben evaluatie 18.275?
+		- analyse_best optie in params
+- wat doet de meest voorkomende familie? (Alle code snippets in die familie hebben dezelfde output, wat is die output?)
+		- snippet uit analyse_best analyseren, sneller is de uitvoer van de snippet ook afdrukken
+- welke ontsnappingen zijn er uit 18.275?  Is dat terug te voeren op bepaalde families?
+		- daar was een speciaal stukje code voor, 24 dec "follow subopt.py"
+
+
+

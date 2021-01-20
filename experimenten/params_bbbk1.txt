@@ -1,6 +1,6 @@
 {
     "do_not_overwrite_logfile": false,
-    "problems_file": "experimenten/problems_merge_elem.txt",
+    "problems_file": "experimenten/problems_merge_elem_hard.txt",
     "functions_file": "experimenten/functions_leeg.txt",
     "seed_prefix": 0,
     "skip_seeds": [],

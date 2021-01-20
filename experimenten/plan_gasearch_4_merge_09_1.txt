@@ -404,3 +404,6 @@ Oplossing Maarten:
 	)
 	elem
 )
+
+rm tmp/acsh/*
+for seed in `seq 1000 1 1999` ; do tsp -n python solve_problems.py $seed acsh ; done

@@ -198,6 +198,9 @@ def read_old_populations(toolbox, old_populations_folder, prefix):
                 elif toolbox.old_populations_samplesize == 1:
                     toolbox.f.write("RuntimeWarning: stopped because no set covering needed, 0 evals\n")
                     exit()
+    if len(old_pops) == 0:
+        toolbox.f.write(f"RuntimeError: no {prefix}* files in folder {old_populations_folder}\n")
+        exit(1)
     if toolbox.old_populations_samplesize != 1:
         if toolbox.old_populations_samplesize < len(old_pops):
             old_pops = random.sample(old_pops, k=toolbox.old_populations_samplesize)
@@ -245,7 +248,14 @@ def analyse_population_impl(toolbox, old_pops):
     count_deap_str = dict()
     count_model_outputs = dict()
     count_eval = dict()
-    for old_pop in old_pops:
+    families = dict()
+    t0 = time.time()
+    for i, old_pop in enumerate(old_pops):
+        if time.time() > t0 + 10:
+            t0 = time.time()
+            print(f"progress {i+1}/{len(old_pops)}")
+        if len(old_pop) != 1:
+            print("len(old_pop) != 1", i, len(old_pop))
         for code in old_pop:
             deap_str = interpret.convert_code_to_deap_str(code, toolbox)
             ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)
@@ -260,6 +270,11 @@ def analyse_population_impl(toolbox, old_pops):
                 count_deap_str[deap_str] = 0
             count_deap_str[deap_str] += 1
             model_outputs = toolbox.families_list[ind.family_index][1]
+            if ind.family_index not in families:
+                families[ind.family_index] = [ind.eval, ind.family_index, ind.deap_str, str(model_outputs[-1]), 0]
+            families[ind.family_index][4] += 1
+            if len(families[ind.family_index][2]) > len(ind.deap_str):
+                families[ind.family_index][2] = ind.deap_str
             if model_outputs not in count_model_outputs:
                 count_model_outputs[model_outputs] = 0
             count_model_outputs[model_outputs] += 1
@@ -267,28 +282,49 @@ def analyse_population_impl(toolbox, old_pops):
                 count_eval[ind.eval] = 0
             count_eval[ind.eval] += 1
     with open(f"{toolbox.output_folder}/analysis.txt", "w") as f:
-        f.write(f"count\tstr\n")
-        count_deap_str = [(key, value) for key, value in count_deap_str.items()]
-        count_deap_str.sort(key=lambda item: -item[1])
-        for key, value in count_deap_str:
-            f.write(f"{value}\t{key}\n")
+        if False:
+            f.write(f"count\tstr\n")
+            count_deap_str = [(key, value) for key, value in count_deap_str.items()]
+            count_deap_str.sort(key=lambda item: -item[1])
+            for key, value in count_deap_str:
+                f.write(f"{value}\t{key}\n")
+        if False:
+            f.write(f"\ncount\tmodel_output\n")
+            count_model_outputs = [(key, value) for key, value in count_model_outputs.items()]
+            count_model_outputs.sort(key=lambda item: -item[1])
+            for key, value in count_model_outputs:
+                f.write(f"{value}\t{key}\n")
 
-        f.write(f"\ncount\tmodel_output\n")
-        count_model_outputs = [(key, value) for key, value in count_model_outputs.items()]
-        count_model_outputs.sort(key=lambda item: -item[1])
-        for key, value in count_model_outputs:
-            f.write(f"{value}\t{key}\n")
+        if False:
+            f.write(f"\ncount\teval\n")
+            count_eval = [(key, value) for key, value in count_eval.items()]
+            count_eval.sort(key=lambda item: -item[1])
+            for key, value in count_eval:
+                f.write(f"{value}\t{key}\n")
 
-        f.write(f"\ncount\teval\n")
-        count_eval = [(key, value) for key, value in count_eval.items()]
-        count_eval.sort(key=lambda item: -item[1])
-        for key, value in count_eval:
-            f.write(f"{value}\t{key}\n")
+        f.write(f"{'  error':7} family_index individuals {'shortest_individual':90} {'outputs':30}\n")
+        data = [value for key, value in families.items()]
+        data.sort(key=lambda item: -item[0])
+        sum_count = 0
+        for error, family, ind, outputs, count in data:
+            sum_count += count
+            if len(ind) > 90:
+                ind = str(ind)[:87] + "..."
+            if len(outputs) > 30:
+                outputs = str(outputs)[:27] + "..."
+            f.write(f"{error:7.3f} {family:12d} {count:11d} {ind:90} {outputs:30}\n")
+        f.write(f"{' ':7} {' ':12} {sum_count:11} {' ':90} {' ':30}\n")
+        
     return None
 
 
 def generate_initial_population(toolbox, old_pops=None):
     if toolbox.analyse_best:
+        # best pop uit pop maken kan met :
+        # for s in `seq 1000 1 1999` ; do echo '(' > best_$s.txt ; if grep '\#' pop_$s.txt | head -1 >> best_$s.txt ; then echo $s ; fi ; echo ')' >> best_$s.txt ; done
+        # daarna de lege best files identificeren met
+        # for s in `seq 1000 1 1999` ; do grep -L '\#' best_$s.txt ; done
+        # en dan weghalen.
         bests = read_old_populations(toolbox, toolbox.old_populations_folder, "best")
         analyse_population_impl(toolbox, bests)    
         exit()
