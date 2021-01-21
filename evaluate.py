@@ -87,9 +87,16 @@ def evaluate_list_of_ints(actual, expect, debug=False):
     error = 0.0
     if type(actual) != type([]):
         error = 1.0
-    errors.append(error)
-    if type(actual) == type(1):
+        assert type(actual) == type(1)
         actual = [actual]
+    else:
+        for v in actual:
+            if type(v) != type(1):
+                error += 1/(1+len(actual))
+        if len(actual) == 0:
+            actual = [0]
+            error = 1.0
+    errors.append(error)
     k = len(expect)
     if k == 0:
         raise RuntimeError("TODO: handle case were expect output is empty")
@@ -98,6 +105,8 @@ def evaluate_list_of_ints(actual, expect, debug=False):
     errors.append(abs(len(actual) - len(expect)) ** n)
     # error : hoever zitten de expect getallen van de model getallen af
     actual_numbers = extract_numbers(actual)
+    if len(actual_numbers) == 0:
+        actual_numbers = set([0])
     expected_numbers = extract_numbers(expect)
     error = 0.0
     for expected_number in expected_numbers:

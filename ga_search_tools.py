@@ -6,6 +6,7 @@ import copy
 import math
 import time
 import json
+import numpy as np
 
 import interpret
 import evaluate
@@ -263,78 +264,38 @@ def load_initial_population_impl(toolbox, old_pops):
 
 
 def analyse_population_impl(toolbox, old_pops):
-    population = []
-    count_deap_str = dict()
-    count_model_outputs = dict()
-    count_eval = dict()
     families = dict()
-    t0 = time.time()
-    for i, old_pop in enumerate(old_pops):
-        if time.time() > t0 + 10:
-            t0 = time.time()
-            print(f"progress {i+1}/{len(old_pops)}")
-        if len(old_pop) != 1:
-            print("len(old_pop) != 1", i, len(old_pop))
+    for old_pop in old_pops:
         for code in old_pop:
             deap_str = interpret.convert_code_to_deap_str(code, toolbox)
             ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)
             ind.deap_str = str(ind)
-            ind.parents = []
-            ind.eval = evaluate_individual(toolbox, ind)
-            population.append(ind)
-
-            assert len(ind) == deap_len_of_code(code)
             assert deap_str == ind.deap_str
-            if deap_str not in count_deap_str:
-                count_deap_str[deap_str] = 0
-            count_deap_str[deap_str] += 1
-            model_outputs = toolbox.families_list[ind.family_index].model_outputs
+            assert len(ind) == deap_len_of_code(code)
+            ind.parents = []
+            ind.eval = evaluate_individual(toolbox, ind) # required to set ind.family_index
             if ind.family_index not in families:
-                families[ind.family_index] = [ind.eval, ind.family_index, ind.deap_str, str(model_outputs[-1]), 0]
-            families[ind.family_index][4] += 1
-            if len(families[ind.family_index][2]) > len(ind.deap_str):
-                families[ind.family_index][2] = ind.deap_str
-            if model_outputs not in count_model_outputs:
-                count_model_outputs[model_outputs] = 0
-            count_model_outputs[model_outputs] += 1
-            if ind.eval not in count_eval:
-                count_eval[ind.eval] = 0
-            count_eval[ind.eval] += 1
+                families[ind.family_index] = [ind.family_index, ind.deap_str, 0]
+            families[ind.family_index][2] += 1
+            if len(families[ind.family_index][1]) > len(ind.deap_str):
+                families[ind.family_index][1] = ind.deap_str
+    del ind, deap_str
     with open(f"{toolbox.output_folder}/analysis.txt", "w") as f:
-        if False:
-            f.write(f"count\tstr\n")
-            count_deap_str = [(key, value) for key, value in count_deap_str.items()]
-            count_deap_str.sort(key=lambda item: -item[1])
-            for key, value in count_deap_str:
-                f.write(f"{value}\t{key}\n")
-        if False:
-            f.write(f"\ncount\tmodel_output\n")
-            count_model_outputs = [(key, value) for key, value in count_model_outputs.items()]
-            count_model_outputs.sort(key=lambda item: -item[1])
-            for key, value in count_model_outputs:
-                f.write(f"{value}\t{key}\n")
-
-        if False:
-            f.write(f"\ncount\teval\n")
-            count_eval = [(key, value) for key, value in count_eval.items()]
-            count_eval.sort(key=lambda item: -item[1])
-            for key, value in count_eval:
-                f.write(f"{value}\t{key}\n")
-
-        f.write(f"{'  error':7} family_index individuals {'shortest_individual':90} {'outputs':30}\n")
+        f.write(f"{'  error':7} family_index individuals {'shortest_individual':60} {'last_output':30} {'last_error':30}\n")
         data = [value for key, value in families.items()]
-        data.sort(key=lambda item: -item[0])
+        data.sort(key=lambda item: -toolbox.families_list[item[0]].weighted_error)
         sum_count = 0
-        for error, family, ind, outputs, count in data:
+        sum_error_vector = np.zeros_like(toolbox.families_list[0].eval_vectors[-1])
+        for family_index, deap_str, count in data:
+            error = toolbox.families_list[family_index].weighted_error
+            outputs = str(toolbox.families_list[family_index].model_outputs[-1])
+            error_vector = toolbox.families_list[family_index].eval_vectors[-1]
+            sum_error_vector += np.array(error_vector)
+            error_vector = " ".join([f"{v:5.3f}" for v in error_vector])
             sum_count += count
-            if len(ind) > 90:
-                ind = str(ind)[:87] + "..."
-            if len(outputs) > 30:
-                outputs = str(outputs)[:27] + "..."
-            f.write(f"{error:7.3f} {family:12d} {count:11d} {ind:90} {outputs:30}\n")
-        f.write(f"{' ':7} {' ':12} {sum_count:11} {' ':90} {' ':30}\n")
-        
-    return None
+            f.write(f"{error:7.3f} {family_index:12d} {count:11d} {deap_str[:60]:60} {outputs[:30]:30} {error_vector[:30]:30}\n")
+        sum_error_vector = " ".join([f"{v:5.3f}" for v in sum_error_vector])
+        f.write(f"{' ':7} {' ':12} {sum_count:11} {' ':60} {' ':30} {sum_error_vector[:30]:30}\n")
 
 
 def generate_initial_population(toolbox, old_pops=None):
@@ -396,6 +357,18 @@ def cxOnePoint(toolbox, parent1, parent2):
     if child.eval in toolbox.taboo_set:
         return None
     return child
+
+
+def get_family_size(toolbox, ind):
+    return len(toolbox.current_families_dict[ind.family_index])
+
+
+def is_improvement(toolbox, ind, best):
+    if best is None:
+        return True
+    best_eval = best.eval + toolbox.family_size_penalty * get_family_size(toolbox, best)
+    ind_eval = ind.eval + toolbox.family_size_penalty * get_family_size(toolbox, ind)
+    return best_eval > ind_eval or (best_eval == ind_eval and len(best) > len(ind))
 
 
 def crossover_with_local_search(toolbox, parent1, parent2):
