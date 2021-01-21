@@ -360,15 +360,22 @@ def cxOnePoint(toolbox, parent1, parent2):
 
 
 def get_family_size(toolbox, ind):
-    return len(toolbox.current_families_dict[ind.family_index])
+    d = toolbox.current_families_dict
+    return len(d[ind.family_index]) if ind.family_index in d else 0
 
 
 def is_improvement(toolbox, ind, best):
     if best is None:
         return True
-    best_eval = best.eval + toolbox.family_size_penalty * get_family_size(toolbox, best)
-    ind_eval = ind.eval + toolbox.family_size_penalty * get_family_size(toolbox, ind)
-    return best_eval > ind_eval or (best_eval == ind_eval and len(best) > len(ind))
+    if best.eval != ind.eval:
+        return best.eval > ind.eval
+    # now they have equal .eval
+    best_family_size = get_family_size(toolbox, best)
+    ind_family_size = get_family_size(toolbox, ind)
+    if best_family_size != ind_family_size:
+        return best_family_size > ind_family_size
+    # now they have equal family size
+    return len(best) > len(ind)
 
 
 def crossover_with_local_search(toolbox, parent1, parent2):
@@ -394,7 +401,7 @@ def crossover_with_local_search(toolbox, parent1, parent2):
                 child.deap_str = str(child)
                 if child.deap_str not in toolbox.ind_str_set:
                     child.eval = evaluate_individual(toolbox, child)
-                    if best is None or best.eval > child.eval or (best.eval == child.eval and len(best) > len(child)):
+                    if is_improvement(toolbox, child, best):
                         if child.eval not in toolbox.taboo_set:
                             best = child
     return best
@@ -427,7 +434,7 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
             child.deap_str = str(child)
             if child.deap_str not in toolbox.ind_str_set:
                 child.eval = evaluate_individual(toolbox, child)
-                if best is None or best.eval > child.eval or (best.eval == child.eval and len(best) > len(child)):
+                if is_improvement(toolbox, child, best):
                     if child.eval not in toolbox.taboo_set:
                         best = child
     return best
