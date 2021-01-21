@@ -26,7 +26,7 @@ def is_solved_by_function(example_inputs, evaluation_function, fname, functions,
             actual_outputs.append(actual_output)
     if len(used_example_inputs) == 0:
         return False
-    error, _ = evaluate.evaluate_all(used_example_inputs, actual_outputs, evaluation_function, log_file, verbose)
+    error = evaluate.compute_weighted_error(used_example_inputs, actual_outputs, evaluation_function, log_file, verbose)
     if verbose >= 3:
         log_file.write(f"is_solved_by_function({fname}), actual_outputs {actual_outputs}, error {error}\n")
     return error <= 0.0

@@ -108,8 +108,8 @@ def basinhopper(toolbox):
             toolbox.f.write(f"\t{best.deap_str}")
             toolbox.f.write(f"\n")
             if toolbox.verbose >= 1:
-                score, _, _ = ga_search_tools.evaluate_individual_impl(toolbox, best, 4)
-                assert score == 0
+                error = ga_search_tools.forced_reevaluation_of_individual_for_debugging(toolbox, best, 4)
+                assert error == 0
             if toolbox.verbose >= 1:
                 ga_search_tools.write_path(toolbox, best)
             return result

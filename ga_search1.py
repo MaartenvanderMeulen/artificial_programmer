@@ -48,10 +48,8 @@ def select_parents(toolbox, population):
         if parent1.eval > parent2.eval or (parent1.eval == parent2.eval and len(parent1) > len(parent2)):
             parent1, parent2 = parent2, parent1
         # compute p        
-        model_evals1 = toolbox.families_list[parent1.family_index][2]
-        model_evals2 = toolbox.families_list[parent2.family_index][2]
-        assert parent1.eval < 0.1 or math.isclose(parent1.eval, sum(model_evals1))
-        assert parent2.eval < 0.1 or math.isclose(parent2.eval, sum(model_evals2))
+        model_evals1 = toolbox.families_list[parent1.family_index].model_evals
+        model_evals2 = toolbox.families_list[parent2.family_index].model_evals
         p_fitness1 = (1 - parent1.eval/(max_eval*1.1))
         p_fitness2 = (1 - parent2.eval/(max_eval*1.1))
         if p_fitness1 < 0 or 1 < p_fitness1:
@@ -206,7 +204,7 @@ def ga_search_impl(toolbox):
                 if toolbox.f and toolbox.verbose >= 1:
                     count_best = sum([1 for ind in population if ind.eval == population[0].eval])
                     toolbox.f.write(f"gen {toolbox.real_gen:2d} best {population[0].eval:7.3f} ")
-                    toolbox.f.write(f"sc {toolbox.stuck_count:2d} count_best {count_best:4d} {population[0].deap_str}\n")
+                    toolbox.f.write(f"sc {toolbox.stuck_count:2d} count_best {count_best:4d} {population[0].deap_str[:120]}\n")
                 if toolbox.verbose >= 3:
                     log_population(toolbox, population, f"generation {toolbox.real_gen}, pop at start")
                 offspring, solution = generate_offspring(toolbox, population, toolbox.nchildren[toolbox.parachute_level])

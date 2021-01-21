@@ -445,44 +445,64 @@ def evaluate_code(actual_code_str, expected_code_str):
     return len(expected_code_str) - count_equal_prefix_length(actual_code_str, expected_code_str)
 
 
-def evaluate_all(example_inputs, actual_outputs, evaluation_function, log_file, verbose, penalise_non_reacting_models=False):
+def compute_eval_vectors(example_inputs, actual_outputs, evaluation_function, log_file, verbose, penalise_non_reacting_models=False):
+    '''Returns list of evaluation vectors, to be weighted dynamically using compute_weighted_sum'''
+    eval_vectors = []
     if type(evaluation_function) == type(""):
         function_name, extra_function_params = evaluation_function, []
     else:
         function_name, extra_function_params = evaluation_function
-    global sum_errors, weights
+    global sum_errors
     eval_function = eval(function_name)
     if verbose >= 4:
-        log_file.write(f"evaluate_all({function_name})\n")
-    model_evals = []
+        log_file.write(f"compute_error_vectors({function_name})\n")
     assert len(example_inputs) == len (actual_outputs)
     domain_output_set = set()
     for example_input, actual_output in zip(example_inputs, actual_outputs):
         domain_output_set.add(recursive_tuple(actual_output))
-        errors = eval_function(example_input, actual_output, extra_function_params, log_file, verbose)
-        errors = np.array(errors).astype(float)
-        if weights.shape[0] != errors.shape[0]:
-            weights = np.ones((errors.shape[0])) / errors.shape[0]
-        weighted_errors = errors * weights
-        v = float(np.sum(weighted_errors))
-        if sum_errors.shape[0] != errors.shape[0]:
-            sum_errors = np.zeros_like(errors)
-        sum_errors += errors
+        eval_vector = eval_function(example_input, actual_output, extra_function_params, log_file, verbose)
+        eval_vector = np.array(eval_vector).astype(float)
+        if sum_errors.shape[0] != eval_vector.shape[0]:
+            sum_errors = np.zeros_like(eval_vector)
+        sum_errors += eval_vector
         if verbose >= 4:
-            log_file.write(f"    eval_all_deferred, eval({example_input}, {actual_output}) = {v}\n")
-        model_evals.append(v)
+            log_file.write(f"    {eval_vector} = error(input={example_input}, output={actual_output})\n")
+        eval_vectors.append(eval_vector)
     if penalise_non_reacting_models:
         if len(domain_output_set) == 1:
+            global weights
             if verbose >= 3:
                 log_file.write(f"penalise_non_reacting_models\n")
                 log_file.write(f"    domain_output_set {str(domain_output_set)}\n")
                 log_file.write(f"    len(domain_output_set) {len(domain_output_set)}\n")
-                log_file.write(f"    old model evals {str(model_evals)}\n")
-            max_eval = max(model_evals)
-            model_evals = [max_eval for _ in model_evals]
+                vs = [np.sum(v*weights) for v in eval_vectors]
+                log_file.write(f"    old model evals {str(vs)}\n")
+            max_eval = eval_vectors[0]
+            for eval_vector in eval_vectors:
+                if np.sum(max_eval) < np.sum(eval_vector):
+                    max_eval = eval_vector
+            for eval_vector in eval_vectors:
+                eval_vector[...] = max_eval
             if verbose >= 3:
-                log_file.write(f"    new model evals {str(model_evals)}\n")
-    return sum(model_evals), model_evals
+                vs = [np.sum(v*weights) for v in eval_vectors]
+                log_file.write(f"    new model evals {str(vs)}\n")
+    return eval_vectors
+
+
+def compute_weighted_sums(eval_vectors):
+    weighted_sums = []
+    global weights
+    if weights.shape[0] != eval_vectors[0].shape[0]:
+        weights = np.ones((eval_vectors[0].shape[0])) / eval_vectors[0].shape[0]
+    for eval_vector in eval_vectors:
+        weighted_sums.append(np.sum(eval_vector * weights))
+    return weighted_sums
+
+
+def compute_weighted_error(example_inputs, actual_outputs, evaluation_function, log_file, verbose, penalise_non_reacting_models=False):
+    eval_vectors = compute_eval_vectors(example_inputs, actual_outputs, evaluation_function, log_file, verbose)
+    weighted_error = sum(compute_weighted_sums(eval_vectors))
+    return weighted_error
 
 
 def init_dynamic_error_weight_adjustment():

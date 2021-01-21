@@ -59,12 +59,38 @@ def eval_monkey_mode(toolbox, ind, debug):
     return weighted_error, model_outputs, model_evals
 
 
+class Family:
+    def __init__(self, model_outputs, eval_vectors):
+        self.model_outputs = model_outputs
+        self.eval_vectors = eval_vectors
+        self.model_evals = evaluate.compute_weighted_sums(self.eval_vectors)
+        self.weighted_error = sum(self.model_evals)
+
+
+def add_family(toolbox, model_outputs_tuple, eval_vectors):
+    family_index = len(toolbox.families_list)
+    toolbox.families_dict[model_outputs_tuple] = family_index
+    toolbox.families_list.append(Family(model_outputs_tuple, eval_vectors))
+    return family_index
+
+
+def forced_reevaluation_of_individual_for_debugging(toolbox, ind, debug_level):
+    '''Assigns family index to the individual'''
+    model_outputs = run_on_all_inputs(toolbox.cpp_handle, ind)
+    weighted_error = evaluate.compute_weighted_error(toolbox.example_inputs, model_outputs, toolbox.evaluation_function, \
+            toolbox.f, debug_level, toolbox.penalise_non_reacting_models)
+    return weighted_error
+    
+
+
 def evaluate_individual_impl(toolbox, ind, debug=0):
+    '''Assigns family index to the individual'''
     if toolbox.eval_count >= toolbox.max_evaluations:
         raise RuntimeWarning("max evaluations reached")
     toolbox.eval_count += 1
     if toolbox.monkey_mode: 
-        weighted_error, model_outputs, model_evals = eval_monkey_mode(toolbox, ind, debug)
+        # weighted_error, model_outputs, model_evals = eval_monkey_mode(toolbox, ind, debug)
+        pass # TODO : fix this again
     else:
         t0 = time.time()
         cpp_model_outputs = run_on_all_inputs(toolbox.cpp_handle, ind)
@@ -73,13 +99,14 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
         if False:
             test_against_python_interpreter(toolbox, cpp_model_outputs, ind)
         t0 = time.time()
-        weighted_error, model_evals = evaluate.evaluate_all(toolbox.example_inputs, model_outputs, toolbox.evaluation_function, toolbox.f, debug, toolbox.penalise_non_reacting_models)
-        assert math.isclose(weighted_error, sum(model_evals))
+        model_outputs_tuple = recursive_tuple(model_outputs)
+        if model_outputs_tuple in toolbox.families_dict:
+            ind.family_index = toolbox.families_dict[model_outputs_tuple]
+        else:
+            eval_vectors = evaluate.compute_eval_vectors(toolbox.example_inputs, model_outputs, toolbox.evaluation_function, \
+                toolbox.f, debug, toolbox.penalise_non_reacting_models)
+            ind.family_index = add_family(toolbox, model_outputs_tuple, eval_vectors)
         toolbox.t_eval += time.time() - t0
-        model_outputs = recursive_tuple(model_outputs)
-        if weighted_error == 0.0 and len(ind) > len(toolbox.solution_deap_ind) and toolbox.optimise_solution_length:
-            weighted_error += (len(ind) - len(toolbox.solution_deap_ind)) / 1000.0
-    return weighted_error, model_outputs, model_evals
 
 
 def evaluate_individual(toolbox, individual, debug=0):
@@ -88,19 +115,15 @@ def evaluate_individual(toolbox, individual, debug=0):
     deap_str = individual.deap_str
     assert deap_str == str(individual)
     toolbox.eval_lookup_count += 1
-    if deap_str in toolbox.eval_cache: #  TODO handle dynamic weighting that changes the evaluation
+    if deap_str in toolbox.eval_cache:
         individual.family_index = toolbox.eval_cache[deap_str]
-        eval, model_outputs, model_evals = toolbox.families_list[individual.family_index]
-        assert eval < 0.1 or math.isclose(eval, sum(model_evals))
-        return eval
-    weighted_error, model_outputs, model_evals = evaluate_individual_impl(toolbox, individual, debug)
-    if model_outputs in toolbox.families_dict:
-        individual.family_index = toolbox.families_dict[model_outputs]
     else:
-        individual.family_index = len(toolbox.families_list)
-        toolbox.families_list.append((weighted_error, model_outputs, model_evals))
-        toolbox.families_dict[model_outputs] = individual.family_index
-    toolbox.eval_cache[deap_str] = individual.family_index
+        evaluate_individual_impl(toolbox, individual, debug)
+        toolbox.eval_cache[deap_str] = individual.family_index
+    family = toolbox.families_list[individual.family_index]
+    weighted_error = family.weighted_error
+    if weighted_error == 0.0 and len(individual) > len(toolbox.solution_deap_ind) and toolbox.optimise_solution_length:
+        weighted_error += (len(individual) - len(toolbox.solution_deap_ind)) / 1000.0
     return weighted_error
 
 
@@ -269,7 +292,7 @@ def analyse_population_impl(toolbox, old_pops):
             if deap_str not in count_deap_str:
                 count_deap_str[deap_str] = 0
             count_deap_str[deap_str] += 1
-            model_outputs = toolbox.families_list[ind.family_index][1]
+            model_outputs = toolbox.families_list[ind.family_index].model_outputs
             if ind.family_index not in families:
                 families[ind.family_index] = [ind.eval, ind.family_index, ind.deap_str, str(model_outputs[-1]), 0]
             families[ind.family_index][4] += 1
@@ -460,7 +483,7 @@ def consistency_check_ind(toolbox, ind):
         assert hasattr(ind, "family_index")
         assert ind.deap_str == str(ind)
         assert ind.eval is not None
-        model_evals = toolbox.families_list[ind.family_index][2]
+        model_evals = toolbox.families_list[ind.family_index].model_evals
         if not (ind.eval < 0.1 or math.isclose(ind.eval, sum(model_evals))):
             print("ind.eval", ind.eval, "sum(model_evals)", sum(model_evals))
             print("ind.deap_str", ind.deap_str)
