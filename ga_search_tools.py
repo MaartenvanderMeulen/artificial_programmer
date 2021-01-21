@@ -280,7 +280,9 @@ def analyse_population_impl(toolbox, old_pops):
             if len(families[ind.family_index][1]) > len(ind.deap_str):
                 families[ind.family_index][1] = ind.deap_str
     del ind, deap_str
-    with open(f"{toolbox.output_folder}/analysis.txt", "w") as f:
+    filename = f"{toolbox.output_folder}/analysis.txt"
+    print("output in", filename)
+    with open(filename, "w") as f:
         f.write(f"{'  error':7} family_index individuals {'shortest_individual':60} {'last_output':30} {'last_error':30}\n")
         data = [value for key, value in families.items()]
         data.sort(key=lambda item: -toolbox.families_list[item[0]].weighted_error)
@@ -294,8 +296,8 @@ def analyse_population_impl(toolbox, old_pops):
             error_vector = " ".join([f"{v:5.3f}" for v in error_vector])
             sum_count += count
             f.write(f"{error:7.3f} {family_index:12d} {count:11d} {deap_str[:60]:60} {outputs[:30]:30} {error_vector[:30]:30}\n")
-        sum_error_vector = " ".join([f"{v:5.3f}" for v in sum_error_vector])
-        f.write(f"{' ':7} {' ':12} {sum_count:11} {' ':60} {' ':30} {sum_error_vector[:30]:30}\n")
+        sum_error_vector = " ".join([f"{v/len(data):5.3f}" for v in sum_error_vector])
+        f.write(f"{' ':7} {' ':12} {sum_count:11} {' ':60} {' ':30} {sum_error_vector}\n")
 
 
 def generate_initial_population(toolbox, old_pops=None):
@@ -305,7 +307,7 @@ def generate_initial_population(toolbox, old_pops=None):
         # daarna de lege best files identificeren met
         # for s in `seq 1000 1 1999` ; do grep -L '\#' best_$s.txt ; done
         # en dan weghalen.
-        bests = read_old_populations(toolbox, toolbox.old_populations_folder, "best")
+        bests = read_old_populations(toolbox, toolbox.old_populations_folder, "pop")
         analyse_population_impl(toolbox, bests)    
         exit()
     evaluate.init_dynamic_error_weight_adjustment()

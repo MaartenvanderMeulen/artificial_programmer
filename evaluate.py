@@ -126,6 +126,8 @@ def evaluate_list_of_ints(actual, expect, debug=False):
         else:
             error += (abs(expect[i])) ** 1.5
     errors.append(error)
+    weights = [(21/0.857)/2.996, (21/12.000)/2.043, (21/18.971)/11.601, (1.0)/33.359, (21/133.727)/6.282]
+    errors = [e * w for e, w in zip(errors, weights)] 
     return errors
 
 

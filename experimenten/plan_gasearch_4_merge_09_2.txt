@@ -54,5 +54,36 @@ Resterende vragen voor vervolganalyses die in me opgekomen zijn:
 - welke ontsnappingen zijn er uit 18.275?  Is dat terug te voeren op bepaalde families?
 		- daar was een speciaal stukje code voor, 24 dec "follow subopt.py"
 
+=========================== na gesprek met Victor =================================
+- acsh 1000 doen = baseline = 7/1000
+output in tmp/acshx/analysis.txt
+  error family_index individuals shortest_individual                                          last_output                    last_error                    
+ 18.275            0         515 append(sorted_data, elem)                                    (81, 82, 87, 88, 84)           0.000 0.000 0.000 0.000 14.196
+ 18.234           18           1 for(i, append(append(sorted_data, elem), if_then_else(sorted (81, 82, 84, 84, 84, (81, 82,  0.143 1.000 0.000 0.000 13.196
+ 15.384            1         309 append(for(k, sorted_data, assign(elem, k)), assign(k, elem) (81, 82, 87, 88, 88)           0.000 0.000 2.828 0.000 6.196 
+ 13.053            3          27 append(for(k, sorted_data, assign(sorted_data, k)), if_then_ (81, 82, 87, 88, 88)           0.000 0.000 2.828 0.000 6.196 
+ 13.053           10           9 last3(for(k, sorted_data, if_then_else(if_then_else(i, le(el (81, 82, 87, 88, 88)           0.000 0.000 2.828 0.000 6.196 
+ 13.053           11           2 last3(assign(k, if_then_else(sorted_data, i, elem)), for(i,  (81, 82, 87, 88, 88)           0.000 0.000 2.828 0.000 6.196 
+ 13.053           19           1 append(sorted_data, last3(elem, assign(sorted_data, for(k, s (81, 82, 87, 88, 88)           0.000 0.000 2.828 0.000 6.196 
+ 12.817            2           9 append(sorted_data, if_then_else(for(elem, sorted_data, appe (81, 82, 87, 88, 88)           0.000 0.000 2.828 0.000 6.196 
+ 12.519            7           1 append(append(sorted_data, last3(for(k, sorted_data, append( (81, 82, 87, 88, 88, (81, 82,  0.143 1.000 0.000 0.000 6.196 
+ 12.519           13           2 append(append(for(i, sorted_data, last3(append(k, elem), ass (81, 82, 87, 88, 88, (81, 82,  0.143 1.000 0.000 0.000 6.196 
+ 12.519           16           1 append(append(for(k, sorted_data, last3(assign(sorted_data,  (81, 82, 87, 88, 88, ((81, 82, 0.143 1.000 0.000 0.000 6.196 
+ 12.519           20           1 append(append(for(i, sorted_data, assign(elem, last3(assign( (81, 82, 87, 88, 88, (81, 82,  0.143 1.000 0.000 0.000 6.196 
+ 12.085            6          27 append(last3(assign(i, elem), i, append(for(k, sorted_data,  (81, 82, 87, 88, 88, 84)       0.000 1.000 0.000 0.000 6.196 
+ 11.885            8          35 append(last3(le(i, k), assign(k, sorted_data), last3(for(i,  (81, 82, 87, 88, 88, 84)       0.000 1.000 0.000 0.000 6.196 
+ 10.919            9          18 append(append(for(sorted_data, sorted_data, assign(k, sorted (81, 82, 87, 88, 88, 84)       0.000 1.000 0.000 0.000 6.196 
+ 10.919           12           1 append(append(for(sorted_data, sorted_data, sorted_data), if (81, 82, 87, 88, 88, 84)       0.000 1.000 0.000 0.000 6.196 
+ 10.719            4          21 if_then_else(for(k, sorted_data, assign(i, if_then_else(le(e (81, 82, 87, 88, 88, 84)       0.000 1.000 0.000 0.000 6.196 
+  9.919            5          10 append(if_then_else(if_then_else(for(k, sorted_data, for(ele (81, 82, 87, 88, 88, 84)       0.000 1.000 0.000 0.000 6.196 
+  8.532           15           1 append(append(for(sorted_data, for(sorted_data, sorted_data, (81, 82, 84, 88, 88, (81, 82,  0.143 1.000 0.000 0.000 1.000 
+  6.610           17           1 append(for(sorted_data, sorted_data, if_then_else(le(assign( (81, 82, 84, 84, 88)           0.000 0.000 1.000 0.000 5.196 
+  2.766           14           1 append(for(k, sorted_data, if_then_else(le(elem, k), assign( (81, 82, 84, 88, 88)           0.000 0.000 1.000 0.000 1.000 
+                             993                                                                                             0.857 12.000 18.971 0.000 133.
+- default gewichten zetten in evaluatie functie op grond van acsh 993 suboptima totale populatie analyse.
 
+- dynamic weights werkend maken
+- evaluatie verder uitsplisen
+  - 5e dim anders
+  - dyna
 
