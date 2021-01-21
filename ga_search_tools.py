@@ -204,8 +204,6 @@ def generate_initial_population_impl(toolbox):
         toolbox.ind_str_set.add(ind.deap_str)
         ind.parents = []
         ind.eval = evaluate_individual(toolbox, ind)
-        if ind.eval == 0.0:
-            return None, ind
         population.append(ind)
     return population, None
 
@@ -260,8 +258,6 @@ def load_initial_population_impl(toolbox, old_pops):
                 toolbox.ind_str_set.add(ind.deap_str)
                 ind.parents = []
                 ind.eval = evaluate_individual(toolbox, ind)
-                if ind.eval == 0.0:
-                    return None, ind
                 population.append(ind)
     return population, None
 
@@ -442,8 +438,6 @@ def mutUniform(toolbox, parent, expr, pset):
     if child.deap_str in toolbox.ind_str_set or len(child) > toolbox.max_individual_size:
         return None
     child.eval = evaluate_individual(toolbox, child)
-    if child.eval in toolbox.taboo_set:
-        return None
     return child
 
 
@@ -484,11 +478,7 @@ def consistency_check_ind(toolbox, ind):
         assert ind.deap_str == str(ind)
         assert ind.eval is not None
         model_evals = toolbox.families_list[ind.family_index].model_evals
-        if not (ind.eval < 0.1 or math.isclose(ind.eval, sum(model_evals))):
-            print("ind.eval", ind.eval, "sum(model_evals)", sum(model_evals))
-            print("ind.deap_str", ind.deap_str)
-            print("model_evals", model_evals)
-        assert ind.eval < 0.1 or math.isclose(ind.eval, sum(model_evals))
+        assert math.isclose(ind.eval, sum(model_evals))
 
 
 def consistency_check(toolbox, inds):

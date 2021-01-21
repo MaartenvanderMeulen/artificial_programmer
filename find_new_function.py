@@ -74,6 +74,23 @@ class Toolbox(object):
         self.families_dict = dict()
         random.seed(self.seed)
 
+    def get_error(self, ind):
+        result = self.families_list[ind.family_index].weighted_error
+        assert math.isclose(result, ind.eval)
+        return result
+
+    def sort_ind_key(self, ind):
+        result = self.get_error(ind)
+        if result == 0.0 and len(ind) > len(self.solution_deap_ind) and self.optimise_solution_length:
+            result = 0.001 + (len(ind) - len(self.solution_deap_ind)) / 100000.0
+        return result
+
+    def is_solution(self, ind):
+        result = self.get_error(ind)
+        if result == 0.0 and len(ind) > len(self.solution_deap_ind) and self.optimise_solution_length:
+            return False
+        return result == 0.0
+
 
 def write_timings(toolbox):
     ga_search_tools.write_seconds(toolbox, toolbox.t_total, "total")
@@ -97,7 +114,7 @@ def basinhopper(toolbox):
             ga_search_tools.write_population(toolbox.best_ind_file, [best], toolbox.functions)
         toolbox.t_total = time.time() - toolbox.t0
         write_timings(toolbox)
-        if best and best.eval == 0:
+        if best and toolbox.get_error(best) == 0:
             code = interpret.compile_deap(best.deap_str, toolbox.functions)
             result = ["function", toolbox.problem_name, toolbox.problem_params, code]
             toolbox.f.write(f"solved\t{toolbox.problem_name}")

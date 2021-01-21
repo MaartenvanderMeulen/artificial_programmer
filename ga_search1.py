@@ -124,8 +124,6 @@ def generate_offspring(toolbox, population, nchildren):
                 break
         retry_count = 0
         assert child.eval is not None
-        if child.eval == 0.0:
-            return None, child
         assert child.deap_str == str(child)
         toolbox.ind_str_set.add(child.deap_str)
         offspring.append(child)
@@ -147,7 +145,7 @@ def generate_offspring(toolbox, population, nchildren):
             expected_offspring_escapes_count = nchildren * all_escapes_count / (len(population) ** 2)
             toolbox.f.write(f"{all_escapes_count}\t{offspring_escapes_count}\t{expected_offspring_escapes_count}\n")
     consistency_check(toolbox, offspring)
-    return offspring, None
+    return offspring
 
 
 def track_stuck(toolbox, population):
@@ -179,7 +177,6 @@ def track_stuck(toolbox, population):
         pass
     toolbox.prev_eval = population[0].eval
 
-
 def ga_search_impl(toolbox):
     if toolbox.final_pop_file: # clear the file to avoid confusion with older output
         write_population(toolbox.final_pop_file, [], toolbox.functions)
@@ -198,6 +195,7 @@ def ga_search_impl(toolbox):
         toolbox.parachute_level = 0
         toolbox.gen = 0
         toolbox.real_gen = 0
+
         while toolbox.parachute_level < len(toolbox.ngen):
             while toolbox.gen < toolbox.ngen[toolbox.parachute_level]:
                 track_stuck(toolbox, population)
@@ -207,16 +205,16 @@ def ga_search_impl(toolbox):
                     toolbox.f.write(f"sc {toolbox.stuck_count:2d} count_best {count_best:4d} {population[0].deap_str[:120]}\n")
                 if toolbox.verbose >= 3:
                     log_population(toolbox, population, f"generation {toolbox.real_gen}, pop at start")
-                offspring, solution = generate_offspring(toolbox, population, toolbox.nchildren[toolbox.parachute_level])
-                if solution:
-                    return solution, toolbox.real_gen + 1
+                offspring = generate_offspring(toolbox, population, toolbox.nchildren[toolbox.parachute_level])
                 if toolbox.verbose >= 4:
                     log_population(toolbox, offspring, f"generation {toolbox.real_gen}, offspring")
                 fraction = toolbox.parents_keep_fraction[toolbox.parachute_level]
                 if fraction < 1:
                     population = random.sample(population, k=int(len(population)*fraction))
                 population += offspring
-                population.sort(key=lambda item: item.eval)
+                population.sort(key=toolbox.sort_ind_key)
+                if toolbox.is_solution(population[0]):
+                    return population[0], toolbox.real_gen + 1
                 population[:] = population[:toolbox.pop_size[toolbox.parachute_level]]
                 consistency_check(toolbox, population)
                 update_dynamic_weighted_evaluation(toolbox, population)
