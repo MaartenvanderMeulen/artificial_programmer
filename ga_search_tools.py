@@ -67,6 +67,10 @@ class Family:
         self.model_evals = evaluate.compute_weighted_sums(self.eval_vectors)
         self.weighted_error = sum(self.model_evals)
 
+    def dynamic_weights_update(self):
+        self.model_evals = evaluate.compute_weighted_sums(self.eval_vectors)
+        self.weighted_error = sum(self.model_evals)
+
 
 def add_family(toolbox, model_outputs_tuple, eval_vectors):
     family_index = len(toolbox.families_list)
@@ -137,9 +141,25 @@ def best_of_n(population, n):
 
 def update_dynamic_weighted_evaluation(toolbox, individuals):
     if toolbox.dynamic_weights:
-        evaluate.dynamic_error_weight_adjustment(toolbox.f, toolbox.verbose)
-        for ind in individuals:
-            ind.eval = evaluate_individual(toolbox, ind)
+        if len(toolbox.families_list) > 0:
+            n_error_dimensions = len(toolbox.families_list[0].eval_vectors[0])
+            avg_errors = np.zeros((n_error_dimensions))
+            for i, family in enumerate(toolbox.families_list):
+                if i in toolbox.current_families_dict:
+                    for vec in family.eval_vectors:
+                        avg_errors += np.array(vec)
+            avg_errors /= len(toolbox.families_list)
+            if toolbox.prev_avg_errors is not None:
+                toolbox.f.write(f"update_dynamic_weights, n {n_error_dimensions}\n")
+                toolbox.f.write(f"{toolbox.prev_avg_errors} prev avg errors\n")
+                toolbox.f.write(f"{avg_errors} avg errors\n")
+                evaluate.dynamic_error_weight_adjustment(toolbox.f, toolbox.verbose, toolbox.prev_avg_errors, avg_errors)
+                for family in toolbox.families_list:
+                    family.dynamic_weights_update()
+                for ind in individuals:
+                    ind.eval = toolbox.families_list[ind.family_index].weighted_error
+                individuals.sort(key=toolbox.sort_ind_key)
+            toolbox.prev_avg_errors = avg_errors
 
 
 def log_population(toolbox, population, label):
@@ -362,8 +382,14 @@ def cxOnePoint(toolbox, parent1, parent2):
 
 
 def get_family_size(toolbox, ind):
-    d = toolbox.current_families_dict
-    return len(d[ind.family_index]) if ind.family_index in d else 0
+    n = 0
+    c = toolbox.current_families_dict
+    if ind.family_index in c:
+        n += len(c[ind.family_index])
+    o = toolbox.offspring_families_dict
+    if ind.family_index in o:
+        n += len(o[ind.family_index])
+    return n
 
 
 def is_improvement(toolbox, ind, best):
@@ -449,6 +475,7 @@ def refresh_toolbox_from_population(toolbox, population):
         if ind.family_index not in toolbox.current_families_dict:
             toolbox.current_families_dict[ind.family_index] = []
         toolbox.current_families_dict[ind.family_index].append(ind)
+    toolbox.offspring_families_dict = dict()
 
 
 def consistency_check_ind(toolbox, ind):

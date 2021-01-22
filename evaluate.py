@@ -8,9 +8,8 @@ import interpret
 
 
 # used in dynamic weight adjustment
-global sum_errors, weights
+global weights
 weights = np.ones((6)) / 6
-sum_errors = np.zeros_like(weights)
 
 
 def recursive_tuple(value):
@@ -126,8 +125,9 @@ def evaluate_list_of_ints(actual, expect, debug=False):
         else:
             error += (abs(expect[i])) ** 1.5
     errors.append(error)
-    weights = [(21/0.857)/2.996, (21/12.000)/2.043, (21/18.971)/11.601, (1.0)/33.359, (21/133.727)/6.282]
-    errors = [e * w for e, w in zip(errors, weights)] 
+    if False:
+        weights = [(21/0.857)/2.996, (21/12.000)/2.043, (21/18.971)/11.601, (1.0)/33.359, (21/133.727)/6.282]
+        errors = [e * w for e, w in zip(errors, weights)] 
     return errors
 
 
@@ -463,7 +463,6 @@ def compute_eval_vectors(example_inputs, actual_outputs, evaluation_function, lo
         function_name, extra_function_params = evaluation_function, []
     else:
         function_name, extra_function_params = evaluation_function
-    global sum_errors
     eval_function = eval(function_name)
     if verbose >= 4:
         log_file.write(f"compute_error_vectors({function_name})\n")
@@ -473,9 +472,6 @@ def compute_eval_vectors(example_inputs, actual_outputs, evaluation_function, lo
         domain_output_set.add(recursive_tuple(actual_output))
         eval_vector = eval_function(example_input, actual_output, extra_function_params, log_file, verbose)
         eval_vector = np.array(eval_vector).astype(float)
-        if sum_errors.shape[0] != eval_vector.shape[0]:
-            sum_errors = np.zeros_like(eval_vector)
-        sum_errors += eval_vector
         if verbose >= 4:
             log_file.write(f"    {eval_vector} = error(input={example_input}, output={actual_output})\n")
         eval_vectors.append(eval_vector)
@@ -517,27 +513,24 @@ def compute_weighted_error(example_inputs, actual_outputs, evaluation_function, 
 
 
 def init_dynamic_error_weight_adjustment():
-    global sum_errors, weights
-    n = 6
-    sum_errors = np.zeros((n))
-    weights = np.ones((n)) / n
+    global weights
+    weights = np.ones((6)) / 6
 
 
-def dynamic_error_weight_adjustment(log_file, verbose):
-    global sum_errors, weights
+def dynamic_error_weight_adjustment(log_file, verbose, prev_avg_errors, avg_errors):
+    global weights
     n = len(weights)
+    assert n == len(avg_errors) and n == len(prev_avg_errors)
     if verbose >= 1:
-        log_file.write(f"weights before {weights}, {sum_errors * weights}\n")
-    average_weighted_error = np.sum(sum_errors) / n
+        log_file.write(f"{weights} weights before \n")
     for i in range(n):
-        if sum_errors[i] > 0:
-            weights[i] = average_weighted_error / sum_errors[i]
-        else:
-            weights[i] = 1.0 / n
-    weights /= np.sum(weights)
+        if avg_errors[i] > prev_avg_errors[i]:
+            weights[i] /= 1.1
+        elif avg_errors[i] < prev_avg_errors[i] or avg_errors[i] == 0.0:
+            weights[i] *= 1.1
+    weights *= 1 / np.sum(weights)
     if verbose >= 1:
-        log_file.write(f"weights after {weights}, {sum_errors * weights}\n")
-    sum_errors.fill(0)
+        log_file.write(f"{weights} weights after\n")
 
 
 if __name__ == "__main__":

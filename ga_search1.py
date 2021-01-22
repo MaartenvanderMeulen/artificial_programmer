@@ -88,6 +88,7 @@ def generate_offspring(toolbox, population, nchildren):
     all_escapes_count = 0   
     toolbox.keep_path = False
     only_cx = False
+    toolbox.offspring_families_dict = dict()
     if False:
         do_special_experiment = False # math.isclose(population[0].eval, 77.61253, abs_tol=0.00001)
         if do_special_experiment:
@@ -126,6 +127,9 @@ def generate_offspring(toolbox, population, nchildren):
         assert child.eval is not None
         assert child.deap_str == str(child)
         toolbox.ind_str_set.add(child.deap_str)
+        if child.family_index not in toolbox.offspring_families_dict:
+            toolbox.offspring_families_dict[child.family_index] = []
+        toolbox.offspring_families_dict[child.family_index].append(child)
         offspring.append(child)
         if False:
             if do_special_experiment and child.eval < 77.61253 - 0.00001:
@@ -150,7 +154,7 @@ def generate_offspring(toolbox, population, nchildren):
 
 def track_stuck(toolbox, population):
     # track if we are stuck
-    if population[0].eval == toolbox.prev_eval:                        
+    if population[0].family_index in toolbox.prev_family_index:                        
         toolbox.stuck_count += 1
         if toolbox.stuck_count >= toolbox.max_stuck_count + 1:            
             if "reenter_parachuting_phase" not in toolbox.metaevolution_strategies or toolbox.count_opschudding > 0:
@@ -159,7 +163,7 @@ def track_stuck(toolbox, population):
                 toolbox.f.write("reenter_parachuting_phase\n")
                 toolbox.parachute_level = 0
                 toolbox.gen = 0
-                toolbox.prev_eval = 1e9
+                toolbox.prev_family_index = set()
                 toolbox.stuck_count = 0
                 toolbox.count_opschudding += 1
                 toolbox.reset()
@@ -168,14 +172,10 @@ def track_stuck(toolbox, population):
                     ind.eval = evaluate_individual(toolbox, ind)
                     consistency_check_ind(toolbox, ind)
                 refresh_toolbox_from_population(toolbox, population)
-    elif toolbox.best_eval > population[0].eval:
-        # betere oplossing dan ooit gevonden!
-        toolbox.best_eval = population[0].eval
-        toolbox.stuck_count = 0
     else:
+        toolbox.stuck_count = 0
         # verandering t.o.v. vorige iteratie
-        pass
-    toolbox.prev_eval = population[0].eval
+    toolbox.prev_family_index.add(population[0].family_index)
 
 def ga_search_impl(toolbox):
     if toolbox.final_pop_file: # clear the file to avoid confusion with older output
@@ -186,11 +186,10 @@ def ga_search_impl(toolbox):
         if solution:
             return solution, 0
         consistency_check(toolbox, population)
-        update_dynamic_weighted_evaluation(toolbox, population)
-        population.sort(key=lambda item: item.eval)
         refresh_toolbox_from_population(toolbox, population)
-        toolbox.prev_eval = 1e9
-        toolbox.best_eval = 1e9
+        update_dynamic_weighted_evaluation(toolbox, population)
+        population.sort(key=toolbox.sort_ind_key)
+        toolbox.prev_family_index = set()
         toolbox.stuck_count, toolbox.count_opschudding = 0, 0
         toolbox.parachute_level = 0
         toolbox.gen = 0
@@ -217,8 +216,8 @@ def ga_search_impl(toolbox):
                     return population[0], toolbox.real_gen + 1
                 population[:] = population[:toolbox.pop_size[toolbox.parachute_level]]
                 consistency_check(toolbox, population)
-                update_dynamic_weighted_evaluation(toolbox, population)
                 refresh_toolbox_from_population(toolbox, population)
+                update_dynamic_weighted_evaluation(toolbox, population)
                 toolbox.gen += 1
                 toolbox.real_gen += 1
             toolbox.parachute_level += 1

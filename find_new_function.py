@@ -108,6 +108,7 @@ def basinhopper(toolbox):
         toolbox.t_py_interpret = 0
         toolbox.t_cpp_interpret = 0
         toolbox.t_eval = 0
+        toolbox.prev_avg_errors = None
 
         best, gen = ga_search1.ga_search_impl(toolbox)
         if best and toolbox.best_ind_file:
@@ -142,7 +143,6 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox = Toolbox(problem, functions, params["seed"])
     toolbox.problem_name, toolbox.problem_params, _, _, _, _ = problem
     toolbox.monkey_mode = False
-    toolbox.dynamic_weights = False # not toolbox.monkey_mode
     toolbox.child_creation_retries = 99
     toolbox.f = f
     if params["verbose"] >= 1 and len(toolbox.solution_deap_ind) > 0:
@@ -184,6 +184,7 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.evolution_strategies = params["evolution_strategies"]
     toolbox.metaevolution_strategies = params["metaevolution_strategies"]
     toolbox.idea_victor = params["idea_victor"]
+    toolbox.dynamic_weights = params["dynamic_weights"]
     
     # search
     toolbox.all_generations_ind = []

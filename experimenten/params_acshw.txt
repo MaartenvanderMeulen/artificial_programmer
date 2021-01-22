@@ -42,5 +42,5 @@
     "metaevolution_strategies": [], 
     "idea_victor": false,
     "hops": 1,
-    "dynamic_weights": false
+    "dynamic_weights": true
 }
