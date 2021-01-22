@@ -398,11 +398,12 @@ def is_improvement(toolbox, ind, best):
     if best.eval != ind.eval:
         return best.eval > ind.eval
     # now they have equal .eval
-    best_family_size = get_family_size(toolbox, best)
-    ind_family_size = get_family_size(toolbox, ind)
-    if best_family_size != ind_family_size:
-        return best_family_size > ind_family_size
-    # now they have equal family size
+    if False:
+        best_family_size = get_family_size(toolbox, best)
+        ind_family_size = get_family_size(toolbox, ind)
+        if best_family_size != ind_family_size:
+            return best_family_size > ind_family_size
+        # now they have equal family size
     return len(best) > len(ind)
 
 

@@ -122,9 +122,42 @@ def evaluate_list_of_ints(actual, expect, debug=False):
         assert type(expect[i]) == type(1)
         if i < len(actual) and type(actual[i]) == type(1):
             error += (abs(actual[i] - expect[i])) ** 1.5
-        else:
-            error += (abs(expect[i])) ** 1.5
+        #else:
+        #    error += (abs(expect[i])) ** 1.5
     errors.append(error)
+    # error : hoeveel staan er in volgorde?
+    error = 0.0
+    j = 0 
+    for i in range(len(expect)):
+        while j < len(actual) and expect[i] != actual[j]:
+            j += 1
+        if j >= len(actual):
+            error += 1/len(expect)
+    errors.append(error)
+    # error : hoeveel staan er in volgorde (kijkend van achter naar voren)?
+    error = 0.0
+    j = len(actual)-1
+    i = len(expect)-1
+    while i >= 0:
+        while j >= 0 and expect[i] != actual[j]:
+            j -= 1
+        if j < 0:
+            error += 1/len(expect)
+        i -= 1
+    errors.append(error)
+    if False:
+        # error : hoever zitten de expect getallen van de model getallen af, als alleen naar de lijst zelf gekeken wordt
+        actual_numbers = [v for v in actual if type(v) == type(1)]
+        error = 0.0
+        for v in expect:
+            error += _distance_with_closest_numbers(v, actual_numbers) ** 1.5
+        errors.append(error)
+        # error : hoever zitten de model getallen van de expect getallen af, als alleen naar de lijst zelf gekeken wordt
+        error = 0.0
+        for v in actual_numbers:
+            error += _distance_with_closest_numbers(v, expect) ** 1.5
+        errors.append(error)
+
     if False:
         weights = [(21/0.857)/2.996, (21/12.000)/2.043, (21/18.971)/11.601, (1.0)/33.359, (21/133.727)/6.282]
         errors = [e * w for e, w in zip(errors, weights)] 
@@ -525,9 +558,11 @@ def dynamic_error_weight_adjustment(log_file, verbose, prev_avg_errors, avg_erro
         log_file.write(f"{weights} weights before \n")
     for i in range(n):
         if avg_errors[i] > prev_avg_errors[i]:
-            weights[i] /= 1.1
-        elif avg_errors[i] < prev_avg_errors[i] or avg_errors[i] == 0.0:
             weights[i] *= 1.1
+        elif avg_errors[i] < prev_avg_errors[i]:
+            weights[i] /= 1.1
+        elif avg_errors[i] == 0.0:
+            pass
     weights *= 1 / np.sum(weights)
     if verbose >= 1:
         log_file.write(f"{weights} weights after\n")

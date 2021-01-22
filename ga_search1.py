@@ -200,8 +200,8 @@ def ga_search_impl(toolbox):
                 track_stuck(toolbox, population)
                 if toolbox.f and toolbox.verbose >= 1:
                     count_best = sum([1 for ind in population if ind.eval == population[0].eval])
-                    toolbox.f.write(f"gen {toolbox.real_gen:2d} best {population[0].eval:7.3f} ")
-                    toolbox.f.write(f"sc {toolbox.stuck_count:2d} count_best {count_best:4d} {population[0].deap_str[:120]}\n")
+                    toolbox.f.write(f"gen {toolbox.real_gen} best {population[0].eval:.3f} ")
+                    toolbox.f.write(f"sc {toolbox.stuck_count} count_best {count_best} family {population[0].family_index} {population[0].deap_str[:120]}\n")
                 if toolbox.verbose >= 3:
                     log_population(toolbox, population, f"generation {toolbox.real_gen}, pop at start")
                 offspring = generate_offspring(toolbox, population, toolbox.nchildren[toolbox.parachute_level])

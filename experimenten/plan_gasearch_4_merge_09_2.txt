@@ -87,8 +87,13 @@ Als in populatie som fout stijgt in een iteratie : gewicht / 1.1;
 Als in populatie som fout daalt in een iteratie : gewicht * 1.1;
 beginnen met default gewichten terug op 1.0 en dynamische gewichten ook op 1.0.  
 - dynamic weights werkend maken
-
-- evaluatie verder uitsplisen
-  - 5e dim anders
-  - dyna
+- baseline na dynamic weights weer werkend 7/1000.  Samenvatting aanpassingen tov 4/1000
+  - error wegens type iets gedifferentieerd (heeft effect 7/1000)
+  - local search : bij gelijke evaluatie is de individual van van de kleinste familie beter (heeft geen effect)
+  - stuck detectie : nu alleen op family index van de beste
+- dynamic weights met "dempen" van fouten verergeringen : 3/1000
+- dynamic weights met "versterken" van fouten verergeringen : 2/1000
+- evaluatie verder uitsplisen, zonder dynamic weights
+  - 5e dim anders ophouden bij len(expected) : 
+  - 6e dimensie hoeveel van de volgorde klopt? : 
 
