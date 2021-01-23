@@ -18,16 +18,33 @@ def recursive_tuple(value):
     return tuple([recursive_tuple(v) for v in value])
 
 
-def extract_numbers(values):
+def extract_numbers_list(values):
     if type(values) == type([]):
-        result = set()
-        for item in values:
-            item_set = extract_numbers(item)
-            result.update(item_set)
+        if len(values) == 0:
+            result = [0]
+        else:
+            result = []
+            for item in values:
+                if type(item) == type(1):
+                    result.append(item)
+                else:
+                    result.extend(extract_numbers_list(item))
     else:
         assert type(values) == type(1)
-        result = set([values])
+        result = [values]
     return result
+
+
+def extract_numbers_set(values):
+    return set(extract_numbers_list(values))
+
+
+def count_empty_sublists(actual):
+    if type(actual) == type(1):
+        return 0
+    if len(actual) == 0:
+        return 1
+    return sum([count_empty_sublists(v) for v in actual])
 
 
 def _distance_with_closest_numbers(x, values):
@@ -43,6 +60,8 @@ def _distance_with_closest_numbers(x, values):
                 value = 1000000
             if result > abs(x - value):
                result = abs(x - value)
+               if result == 0:
+                   break
     else:
         result = abs(x - 0)
     assert result <= 1000000
@@ -62,7 +81,7 @@ def evaluate_int(actual, expect, debug=False):
     # error : length
     error = 0.0
     if type(actual) != type(1):
-        actual_numbers = extract_numbers(actual)
+        actual_numbers = extract_numbers_set(actual)
         if len(actual_numbers) == 0:
             error += 1.0
             actual = expect + 1000
@@ -82,16 +101,16 @@ def evaluate_list_of_ints(actual, expect, debug=False):
     for item in expect:
         assert type(item) == type(1)
 
-    # error : type difference
+    # error1 : type difference
     error = 0.0
     if type(actual) != type([]):
         error = 1.0
         assert type(actual) == type(1)
         actual = [actual]
     else:
-        for v in actual:
-            if type(v) != type(1):
-                error += 1/(1+len(actual))
+        for i in range(min(len(expect), len(actual))):
+            if type(actual[i]) != type(1):
+                error += 1/len(expect)
         if len(actual) == 0:
             actual = [0]
             error = 1.0
@@ -99,68 +118,60 @@ def evaluate_list_of_ints(actual, expect, debug=False):
     k = len(expect)
     if k == 0:
         raise RuntimeError("TODO: handle case were expect output is empty")
-    # error : aantal outputs
-    n = 2 if len(actual) < len(expect) else 1.2
-    errors.append(abs(len(actual) - len(expect)) ** n)
-    # error : hoever zitten de expect getallen van de model getallen af
-    actual_numbers = extract_numbers(actual)
-    if len(actual_numbers) == 0:
-        actual_numbers = set([0])
-    expected_numbers = extract_numbers(expect)
+    # error2 : aantal outputs
+    actual_list = extract_numbers_list(actual)
+    n = 2 if len(actual_list) < len(expect) else 1.1
+    errors.append(abs(len(actual_list) - len(expect)) ** n)
+    # error3 : hoever zitten de expect getallen van de model getallen af
+    actual_set = set(actual_list)
+    if len(actual_set) == 0:
+        actual_set = set([0])
     error = 0.0
-    for expected_number in expected_numbers:
-        error += _distance_with_closest_numbers(expected_number, actual_numbers) ** 1.5
+    for expected_number in expect:
+        error += _distance_with_closest_numbers(expected_number, actual_set) ** 1.5
     errors.append(error)
-    # error : hoever zitten de model getallen van de expect getallen af
+    # error4 : hoever zitten de model getallen van de expect getallen af
     error = 0.0
-    for actual_number in actual_numbers:
-        error += _distance_with_closest_numbers(actual_number, expected_numbers) ** 1.5
+    for actual_number in actual_set:
+        error += _distance_with_closest_numbers(actual_number, expect) ** 1.5
     errors.append(error)
-    # error : absolute verschil van de outputs met de gewenste output
+    # error5 : absolute verschil van de outputs met de gewenste output
     error = 0.0
     for i in range(len(expect)):
         assert type(expect[i]) == type(1)
-        if i < len(actual) and type(actual[i]) == type(1):
-            error += (abs(actual[i] - expect[i])) ** 1.5
-        #else:
-        #    error += (abs(expect[i])) ** 1.5
+        if i < len(actual):
+            if type(actual[i]) == type(1):
+                error += (abs(actual[i] - expect[i])) ** 1.5
+            else:
+                error += (abs(expect[i])) ** 1.5
     errors.append(error)
-    # error : hoeveel staan er in volgorde?
+    # error6 : hoeveel staan er in volgorde?
     error = 0.0
     j = 0 
     for i in range(len(expect)):
-        while j < len(actual) and expect[i] != actual[j]:
+        while j < len(actual_list) and expect[i] != actual_list[j]:
             j += 1
-        if j >= len(actual):
+        if j >= len(actual_list):
             error += 1/len(expect)
     errors.append(error)
-    # error : hoeveel staan er in volgorde (kijkend van achter naar voren)?
+    # error7 : hoeveel staan er in volgorde (kijkend van achter naar voren)?
     error = 0.0
-    j = len(actual)-1
+    j = len(actual_list)-1
     i = len(expect)-1
     while i >= 0:
-        while j >= 0 and expect[i] != actual[j]:
+        while j >= 0 and expect[i] != actual_list[j]:
             j -= 1
         if j < 0:
             error += 1/len(expect)
         i -= 1
     errors.append(error)
-    if False:
-        # error : hoever zitten de expect getallen van de model getallen af, als alleen naar de lijst zelf gekeken wordt
-        actual_numbers = [v for v in actual if type(v) == type(1)]
-        error = 0.0
-        for v in expect:
-            error += _distance_with_closest_numbers(v, actual_numbers) ** 1.5
-        errors.append(error)
-        # error : hoever zitten de model getallen van de expect getallen af, als alleen naar de lijst zelf gekeken wordt
-        error = 0.0
-        for v in actual_numbers:
-            error += _distance_with_closest_numbers(v, expect) ** 1.5
-        errors.append(error)
+    # error 8: # empty sublists
+    errors.append(count_empty_sublists(actual))
 
     if False:
-        weights = [(21/0.857)/2.996, (21/12.000)/2.043, (21/18.971)/11.601, (1.0)/33.359, (21/133.727)/6.282]
-        errors = [e * w for e, w in zip(errors, weights)] 
+        # geeft hele slechte resultaten!
+        avg_errors = [0.060, 24.240, 47.012, 284.554, 260.724, 0.378, 0.666, 1.309]
+        errors = [e / u for e, u in zip(errors, avg_errors)] 
     return errors
 
 

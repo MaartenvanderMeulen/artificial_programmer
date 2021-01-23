@@ -231,15 +231,24 @@ def generate_initial_population_impl(toolbox):
 
 def read_old_populations(toolbox, old_populations_folder, prefix):
     old_pops = []
+    filenames = []
     for filename in os.listdir(old_populations_folder):
         if filename[:len(prefix)] == prefix:
-            if toolbox.old_populations_samplesize != 1 or filename == f"{prefix}_{toolbox.seed}.txt":
-                old_pop = interpret.compile(interpret.load(old_populations_folder + "/" + filename))
-                if len(old_pop) > 0:
-                    old_pops.append(old_pop)
-                elif toolbox.old_populations_samplesize == 1:
-                    toolbox.f.write("RuntimeWarning: stopped because no set covering needed, 0 evals\n")
-                    exit()
+            id = int(filename[len(prefix)+1:len(prefix)+1+4])
+            if id // toolbox.old_populations_samplesize == toolbox.seed // toolbox.old_populations_samplesize:
+                filenames.append(filename)
+    filenames.sort()
+    for filename in filenames:
+        if toolbox.old_populations_samplesize != 1 or filename == f"{prefix}_{toolbox.seed}.txt":
+            old_pop = interpret.compile(interpret.load(old_populations_folder + "/" + filename))
+            if len(old_pop) > 0:
+                old_pops.append(old_pop)
+            elif toolbox.old_populations_samplesize == 1:
+                toolbox.f.write("RuntimeWarning: stopped because no set covering needed, 0 evals\n")
+                exit()
+    if len(old_pops) != toolbox.old_populations_samplesize:
+        toolbox.f.write(f"read_old_populations : len(old_pops) = {len(old_pops)} != samplesize = {toolbox.old_populations_samplesize}\n")
+        # exit()
     if len(old_pops) == 0:
         toolbox.f.write(f"RuntimeError: no {prefix}* files in folder {old_populations_folder}\n")
         exit(1)
@@ -285,9 +294,11 @@ def load_initial_population_impl(toolbox, old_pops):
 
 def analyse_population_impl(toolbox, old_pops):
     families = dict()
+    count = 0
     for old_pop in old_pops:
         for code in old_pop:
             deap_str = interpret.convert_code_to_deap_str(code, toolbox)
+            count += 1
             ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)
             ind.deap_str = str(ind)
             assert deap_str == ind.deap_str
@@ -301,9 +312,9 @@ def analyse_population_impl(toolbox, old_pops):
                 families[ind.family_index][1] = ind.deap_str
     del ind, deap_str
     filename = f"{toolbox.output_folder}/analysis.txt"
-    print("output in", filename)
+    print(f"anaysis of {count} individuals in {len(old_pops)} pops : result in {filename}")
     with open(filename, "w") as f:
-        f.write(f"{'  error':7} family_index individuals {'shortest_individual':60} {'last_output':30} {'last_error':30}\n")
+        f.write(f"{' error':8} findex fsize {'deap_str':10} {'last_output':63} {'last_error':63}\n")
         data = [value for key, value in families.items()]
         data.sort(key=lambda item: -toolbox.families_list[item[0]].weighted_error)
         sum_count = 0
@@ -315,19 +326,19 @@ def analyse_population_impl(toolbox, old_pops):
             sum_error_vector += np.array(error_vector)
             error_vector = " ".join([f"{v:5.3f}" for v in error_vector])
             sum_count += count
-            f.write(f"{error:7.3f} {family_index:12d} {count:11d} {deap_str[:60]:60} {outputs[:30]:30} {error_vector[:30]:30}\n")
+            f.write(f"{error:8.3f} {family_index:6d} {count:5d} {deap_str[:10]:10} {outputs[:63]:63} {error_vector[:63]:63}\n")
         sum_error_vector = " ".join([f"{v/len(data):5.3f}" for v in sum_error_vector])
-        f.write(f"{' ':7} {' ':12} {sum_count:11} {' ':60} {' ':30} {sum_error_vector}\n")
+        f.write(f"{' ':8} {' ':6} {sum_count:5} {' ':10} {' ':63} {sum_error_vector:63}\n")
 
 
 def generate_initial_population(toolbox, old_pops=None):
     if toolbox.analyse_best:
         # best pop uit pop maken kan met :
         # for s in `seq 1000 1 1999` ; do echo '(' > best_$s.txt ; if grep '\#' pop_$s.txt | head -1 >> best_$s.txt ; then echo $s ; fi ; echo ')' >> best_$s.txt ; done
-        # daarna de lege best files identificeren met
-        # for s in `seq 1000 1 1999` ; do grep -L '\#' best_$s.txt ; done
-        # en dan weghalen.
-        bests = read_old_populations(toolbox, toolbox.old_populations_folder, "pop")
+        # daarna de lege best files weghalen
+        # for s in `seq 1000 1 1999` ; do grep -L '\#' best_$s.txt ; done > x
+        # rm `cat x`
+        bests = read_old_populations(toolbox, toolbox.old_populations_folder, "best")
         analyse_population_impl(toolbox, bests)    
         exit()
     evaluate.init_dynamic_error_weight_adjustment()

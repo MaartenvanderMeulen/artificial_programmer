@@ -97,3 +97,26 @@ beginnen met default gewichten terug op 1.0 en dynamische gewichten ook op 1.0.
   - 5e dim anders ophouden bij len(expected) : 
   - 6e dimensie hoeveel van de volgorde klopt? : 
 
+============================= 23 Jan
+a maxevals 70000, 0% solved
+b maxevals 300000, 70/1024=6.8% solved.
+bb baseline 141600, 50% solved
+- error dim1 1 : aantal foute types voor de eerste min(min(len(actual)),min(len(expect))), elke fout 1/len(expect) tellen
+  resultaat : haalt 50% niet 510/1024.  Maar we laten het er toch maar in want het is een mooiere fout.
+- error dim1 2 : len(extract_numers_list(actual)) ipv len(actual)
+  resultaat 669/1024=65%, significant.  maxeval 106987.
+- error dim1 6 : staan de goede getallen op hun plaats: ook error geven voor ontbrekende getallen.
+  resultaat 731/1024=71%, significant, maxeval 70641
+  stopped	merge_elem	12	gen	106987	evals
+  stopped	merge_elem	13	gen	106987	evals
+  stopped	merge_elem	14	gen	106987	evals
+  dus nog genoeg iteraties
+- error dim 8&9 aanzetten
+  Niet significant (52.4%)
+- error 5 met actual_list ipv actual.  Werkt duidelik slechter.
+- error 6&7 met actual_list ipv actual.  Werkt 510/1024=<50%.  We gaan toch actual_list gebruiken want zo is 6&7 atomairder.
+- extra error voor aantal '()' lege lijsten.
+  resultaat.  Werkt niet significant verschillend.  We gaan het gebruiken, want het is een dimensie die door niks gecoverered wordt
+- default weights gebruiken.  Werkt heel slecht.  Vreemd.
+- eens kijken hoe 'a' & 'b' het nu doet?
+bb baseline 70641, 50% solved
