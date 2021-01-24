@@ -443,12 +443,12 @@ def refresh_toolbox_from_population(toolbox, population):
     if toolbox.dynamic_weights:
         raw_error_matrix_list = []
         for family_index, _ in toolbox.current_families_dict.items():
-            raw_error_matrix_list.append(toolbox.families_list[family_index])
+            raw_error_matrix_list.append(toolbox.families_list[family_index].raw_error_matrix)
         evaluate.update_avg_raw_error_vector(raw_error_matrix_list)
         for family in toolbox.families_list:
-            family.dynamic_weights_update()
+            family.update_normalised_errors()
         for ind in population:
-            family = toolbox.family_list[ind.family_index]
+            family = toolbox.families_list[ind.family_index]
             ind.raw_error = family.raw_error
             ind.normalised_error = family.normalised_error
     # always sort!

@@ -520,8 +520,8 @@ def compute_raw_error(raw_error_matrix):
 
 def update_avg_raw_error_vector(raw_error_matrix_list):
     global inv_avg_raw_error_vector
-    if inv_avg_raw_error_vector.shape[0] != raw_error_matrix_list[0][0].shape[0]:
-        inv_avg_raw_error_vector = np.ones((raw_error_matrix_list[0][0].shape[0]))
+    if inv_avg_raw_error_vector.shape[0] != raw_error_matrix_list[0].shape[1]:
+        inv_avg_raw_error_vector = np.ones((raw_error_matrix_list[0].shape[1]))
     avg_raw_error_vector = np.zeros_like(inv_avg_raw_error_vector)
     count = 0
     for raw_error_matrix in raw_error_matrix_list:
@@ -531,6 +531,7 @@ def update_avg_raw_error_vector(raw_error_matrix_list):
     inv_avg_raw_error_vector = np.copy(avg_raw_error_vector)
     for i in range(inv_avg_raw_error_vector.shape[0]):
         inv_avg_raw_error_vector[i] = 1/inv_avg_raw_error_vector[i] if inv_avg_raw_error_vector[i] > 0 else 1.0
+    #print("DEBUG 534", inv_avg_raw_error_vector)
 
 
 def compute_normalised_error_matrix(raw_error_matrix):
