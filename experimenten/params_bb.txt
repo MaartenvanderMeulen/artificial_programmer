@@ -9,7 +9,7 @@
     "extensive_statistics": true,
     "keep_path": false,
     "max_seconds": 3600,
-    "max_evaluations": 70641,
+    "max_evaluations": 150000,
     "max_stuck_count": 99,
     "new_initial_population": false,
     "old_populations_folder": "tmp/b",

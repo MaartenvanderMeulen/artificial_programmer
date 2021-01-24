@@ -120,3 +120,29 @@ bb baseline 141600, 50% solved
 - default weights gebruiken.  Werkt heel slecht.  Vreemd.
 - eens kijken hoe 'a' & 'b' het nu doet?
 bb baseline 70641, 50% solved
+a : 0%
+b : 20/1024 ??? dat is veel lager dan eerst!
+bb : 491/1024 bij maxevals 150000.  Dus weer terug bij af.
+1341:
+gen 0 best 0.542 sc 0 count_best 4 family 43 zz 254 254 if_then_else(elem, for(sorted_data, append(for(k, sorted_data, assign(assign(k, elem), k)), sorted_d
+gen 1 best 0.542 sc 1 count_best 5 family 43 zz 711 1386 if_then_else(elem, for(sorted_data, append(for(k, sorted_data, assign(assign(k, elem), k)), sorted_d
+gen 2 best 0.542 sc 2 count_best 4 family 43 zz 709 2262 if_then_else(append(for(k, i, sorted_data), k), for(sorted_data, append(sorted_data, sorted_data), a
+gen 3 best 0.542 sc 3 count_best 9 family 43 zz 678 3042 if_then_else(append(for(k, i, sorted_data), k), for(sorted_data, append(sorted_data, sorted_data), a
+gen 4 best 0.542 sc 4 count_best 6 family 43 zz 91 5126 if_then_else(append(for(k, elem, sorted_data), k), for(sorted_data, append(sorted_data, sorted_data)
+gen 5 best 0.542 sc 5 count_best 13 family 43 zz 89 6755 if_then_else(append(for(k, i, k), k), for(sorted_data, append(sorted_data, sorted_data), assign(k, i
+gen 6 best 0.542 sc 6 count_best 24 family 43 zz 90 7961 append(for(i, sorted_data, if_then_else(le(assign(sorted_data, i), elem), sorted_data, assign(k, if_
+gen 7 best 0.542 sc 7 count_best 28 family 43 zz 85 8897 if_then_else(elem, for(sorted_data, append(sorted_data, sorted_data), assign(k, if_then_else(if_then
+gen 8 best 0.542 sc 8 count_best 29 family 43 zz 74 9834 if_then_else(if_then_else(i, sorted_data, elem), for(sorted_data, append(sorted_data, sorted_data), 
+gen 9 best 0.542 sc 9 count_best 30 family 43 zz 67 10567 if_then_else(append(sorted_data, k), for(sorted_data, append(sorted_data, sorted_data), assign(k, if
+gen 10 best 0.542 sc 10 count_best 34 family 43 zz 72 11103 if_then_else(elem, for(sorted_data, append(sorted_data, sorted_data), assign(k, if_then_else(if_then
+gen 11 best 0.542 sc 11 count_best 28 family 43 zz 76 11769 append(for(sorted_data, assign(append(k, k), sorted_data), assign(k, if_then_else(le(assign(i, sorte
+gen 12 best 0.542 sc 12 count_best 35 family 43 zz 76 12385 if_then_else(append(last3(k, k, sorted_data), k), for(sorted_data, append(sorted_data, sorted_data),
+gen 13 best 0.542 sc 13 count_best 34 family 43 zz 67 13135 if_then_else(elem, for(sorted_data, append(sorted_data, sorted_data), assign(k, if_then_else(if_then
+gen 14 best 0.542 sc 14 count_best 33 family 43 zz 70 13923 if_then_else(elem, for(sorted_data, append(sorted_data, sorted_data), assign(k, if_then_else(if_then
+gen 15 best 0.542 sc 15 count_best 37 family 43 zz 60 14479 if_then_else(last3(sorted_data, sorted_data, elem), for(sorted_data, append(sorted_data, sorted_data
+gen 16 best 0.542 sc 16 count_best 36 family 43 zz 58 15009 if_then_else(elem, for(sorted_data, append(sorted_data, sorted_data), assign(k, if_then_else(if_then
+RuntimeWarning: max evaluations reached
+stopped	merge_elem	17	gen	150000	evals
+- eerst eens family op error_vec proberen.
+
+

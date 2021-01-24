@@ -540,19 +540,26 @@ def compute_eval_vectors(example_inputs, actual_outputs, evaluation_function, lo
     return eval_vectors
 
 
-def compute_weighted_sums(eval_vectors):
-    weighted_sums = []
+def mul_lists(a, b):
+    return 
+
+
+def compute_model_evals(eval_vectors):
+    result = []
     global weights
     if weights.shape[0] != eval_vectors[0].shape[0]:
         weights = np.ones((eval_vectors[0].shape[0])) / eval_vectors[0].shape[0]
     for eval_vector in eval_vectors:
-        weighted_sums.append(np.sum(eval_vector * weights))
-    return weighted_sums
+        if False:
+            result.append(np.sum(eval_vector * weights))
+        else:
+            result.extend(list(eval_vector * weights))
+    return result
 
 
 def compute_weighted_error(example_inputs, actual_outputs, evaluation_function, log_file, verbose, penalise_non_reacting_models=False):
     eval_vectors = compute_eval_vectors(example_inputs, actual_outputs, evaluation_function, log_file, verbose)
-    weighted_error = sum(compute_weighted_sums(eval_vectors))
+    weighted_error = sum(compute_model_evals(eval_vectors))
     return weighted_error
 
 

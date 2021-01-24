@@ -61,29 +61,23 @@ def eval_monkey_mode(toolbox, ind, debug):
 
 
 class Family:
-    def __init__(self, model_outputs, eval_vectors):
+    def __init__(self, model_outputs, raw_error_vectors):
         self.model_outputs = model_outputs
-        self.eval_vectors = eval_vectors
-        self.model_evals = evaluate.compute_weighted_sums(self.eval_vectors)
-        self.weighted_error = sum(self.model_evals)
+        self.raw_error_vectors = raw_error_vectors
+        self.normalised_error_vectors = evaluate.compute_normalised_error_vectors(self.raw_error_vectors)
+        self.raw_error = evaluate.compute_raw_error(self.raw_error_vectors)
+        self.normalised_error = evaluate.compute_normalised_error(self.normalised_error_vectors)
 
     def dynamic_weights_update(self):
-        self.model_evals = evaluate.compute_weighted_sums(self.eval_vectors)
+        self.model_evals = evaluate.compute_model_evals(self.eval_vectors)
         self.weighted_error = sum(self.model_evals)
-
-
-def add_family(toolbox, model_outputs_tuple, eval_vectors):
-    family_index = len(toolbox.families_list)
-    toolbox.families_dict[model_outputs_tuple] = family_index
-    toolbox.families_list.append(Family(model_outputs_tuple, eval_vectors))
-    return family_index
 
 
 def forced_reevaluation_of_individual_for_debugging(toolbox, ind, debug_level):
     '''Assigns family index to the individual'''
     model_outputs = run_on_all_inputs(toolbox.cpp_handle, ind)
-    weighted_error = evaluate.compute_weighted_error(toolbox.example_inputs, model_outputs, toolbox.evaluation_function, \
-            toolbox.f, debug_level, toolbox.penalise_non_reacting_models)
+    eval_vectors = compute_eval_vectors(example_inputs, model_outputs, evaluation_function, log_file, verbose)
+    weighted_error = sum(compute_model_evals(eval_vectors))
     return weighted_error
     
 
@@ -104,13 +98,29 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
         if False:
             test_against_python_interpreter(toolbox, cpp_model_outputs, ind)
         t0 = time.time()
-        model_outputs_tuple = recursive_tuple(model_outputs)
-        if model_outputs_tuple in toolbox.families_dict:
-            ind.family_index = toolbox.families_dict[model_outputs_tuple]
+        if False:
+            # family key is model output
+            model_outputs_tuple = recursive_tuple(model_outputs)
+            if model_outputs_tuple in toolbox.families_dict:
+                ind.family_index = toolbox.families_dict[model_outputs_tuple]
+            else:
+                eval_vectors = evaluate.compute_eval_vectors(toolbox.example_inputs, model_outputs, toolbox.evaluation_function, \
+                    toolbox.f, debug, toolbox.penalise_non_reacting_models)
+                ind.family_index = len(toolbox.families_list)
+                toolbox.families_dict[model_outputs_tuple] = ind.family_index
+                toolbox.families_list.append(Family(model_outputs, eval_vectors))
         else:
+            # family key is eval vector
             eval_vectors = evaluate.compute_eval_vectors(toolbox.example_inputs, model_outputs, toolbox.evaluation_function, \
                 toolbox.f, debug, toolbox.penalise_non_reacting_models)
-            ind.family_index = add_family(toolbox, model_outputs_tuple, eval_vectors)
+            eval_vectors_tuple = tuple([tuple(v) for v in eval_vectors])
+            if eval_vectors_tuple in toolbox.families_dict:
+                ind.family_index = toolbox.families_dict[eval_vectors_tuple]
+            else:
+                ind.family_index = len(toolbox.families_list)
+                toolbox.families_dict[eval_vectors_tuple] = ind.family_index
+                toolbox.families_list.append(Family(model_outputs, eval_vectors))
+
         toolbox.t_eval += time.time() - t0
 
 
