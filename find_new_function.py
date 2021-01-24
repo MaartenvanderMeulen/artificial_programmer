@@ -24,7 +24,7 @@ def f():
 
 class Toolbox(object):
     def __init__(self, problem, functions, seed):
-        problem_name, formal_params, example_inputs, evaluation_function, hints, _ = problem
+        problem_name, formal_params, example_inputs, error_function, hints, _ = problem
         int_hints, var_hints, func_hints, solution_hints = hints
         var_names = formal_params + var_hints
         assert len(set(var_names)) == len(var_names)
@@ -53,7 +53,7 @@ class Toolbox(object):
         self.problem_name = problem_name
         self.formal_params = formal_params
         self.example_inputs = example_inputs
-        self.evaluation_function = evaluation_function
+        self.error_function = error_function
         self.functions = functions
         self.pset = pset
         self.solution_code_str = interpret.convert_code_to_str(solution_hints) # for monkey test
@@ -63,31 +63,25 @@ class Toolbox(object):
             print("deap_str1", deap_str)
             print("deap_str2", str(self.solution_deap_ind))
             raise RuntimeError(f"Check if function hints '{str(func_hints)}' contain all functions of solution hint '{str(solution_hints)}'")
-        self.taboo_set = set()
         self.cpp_handle = get_cpp_handle(example_inputs, formal_params, var_hints)
         self.seed = seed
         self.reset()
 
     def reset(self):
-        self.eval_cache = dict()
+        self.deap_str_to_family_index_dict = dict()
         self.families_list = []
         self.families_dict = dict()
         random.seed(self.seed)
 
-    def get_error(self, ind):
-        result = self.families_list[ind.family_index].weighted_error
-        assert math.isclose(result, ind.eval)
-        return result
-
     def sort_ind_key(self, ind):
-        result = self.get_error(ind)
-        if result == 0.0 and len(ind) > len(self.solution_deap_ind) and self.optimise_solution_length:
+        result = ind.normalised_error
+        if self.optimise_solution_length and result == 0.0 and len(ind) > len(self.solution_deap_ind):
             result = 0.001 + (len(ind) - len(self.solution_deap_ind)) / 100000.0
         return result
 
     def is_solution(self, ind):
-        result = self.get_error(ind)
-        if result == 0.0 and len(ind) > len(self.solution_deap_ind) and self.optimise_solution_length:
+        result = ind.normalised_error
+        if self.optimise_solution_length and result == 0.0 and len(ind) > len(self.solution_deap_ind):
             return False
         return result == 0.0
 
@@ -108,14 +102,13 @@ def basinhopper(toolbox):
         toolbox.t_py_interpret = 0
         toolbox.t_cpp_interpret = 0
         toolbox.t_eval = 0
-        toolbox.prev_avg_errors = None
 
         best, gen = ga_search1.ga_search_impl(toolbox)
         if best and toolbox.best_ind_file:
             ga_search_tools.write_population(toolbox.best_ind_file, [best], toolbox.functions)
         toolbox.t_total = time.time() - toolbox.t0
         write_timings(toolbox)
-        if best and toolbox.get_error(best) == 0:
+        if best and toolbox.is_solution(best):
             code = interpret.compile_deap(best.deap_str, toolbox.functions)
             result = ["function", toolbox.problem_name, toolbox.problem_params, code]
             toolbox.f.write(f"solved\t{toolbox.problem_name}")
@@ -127,6 +120,7 @@ def basinhopper(toolbox):
             toolbox.f.write(f"\n")
             if toolbox.verbose >= 1:
                 error = ga_search_tools.forced_reevaluation_of_individual_for_debugging(toolbox, best, 4)
+                print("DEBUG 123", error)
                 assert error == 0
             if toolbox.verbose >= 1:
                 ga_search_tools.write_path(toolbox, best)

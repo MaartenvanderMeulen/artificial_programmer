@@ -16,7 +16,7 @@
             (84 (79 80 81 82 83))
             (84 (81 82 87 88))
         )
-        (eval_merge_elem ())
+        (compute_error_merge_elem ())
         (() (i k)
             (
                 append for if_then_else le last3 assign 

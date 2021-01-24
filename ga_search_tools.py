@@ -37,49 +37,28 @@ def test_against_python_interpreter(toolbox, cpp_model_outputs, ind):
     assert py_model_outputs == cpp_model_outputs
 
 
-def eval_monkey_mode(toolbox, ind, debug):
-    '''if the solution can be found in monkey mode, the real search could in theory find it also'''
-    deap_str = ind.deap_str
-    assert deap_str == str(ind)
-    code = interpret.compile_deap(deap_str, toolbox.functions)
-    toolbox.functions[toolbox.problem_name] = [toolbox.formal_params, code]
-    code_str = interpret.convert_code_to_str(code)
-    weighted_error = evaluate.evaluate_code(code_str, toolbox.solution_code_str)
-    model_outputs = (weighted_error,)
-    model_evals = (weighted_error,)
-    if weighted_error == 0.0:
-        # now check that this also evaluates 
-        model_outputs_tmp = []
-        for input in toolbox.example_inputs:
-            model_output_tmp = interpret.run([toolbox.problem_name] + input, dict(), toolbox.functions)
-            model_outputs_tmp.append(model_output_tmp)        
-        weighted_error_tmp, model_evals_tmp = evaluate.evaluate_all(toolbox.example_inputs, model_outputs_tmp, toolbox.evaluation_function, toolbox.f, debug, toolbox.penalise_non_reacting_models)
-        if weighted_error_tmp != 0:
-            weighted_error_tmp, model_evals_tmp = evaluate.evaluate_all(toolbox.example_inputs, model_outputs_tmp, toolbox.evaluation_function, toolbox.f, 4, toolbox.penalise_non_reacting_models)
-        assert weighted_error_tmp == 0
-    return weighted_error, model_outputs, model_evals
-
-
 class Family:
-    def __init__(self, model_outputs, raw_error_vectors):
+    def __init__(self, model_outputs, raw_error_matrix):
         self.model_outputs = model_outputs
-        self.raw_error_vectors = raw_error_vectors
-        self.normalised_error_vectors = evaluate.compute_normalised_error_vectors(self.raw_error_vectors)
-        self.raw_error = evaluate.compute_raw_error(self.raw_error_vectors)
-        self.normalised_error = evaluate.compute_normalised_error(self.normalised_error_vectors)
+        self.raw_error_matrix = raw_error_matrix
+        self.raw_error = evaluate.compute_raw_error(self.raw_error_matrix)
+        self.update_normalised_errors()
 
-    def dynamic_weights_update(self):
-        self.model_evals = evaluate.compute_model_evals(self.eval_vectors)
-        self.weighted_error = sum(self.model_evals)
+    def update_normalised_errors(self):
+        self.normalised_error_matrix = evaluate.compute_normalised_error_matrix(self.raw_error_matrix)
+        assert self.normalised_error_matrix.shape == self.raw_error_matrix.shape
+        self.normalised_error = evaluate.compute_normalised_error(self.normalised_error_matrix)
+        assert type(self.normalised_error) == type(0.0)
 
 
 def forced_reevaluation_of_individual_for_debugging(toolbox, ind, debug_level):
     '''Assigns family index to the individual'''
     model_outputs = run_on_all_inputs(toolbox.cpp_handle, ind)
-    eval_vectors = compute_eval_vectors(example_inputs, model_outputs, evaluation_function, log_file, verbose)
-    weighted_error = sum(compute_model_evals(eval_vectors))
-    return weighted_error
-    
+    raw_error_matrix = evaluate.compute_raw_error_matrix(toolbox.example_inputs, model_outputs, toolbox.error_function, \
+        toolbox.f, toolbox.verbose)
+    normalised_error_matrix = evaluate.compute_normalised_error_matrix(raw_error_matrix)
+    normalised_error = evaluate.compute_normalised_error(normalised_error_matrix)
+    return normalised_error
 
 
 def evaluate_individual_impl(toolbox, ind, debug=0):
@@ -87,41 +66,24 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
     if toolbox.eval_count >= toolbox.max_evaluations:
         raise RuntimeWarning("max evaluations reached")
     toolbox.eval_count += 1
-    if toolbox.monkey_mode: 
-        # weighted_error, model_outputs, model_evals = eval_monkey_mode(toolbox, ind, debug)
-        pass # TODO : fix this again
-    else:
-        t0 = time.time()
-        cpp_model_outputs = run_on_all_inputs(toolbox.cpp_handle, ind)
-        toolbox.t_cpp_interpret += time.time() - t0
-        model_outputs = cpp_model_outputs
-        if False:
-            test_against_python_interpreter(toolbox, cpp_model_outputs, ind)
-        t0 = time.time()
-        if False:
-            # family key is model output
-            model_outputs_tuple = recursive_tuple(model_outputs)
-            if model_outputs_tuple in toolbox.families_dict:
-                ind.family_index = toolbox.families_dict[model_outputs_tuple]
-            else:
-                eval_vectors = evaluate.compute_eval_vectors(toolbox.example_inputs, model_outputs, toolbox.evaluation_function, \
-                    toolbox.f, debug, toolbox.penalise_non_reacting_models)
-                ind.family_index = len(toolbox.families_list)
-                toolbox.families_dict[model_outputs_tuple] = ind.family_index
-                toolbox.families_list.append(Family(model_outputs, eval_vectors))
-        else:
-            # family key is eval vector
-            eval_vectors = evaluate.compute_eval_vectors(toolbox.example_inputs, model_outputs, toolbox.evaluation_function, \
-                toolbox.f, debug, toolbox.penalise_non_reacting_models)
-            eval_vectors_tuple = tuple([tuple(v) for v in eval_vectors])
-            if eval_vectors_tuple in toolbox.families_dict:
-                ind.family_index = toolbox.families_dict[eval_vectors_tuple]
-            else:
-                ind.family_index = len(toolbox.families_list)
-                toolbox.families_dict[eval_vectors_tuple] = ind.family_index
-                toolbox.families_list.append(Family(model_outputs, eval_vectors))
 
-        toolbox.t_eval += time.time() - t0
+    t0 = time.time()
+    model_outputs = run_on_all_inputs(toolbox.cpp_handle, ind)
+    toolbox.t_cpp_interpret += time.time() - t0
+    if False:
+        test_against_python_interpreter(toolbox, model_outputs, ind)
+
+    t0 = time.time()
+    model_outputs_tuple = recursive_tuple(model_outputs)
+    if model_outputs_tuple in toolbox.families_dict:
+        ind.family_index = toolbox.families_dict[model_outputs_tuple]
+    else:
+        raw_error_matrix = evaluate.compute_raw_error_matrix(toolbox.example_inputs, model_outputs, toolbox.error_function, \
+            toolbox.f, debug, toolbox.penalise_non_reacting_models)
+        ind.family_index = len(toolbox.families_list)
+        toolbox.families_dict[model_outputs_tuple] = ind.family_index
+        toolbox.families_list.append(Family(model_outputs, raw_error_matrix))
+    toolbox.t_eval += time.time() - t0
 
 
 def evaluate_individual(toolbox, individual, debug=0):
@@ -130,52 +92,29 @@ def evaluate_individual(toolbox, individual, debug=0):
     deap_str = individual.deap_str
     assert deap_str == str(individual)
     toolbox.eval_lookup_count += 1
-    if deap_str in toolbox.eval_cache:
-        individual.family_index = toolbox.eval_cache[deap_str]
+    if deap_str in toolbox.deap_str_to_family_index_dict:
+        individual.family_index = toolbox.deap_str_to_family_index_dict[deap_str]
     else:
         evaluate_individual_impl(toolbox, individual, debug)
-        toolbox.eval_cache[deap_str] = individual.family_index
+        toolbox.deap_str_to_family_index_dict[deap_str] = individual.family_index
     family = toolbox.families_list[individual.family_index]
-    weighted_error = family.weighted_error
-    if weighted_error == 0.0 and len(individual) > len(toolbox.solution_deap_ind) and toolbox.optimise_solution_length:
-        weighted_error += (len(individual) - len(toolbox.solution_deap_ind)) / 1000.0
-    return weighted_error
+    assert type(family.raw_error) == type(0.0)
+    individual.raw_error = family.raw_error
+    assert type(family.normalised_error) == type(0.0)
+    individual.normalised_error = family.normalised_error
 
 
 def best_of_n(population, n):
     inds = random.sample(population, n) # sample always returns a list
-    ind = min(inds, key=lambda ind: ind.eval)
+    ind = min(inds, key=lambda ind: ind.normalised_error)
     return ind
 
-
-
-def update_dynamic_weighted_evaluation(toolbox, individuals):
-    if toolbox.dynamic_weights:
-        if len(toolbox.families_list) > 0:
-            n_error_dimensions = len(toolbox.families_list[0].eval_vectors[0])
-            avg_errors = np.zeros((n_error_dimensions))
-            for i, family in enumerate(toolbox.families_list):
-                if i in toolbox.current_families_dict:
-                    for vec in family.eval_vectors:
-                        avg_errors += np.array(vec)
-            avg_errors /= len(toolbox.families_list)
-            if toolbox.prev_avg_errors is not None:
-                toolbox.f.write(f"update_dynamic_weights, n {n_error_dimensions}\n")
-                toolbox.f.write(f"{toolbox.prev_avg_errors} prev avg errors\n")
-                toolbox.f.write(f"{avg_errors} avg errors\n")
-                evaluate.dynamic_error_weight_adjustment(toolbox.f, toolbox.verbose, toolbox.prev_avg_errors, avg_errors)
-                for family in toolbox.families_list:
-                    family.dynamic_weights_update()
-                for ind in individuals:
-                    ind.eval = toolbox.families_list[ind.family_index].weighted_error
-                individuals.sort(key=toolbox.sort_ind_key)
-            toolbox.prev_avg_errors = avg_errors
 
 
 def log_population(toolbox, population, label):
     toolbox.f.write(f"write_population {label}\n")
     for i, ind in enumerate(population):
-        toolbox.f.write(f"    ind {i} {ind.eval:.3f} {len(ind)} {ind.deap_str}\n")
+        toolbox.f.write(f"    ind {i} {ind.raw_error:.3f} {len(ind)} {ind.deap_str}\n")
     toolbox.f.write("\n")
     toolbox.f.flush()
 
@@ -186,7 +125,7 @@ def write_population(file_name, population, functions):
         for ind in population:
             code = interpret.compile_deap(ind.deap_str, functions)
             code_str = interpret.convert_code_to_str(code)
-            f.write(f"    {code_str} # {ind.eval:.3f}\n")
+            f.write(f"    {code_str} # {ind.raw_error:.3f}\n")
         f.write(")\n")
 
 
@@ -196,7 +135,7 @@ def write_final_population(toolbox, population):
         for ind in population:
             code = interpret.compile_deap(ind.deap_str, toolbox.functions)
             code_str = interpret.convert_code_to_str(code)
-            f.write(f"    {code_str} # {ind.eval:.3f}\n")
+            f.write(f"    {code_str} # {ind.raw_error:.3f}\n")
         f.write(")\n")
 
 
@@ -207,11 +146,11 @@ def write_path(toolbox, ind, indent=0):
     code_str = interpret.convert_code_to_str(code)
     if False:
         if indent:
-            toolbox.f.write(f"parent\t{ind.eval:.3f}\tcode\t{code_str}\n")
+            toolbox.f.write(f"parent\t{ind.raw_error:.3f}\tcode\t{code_str}\n")
         else:
-            toolbox.f.write(f"child\t{ind.eval:.3f}\tcode\t{code_str}\n")
+            toolbox.f.write(f"child\t{ind.raw_error:.3f}\tcode\t{code_str}\n")
     else:
-        toolbox.f.write(f"{code_str} {ind.eval:.3f} \n")
+        toolbox.f.write(f"{code_str} {ind.raw_error:.3f} \n")
     # evaluate_individual_impl(toolbox, ind, toolbox.verbose)
     if indent == 0:
         for parent in ind.parents:
@@ -234,9 +173,9 @@ def generate_initial_population_impl(toolbox):
         retry_count = 0
         toolbox.ind_str_set.add(ind.deap_str)
         ind.parents = []
-        ind.eval = evaluate_individual(toolbox, ind)
+        evaluate_individual(toolbox, ind)
         population.append(ind)
-    return population, None
+    return population
 
 
 def read_old_populations(toolbox, old_populations_folder, prefix):
@@ -297,9 +236,9 @@ def load_initial_population_impl(toolbox, old_pops):
                     continue
                 toolbox.ind_str_set.add(ind.deap_str)
                 ind.parents = []
-                ind.eval = evaluate_individual(toolbox, ind)
+                evaluate_individual(toolbox, ind)
                 population.append(ind)
-    return population, None
+    return population
 
 
 def analyse_population_impl(toolbox, old_pops):
@@ -314,7 +253,7 @@ def analyse_population_impl(toolbox, old_pops):
             assert deap_str == ind.deap_str
             assert len(ind) == deap_len_of_code(code)
             ind.parents = []
-            ind.eval = evaluate_individual(toolbox, ind) # required to set ind.family_index
+            evaluate_individual(toolbox, ind) # required to set ind.family_index
             if ind.family_index not in families:
                 families[ind.family_index] = [ind.family_index, ind.deap_str, 0]
             families[ind.family_index][2] += 1
@@ -324,21 +263,29 @@ def analyse_population_impl(toolbox, old_pops):
     filename = f"{toolbox.output_folder}/analysis.txt"
     print(f"anaysis of {count} individuals in {len(old_pops)} pops : result in {filename}")
     with open(filename, "w") as f:
-        f.write(f"{' error':8} findex fsize {'deap_str':10} {'last_output':63} {'last_error':63}\n")
+        f.write(f"{'rawerr':8} {'norerr':8} findex fsize {'last_output':48} {'last_raw_error':48} {'last_nor_error':48}\n")
         data = [value for key, value in families.items()]
         data.sort(key=lambda item: -toolbox.families_list[item[0]].weighted_error)
         sum_count = 0
-        sum_error_vector = np.zeros_like(toolbox.families_list[0].eval_vectors[-1])
+        sum_raw_error_vector = np.zeros_like(toolbox.families_list[0].raw_error_matrix[-1])
+        sum_nor_error_vector = np.zeros_like(toolbox.families_list[0].raw_error_matrix[-1])
         for family_index, deap_str, count in data:
-            error = toolbox.families_list[family_index].weighted_error
+            raw_error = toolbox.families_list[family_index].raw_error
+            nor_error = toolbox.families_list[family_index].normalised_error
             outputs = str(toolbox.families_list[family_index].model_outputs[-1])
-            error_vector = toolbox.families_list[family_index].eval_vectors[-1]
-            sum_error_vector += np.array(error_vector)
-            error_vector = " ".join([f"{v:5.3f}" for v in error_vector])
+            raw_error_vector = toolbox.families_list[family_index].raw_error_matrix[-1]
+            nor_error_vector = toolbox.families_list[family_index].normalised_error_matrix[-1]
+            sum_raw_error_vector += np.array(raw_error_vector)
+            sum_nor_error_vector += np.array(nor_error_vector)
+            raw_error_vector = " ".join([f"{v:5.3f}" for v in raw_error_vector])
+            nor_error_vector = " ".join([f"{v:5.3f}" for v in nor_error_vector])
             sum_count += count
-            f.write(f"{error:8.3f} {family_index:6d} {count:5d} {deap_str[:10]:10} {outputs[:63]:63} {error_vector[:63]:63}\n")
-        sum_error_vector = " ".join([f"{v/len(data):5.3f}" for v in sum_error_vector])
-        f.write(f"{' ':8} {' ':6} {sum_count:5} {' ':10} {' ':63} {sum_error_vector:63}\n")
+            f.write(f"{raw_error:8.3f} {nor_error:8.3f} {family_index:6d} {count:5d} {outputs[:48]:48} ")
+            f.write(f"{raw_error_vector[:48]:48} {nor_error_vector[:48]:48}\n")
+        sum_raw_error_vector = " ".join([f"{v/len(data):5.3f}" for v in sum_raw_error_vector])
+        sum_nor_error_vector = " ".join([f"{v/len(data):5.3f}" for v in sum_nor_error_vector])
+        f.write(f"{' ':8} {' ':8} {len(toolbox.families_list):6} {sum_count:5} {'last_output':48} ")
+        f.write(f"{sum_raw_error_vector:48} {sum_nor_error_vector:48}\n")
 
 
 def generate_initial_population(toolbox, old_pops=None):
@@ -351,24 +298,22 @@ def generate_initial_population(toolbox, old_pops=None):
         bests = read_old_populations(toolbox, toolbox.old_populations_folder, "best")
         analyse_population_impl(toolbox, bests)    
         exit()
-    evaluate.init_dynamic_error_weight_adjustment()
     if toolbox.new_initial_population:
-        population, solution = generate_initial_population_impl(toolbox)
+        population = generate_initial_population_impl(toolbox)
     else:
         # zorg dat de bron van de populatie niet uitmaakt voor de eindtoestand
         # dit was nodig om bij interne opschuddingen hetzelfde resultaat te krijgen als bij set covering op 1 vastloper
         toolbox.reset() # zorgt voor reproduceerbare toolbox
         if old_pops:
             # old_pops is list of individuals
-            population, solution = load_initial_population_impl(toolbox, old_pops)
+            population = load_initial_population_impl(toolbox, old_pops)
         else:
             # 
             old_pops = read_old_populations(toolbox, toolbox.old_populations_folder, "pop")
             # old_pops is list of deap strings
-            population, solution = load_initial_population_impl(toolbox, old_pops)
-        print("ga_search_tools, 292, random.seed(", toolbox.seed, ")")
+            population = load_initial_population_impl(toolbox, old_pops)
         random.seed(toolbox.seed) # zorgt voor reproduceerbare state
-    return population, solution
+    return population
 
 
 def copy_individual(toolbox, ind):
@@ -376,7 +321,8 @@ def copy_individual(toolbox, ind):
     copy_ind = gp.PrimitiveTree(list(ind[:]))
     copy_ind.deap_str = ind.deap_str
     copy_ind.parents = [parent for parent in ind.parents]
-    copy_ind.eval = ind.eval
+    copy_ind.raw_error = ind.raw_error
+    copy_ind.normalised_error = ind.normalised_error
     copy_ind.family_index = ind.family_index
     consistency_check_ind(toolbox, copy_ind)
     return copy_ind
@@ -396,9 +342,7 @@ def cxOnePoint(toolbox, parent1, parent2):
     child.deap_str = str(child)
     if child.deap_str in toolbox.ind_str_set or len(child) > toolbox.max_individual_size:
         return None
-    child.eval = evaluate_individual(toolbox, child)
-    if child.eval in toolbox.taboo_set:
-        return None
+    evaluate_individual(toolbox, child)
     return child
 
 
@@ -416,9 +360,9 @@ def get_family_size(toolbox, ind):
 def is_improvement(toolbox, ind, best):
     if best is None:
         return True
-    if best.eval != ind.eval:
-        return best.eval > ind.eval
-    # now they have equal .eval
+    if best.normalised_error != ind.normalised_error:
+        return best.normalised_error > ind.normalised_error
+    # now they have equal .normalised_error
     if False:
         best_family_size = get_family_size(toolbox, best)
         ind_family_size = get_family_size(toolbox, ind)
@@ -432,7 +376,7 @@ def crossover_with_local_search(toolbox, parent1, parent2):
     if len(parent1) < 2 or len(parent2) < 2:
         # No crossover on single node tree
         return None
-    if parent1.eval > parent2.eval or (parent1.eval == parent2.eval and len(parent1) > len(parent2)):
+    if parent1.normalised_error > parent2.normalised_error or (parent1.normalised_error == parent2.normalised_error and len(parent1) > len(parent2)):
         parent1, parent2 = parent2, parent1
     indexes1 = [i for i in range(len(parent1))]
     indexes2 = [i for i in range(len(parent2))]
@@ -450,10 +394,9 @@ def crossover_with_local_search(toolbox, parent1, parent2):
             if len(child) <= toolbox.max_individual_size:
                 child.deap_str = str(child)
                 if child.deap_str not in toolbox.ind_str_set:
-                    child.eval = evaluate_individual(toolbox, child)
+                    evaluate_individual(toolbox, child)
                     if is_improvement(toolbox, child, best):
-                        if child.eval not in toolbox.taboo_set:
-                            best = child
+                        best = child
     return best
 
 
@@ -467,7 +410,7 @@ def mutUniform(toolbox, parent, expr, pset):
     child.deap_str = str(child)
     if child.deap_str in toolbox.ind_str_set or len(child) > toolbox.max_individual_size:
         return None
-    child.eval = evaluate_individual(toolbox, child)
+    evaluate_individual(toolbox, child)
     return child
 
 
@@ -483,10 +426,9 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
         if len(child) <= toolbox.max_individual_size:
             child.deap_str = str(child)
             if child.deap_str not in toolbox.ind_str_set:
-                child.eval = evaluate_individual(toolbox, child)
+                evaluate_individual(toolbox, child)
                 if is_improvement(toolbox, child, best):
-                    if child.eval not in toolbox.taboo_set:
-                        best = child
+                    best = child
     return best
 
 
@@ -498,18 +440,34 @@ def refresh_toolbox_from_population(toolbox, population):
             toolbox.current_families_dict[ind.family_index] = []
         toolbox.current_families_dict[ind.family_index].append(ind)
     toolbox.offspring_families_dict = dict()
+    if toolbox.dynamic_weights:
+        raw_error_matrix_list = []
+        for family_index, _ in toolbox.current_families_dict.items():
+            raw_error_matrix_list.append(toolbox.families_list[family_index])
+        evaluate.update_avg_raw_error_vector(raw_error_matrix_list)
+        for family in toolbox.families_list:
+            family.dynamic_weights_update()
+        for ind in population:
+            family = toolbox.family_list[ind.family_index]
+            ind.raw_error = family.raw_error
+            ind.normalised_error = family.normalised_error
+    # always sort!
+    population.sort(key=toolbox.sort_ind_key)
 
 
 def consistency_check_ind(toolbox, ind):
     if ind is not None:
         assert hasattr(ind, "deap_str")
         assert hasattr(ind, "parents")
-        assert hasattr(ind, "eval")
+        assert not hasattr(ind, "eval")
+        assert hasattr(ind, "raw_error") # voor weergave aan mens
+        assert hasattr(ind, "normalised_error") # voor vergelijken in local search en voor sorteren populatie
         assert hasattr(ind, "family_index")
         assert ind.deap_str == str(ind)
-        assert ind.eval is not None
-        model_evals = toolbox.families_list[ind.family_index].model_evals
-        assert math.isclose(ind.eval, sum(model_evals))
+        assert ind.raw_error is not None
+        assert ind.normalised_error is not None
+        assert math.isclose(ind.raw_error, toolbox.families_list[ind.family_index].raw_error)
+        assert math.isclose(ind.normalised_error, toolbox.families_list[ind.family_index].normalised_error)
 
 
 def consistency_check(toolbox, inds):

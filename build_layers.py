@@ -253,19 +253,18 @@ class LayerBuilder(object):
 def compute_solved_all(input_chunks, all_functions, log_file, verbose):
     if verbose >= 0:
         print(f"compute solved_all:")
-    evaluation_functions_set = set()
+    error_functions_set = set()
     solved = set()
-    for example_inputs, evaluation_functions in input_chunks:
-        arity = len(example_inputs[0])
-        evaluation_functions_set.update(set(evaluation_functions))
+    for example_inputs, error_functions in input_chunks:
+        error_functions_set.update(set(error_functions))
         for fname, (_, _) in all_functions.items():
-            for evaluation_function in evaluation_functions:
-                if solve_problems.is_solved_by_function(example_inputs, evaluation_function, fname, all_functions, log_file, verbose):
-                    solved.add(evaluation_function)
-                    log_file.write(f"solved\t{evaluation_function}\tby\t{fname}\n")
+            for error_function in error_functions:
+                if solve_problems.is_solved_by_function(example_inputs, error_function, fname, all_functions, log_file, verbose):
+                    solved.add(error_function)
+                    log_file.write(f"solved\t{error_function}\tby\t{fname}\n")
                     if verbose >= 0:
-                        print(f"    {fname} is evaluated OK by {evaluation_function}")
-    solved_all = len(solved) == len(evaluation_functions_set)
+                        print(f"    {fname} is evaluated OK by {error_function}")
+    solved_all = len(solved) == len(error_functions_set)
     if verbose >= 0:
         print("    solved all", bool(solved_all))
     return solved_all

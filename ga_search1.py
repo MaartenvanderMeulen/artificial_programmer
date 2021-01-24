@@ -11,56 +11,54 @@ import time
 import json
 from ga_search_tools import write_population, consistency_check, log_population
 from ga_search_tools import best_of_n, generate_initial_population, generate_initial_population_impl
-from ga_search_tools import update_dynamic_weighted_evaluation, refresh_toolbox_from_population
+from ga_search_tools import refresh_toolbox_from_population
 from ga_search_tools import load_initial_population_impl, evaluate_individual, consistency_check_ind
 from ga_search_tools import crossover_with_local_search, cxOnePoint, mutUniform, replace_subtree_at_best_location
+import numpy as np
 
 from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull, gp.from_string
+
+
+def compute_complementairity(toolbox, parent1, parent2):
+    normalised_error_matrix1 = toolbox.families_list[parent1.family_index].normalised_error_matrix
+    normalised_error_matrix2 = toolbox.families_list[parent2.family_index].normalised_error_matrix
+    normalised_improvement = normalised_error_matrix1 - normalised_error_matrix2
+    complementairity = np.sum(normalised_improvement[normalised_improvement > 0])
+    complementairity /= parent1.normalised_error
+    assert complementairity >= 0
+    if complementairity > 1: # fix any rounding issues: the
+        complementairity = 1 # max complementairity is that the whole parent1.normalised_error is removed
+    return complementairity
 
 
 def select_parents(toolbox, population):
     if toolbox.parent_selection_strategy == 0 or len(toolbox.current_families_dict) == 1:
         return [best_of_n(population, toolbox.best_of_n_cx), best_of_n(population, toolbox.best_of_n_cx)]
-    if toolbox.parent_selection_strategy == 1:        
-        # First attempt with toolbox.inter_family_cx_taboo.  Its just unlikely, not a taboo.
-        list_of_keys = list(toolbox.current_families_dict)
-        group1, group2 = random.sample(list_of_keys, 2) # sample always returns a list
-        group1, group2 = toolbox.current_families_dict[group1], toolbox.current_families_dict[group2]
-        index1, index2 = random.randrange(0, len(group1)), random.randrange(0, len(group2))
-        parent1, parent2 = group1[index1], group2[index2] # all individuals in the group have the same eval
-        return parent1, parent2
         
     # second attempt, hint of Victor:
-    # * hoe beter de evaluatie hoe meer kans.  p_fitness = (1 - eval) ** alpha
+    # * hoe lager de error hoe meer kans.  p_fitness = (1 - error) ** alpha
     # * hoe verder de outputs uit elkaar liggen hoe meer kans.
     # p_complementair = verschillende_outputs(parent1, parent2) / aantal_outputs
     # * p = (p_fitness(parent1) * p_fitness(parent2)) ^ alpha * p_complementair(parent1, parent2) ^ beta
     best_p = -1
     assert toolbox.best_of_n_cx > 0
-    max_eval = max([ind.eval for ind in population])
+    max_normalised_error = max([ind.normalised_error for ind in population])
     for _ in range(toolbox.best_of_n_cx):
         # select two parents
-        group1, group2 = random.sample(list(toolbox.current_families_dict), 2) # sample always returns a list
-        group1, group2 = toolbox.current_families_dict[group1], toolbox.current_families_dict[group2]
-        index1, index2 = random.randrange(0, len(group1)), random.randrange(0, len(group2))
-        parent1, parent2 = group1[index1], group2[index2] # all individuals in the group have the same eval
+        family1_index, family2_index = random.sample(list(toolbox.current_families_dict), 2) # sample always returns a list
+        family1_members, family2_members = toolbox.current_families_dict[family1_index], toolbox.current_families_dict[family2_index]
+        index1, index2 = random.randrange(0, len(family1_members)), random.randrange(0, len(family2_members))
+        parent1, parent2 = family1_members[index1], family2_members[index2] # all individuals in the same family have the same error
         # sort
-        if parent1.eval > parent2.eval or (parent1.eval == parent2.eval and len(parent1) > len(parent2)):
+        if parent1.normalised_error > parent2.normalised_error or (parent1.normalised_error == parent2.normalised_error and len(parent1) > len(parent2)):
             parent1, parent2 = parent2, parent1
         # compute p        
-        model_evals1 = toolbox.families_list[parent1.family_index].model_evals
-        model_evals2 = toolbox.families_list[parent2.family_index].model_evals
-        p_fitness1 = (1 - parent1.eval/(max_eval*1.1))
-        p_fitness2 = (1 - parent2.eval/(max_eval*1.1))
-        if p_fitness1 < 0 or 1 < p_fitness1:
-            print("p_fitness1", p_fitness1)
+        p_fitness1 = (1 - parent1.normalised_error/(max_normalised_error*1.1))
+        p_fitness2 = (1 - parent2.normalised_error/(max_normalised_error*1.1))
         assert 0 <= p_fitness1 and p_fitness1 <= 1
-        if p_fitness2 < 0 or 1 < p_fitness2:
-            print("p_fitness2", p_fitness2)
         assert 0 <= p_fitness2 and p_fitness2 <= 1
-        estimate_improvement = sum([eval1-eval2 for eval1, eval2 in zip(model_evals1, model_evals2) if eval1 > eval2])
-        assert estimate_improvement >= 0
-        p_complementair = estimate_improvement / parent1.eval
+        p_complementair = compute_complementairity(toolbox, parent1, parent2)
+
         assert 0 <= p_complementair and p_complementair <= 1
         p = ((p_fitness1 * p_fitness2)) + (p_complementair * toolbox.beta)
         assert p >= 0
@@ -74,7 +72,7 @@ def analyse_parents(toolbox, population):
     for parent1 in population:
         for parent2 in population:
             child = crossover_with_local_search(toolbox, parent1, parent2)
-            if child and child.eval < 77.61253 - 0.00001:
+            if child and child.normalised_error < 77.61253 - 0.00001:
                 escapes_count += 1
     return escapes_count
 
@@ -90,7 +88,7 @@ def generate_offspring(toolbox, population, nchildren):
     only_cx = False
     toolbox.offspring_families_dict = dict()
     if False:
-        do_special_experiment = False # math.isclose(population[0].eval, 77.61253, abs_tol=0.00001)
+        do_special_experiment = False # math.isclose(population[0].normalised_error, 77.61253, abs_tol=0.00001)
         if do_special_experiment:
             only_cx = True
             all_escapes_count = analyse_parents(toolbox, population)
@@ -124,7 +122,7 @@ def generate_offspring(toolbox, population, nchildren):
             else:
                 break
         retry_count = 0
-        assert child.eval is not None
+        assert child.normalised_error is not None
         assert child.deap_str == str(child)
         toolbox.ind_str_set.add(child.deap_str)
         if child.family_index not in toolbox.offspring_families_dict:
@@ -132,16 +130,16 @@ def generate_offspring(toolbox, population, nchildren):
         toolbox.offspring_families_dict[child.family_index].append(child)
         offspring.append(child)
         if False:
-            if do_special_experiment and child.eval < 77.61253 - 0.00001:
+            if do_special_experiment and child.normalised_error < 77.61253 - 0.00001:
                 if False:
-                    toolbox.f.write(f"child\t{child.eval:.3f}\tcode\t{child.deap_str}\n")
+                    toolbox.f.write(f"child\t{child.normalised_error:.3f}\tcode\t{child.deap_str}\n")
                     for parent in child.parents:
-                        toolbox.f.write(f"parent\t{parent.eval:.3f}\tcode\t{parent.deap_str}\n")
+                        toolbox.f.write(f"parent\t{parent.normalised_error:.3f}\tcode\t{parent.deap_str}\n")
                 if False:
-                    toolbox.f.write(f"{child.eval:.3f}\t")
-                    child.parents.sort(key=lambda item: item.eval)
+                    toolbox.f.write(f"{child.normalised_error:.3f}\t")
+                    child.parents.sort(key=lambda item: item.normalised_error)
                     for parent in child.parents:
-                        toolbox.f.write(f"\t{parent.eval:.3f}")
+                        toolbox.f.write(f"\t{parent.normalised_error:.3f}")
                     toolbox.f.write(f"\n")
                 offspring_escapes_count += 1
     if False:
@@ -169,46 +167,36 @@ def track_stuck(toolbox, population):
                 toolbox.reset()
                 for ind in population:
                     ind.parents = []
-                    ind.eval = evaluate_individual(toolbox, ind)
-                    consistency_check_ind(toolbox, ind)
                 refresh_toolbox_from_population(toolbox, population)
     else:
         toolbox.stuck_count = 0
         # verandering t.o.v. vorige iteratie
     toolbox.prev_family_index.add(population[0].family_index)
 
+
 def ga_search_impl(toolbox):
     if toolbox.final_pop_file: # clear the file to avoid confusion with older output
         write_population(toolbox.final_pop_file, [], toolbox.functions)
     try:
-        population, solution = [], None # generate_initial_population may throw exception
-        population, solution = generate_initial_population(toolbox)
-        if solution:
-            return solution, 0
+        population = [] # generate_initial_population may throw exception
+        population = generate_initial_population(toolbox)
         consistency_check(toolbox, population)
         refresh_toolbox_from_population(toolbox, population)
-        update_dynamic_weighted_evaluation(toolbox, population)
-        population.sort(key=toolbox.sort_ind_key)
         toolbox.prev_family_index = set()
         toolbox.stuck_count, toolbox.count_opschudding = 0, 0
         toolbox.parachute_level = 0
         toolbox.gen = 0
         toolbox.real_gen = 0
-
         while toolbox.parachute_level < len(toolbox.ngen):
             while toolbox.gen < toolbox.ngen[toolbox.parachute_level]:
                 track_stuck(toolbox, population)
                 if toolbox.f and toolbox.verbose >= 1:
-                    count_best = sum([1 for ind in population if ind.eval == population[0].eval])
-                    toolbox.f.write(f"gen {toolbox.real_gen} best {population[0].eval:.3f} ")
-                    n = len(toolbox.current_families_dict)
-                    m = len(toolbox.families_list)
-                    toolbox.f.write(f"sc {toolbox.stuck_count} count_best {count_best} family {population[0].family_index} zz {n} {m} {population[0].deap_str[:100]}\n")
-                if toolbox.verbose >= 3:
-                    log_population(toolbox, population, f"generation {toolbox.real_gen}, pop at start")
+                    count_best = sum([1 for ind in population if ind.normalised_error == population[0].normalised_error])
+                    toolbox.f.write(f"gen {toolbox.real_gen} ")
+                    toolbox.f.write(f"best_raw {population[0].raw_error:.3f} best_norm {population[0].normalised_error:.3f} ")
+                    toolbox.f.write(f"sc {toolbox.stuck_count} count_best {count_best} family {population[0].family_index} ")
+                    toolbox.f.write(f"{population[0].deap_str[:90]}\n")
                 offspring = generate_offspring(toolbox, population, toolbox.nchildren[toolbox.parachute_level])
-                if toolbox.verbose >= 4:
-                    log_population(toolbox, offspring, f"generation {toolbox.real_gen}, offspring")
                 fraction = toolbox.parents_keep_fraction[toolbox.parachute_level]
                 if fraction < 1:
                     population = random.sample(population, k=int(len(population)*fraction))
@@ -219,7 +207,6 @@ def ga_search_impl(toolbox):
                 population[:] = population[:toolbox.pop_size[toolbox.parachute_level]]
                 consistency_check(toolbox, population)
                 refresh_toolbox_from_population(toolbox, population)
-                update_dynamic_weighted_evaluation(toolbox, population)
                 toolbox.gen += 1
                 toolbox.real_gen += 1
             toolbox.parachute_level += 1

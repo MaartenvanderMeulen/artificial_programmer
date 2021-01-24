@@ -7,9 +7,10 @@ import math
 import interpret
 
 
-# used in dynamic weight adjustment
-global weights
-weights = np.ones((6)) / 6
+# used in error normalisation
+global avg_raw_error_vector, inv_avg_raw_error_vector
+avg_raw_error_vector = np.ones((8))
+inv_avg_raw_error_vector = np.ones((8))
 
 
 def recursive_tuple(value):
@@ -68,7 +69,7 @@ def _distance_with_closest_numbers(x, values):
     return result
 
 
-def evaluate_int(actual, expect, debug=False):
+def compute_error_int(actual, expect, debug=False):
     '''compute and return error on this output'''
     errors = []
     assert type(expect) == type(1)
@@ -94,7 +95,7 @@ def evaluate_int(actual, expect, debug=False):
     return errors
 
 
-def evaluate_list_of_ints(actual, expect, debug=False):
+def compute_error_list_of_ints(actual, expect, debug=False):
     '''compute and return error on this output'''
     errors = []
     assert type(expect) == type([])
@@ -183,7 +184,7 @@ def find_col(board, v):
     return None
 
 
-def eval_board_col_diag_common(input, actual, extra_function_params, expect, expect_cols):
+def compute_error_board_col_diag_common(input, actual, extra_function_params, expect, expect_cols):
     board = input[0]
     n = len(board)
 
@@ -249,80 +250,80 @@ def eval_board_col_diag_common(input, actual, extra_function_params, expect, exp
          error_columns*w[4], error_correct_elements_ordered*w[5]]
 
 
-def eval_board_col(input, actual, extra_function_params, log_file, verbose):
+def compute_error_board_col(input, actual, extra_function_params, log_file, verbose):
     board, col = input
     expect = [row[col] for row in board]
-    error = eval_board_col_diag_common(input, actual, extra_function_params, expect, 1)
+    error = compute_error_board_col_diag_common(input, actual, extra_function_params, expect, 1)
     return error
 
 
-def eval_board_diag1(input, actual, extra_function_params, log_file, verbose):
+def compute_error_board_diag1(input, actual, extra_function_params, log_file, verbose):
     board = input[0]
     n = len(board)
     expect = [row[i] for i, row in enumerate(board)]
-    return eval_board_col_diag_common(input, actual, extra_function_params, expect, n)
+    return compute_error_board_col_diag_common(input, actual, extra_function_params, expect, n)
 
 
-def eval_board_diag2(input, actual, extra_function_params, log_file, verbose):
+def compute_error_board_diag2(input, actual, extra_function_params, log_file, verbose):
     board = input[0]
     n = len(board)
     expect = [row[n-1 - i] for i, row in enumerate(board)]
-    result = eval_board_col_diag_common(input, actual, extra_function_params, expect, n)
+    result = compute_error_board_col_diag_common(input, actual, extra_function_params, expect, n)
     return result
 
 
-def eval_get_row_sums(input, actual, extra_function_params, log_file, verbose):
+def compute_error_get_row_sums(input, actual, extra_function_params, log_file, verbose):
     board = input[0]
     expect = []
     expect += [sum(row) for row in board]
-    return evaluate_list_of_ints(actual, expect, False)
+    return compute_error_list_of_ints(actual, expect, False)
 
 
-def eval_get_col_sums(input, actual, extra_function_params, log_file, verbose):
+def compute_error_get_col_sums(input, actual, extra_function_params, log_file, verbose):
     board = input[0]
     n = len(board)
     expect = []
     expect += [sum([row[col] for row in board]) for col in range(n)]
-    return evaluate_list_of_ints(actual, expect, False)
+    return compute_error_list_of_ints(actual, expect, False)
 
 
-def eval_get_diag_sums(input, actual, extra_function_params, log_file, verbose):
+def compute_error_get_diag_sums(input, actual, extra_function_params, log_file, verbose):
     board = input[0]
     n = len(board)
     expect = []
     expect.append(sum([board[i][i] for i in range(n)]))
     expect.append(sum([board[i][(n-1) - i] for i in range(n)]))
-    return evaluate_list_of_ints(actual, expect, False)
+    return compute_error_list_of_ints(actual, expect, False)
 
 
-def eval_get_magic_number_n(input, actual, extra_function_params, log_file, verbose):
+def compute_error_get_magic_number_n(input, actual, extra_function_params, log_file, verbose):
     n = input[0]
     assert type(n) == type(1)
     assert n in [1, 2, 3, 4, 5, 6]
     expect = (n * (n * n + 1)) // 2
     if 1 <= n <= 6:
         assert expect == [0, 1, 5, 15, 34, 65, 111][n]
-    result = evaluate_int(actual, expect, False)
+    result = compute_error_int(actual, expect, False)
     return result
 
 
-def eval_get_magic_number(input, actual, extra_function_params, log_file, verbose):
+def compute_error_get_magic_number(input, actual, extra_function_params, log_file, verbose):
     board = input[0]
     assert type(board) == type([])
     n = len(board)
     expect = (n * (n * n + 1)) // 2
     if 0 <= n <= 5:
         assert expect == [0, 1, 5, 15, 34, 65][n]
-    return evaluate_int(actual, expect, False)
+    return compute_error_int(actual, expect, False)
 
 
-def eval_are_all_equal(input, actual, extra_function_params, log_file, verbose):
+def compute_error_are_all_equal(input, actual, extra_function_params, log_file, verbose):
     values = input[0]
     expect = sum([1 if value == values[0] else 0 for value in values]) == len(values)
-    return evaluate_int(actual, int(expect), False)
+    return compute_error_int(actual, int(expect), False)
 
 
-def eval_is_magic(inputs, actual, extra_function_params, log_file, verbose):
+def compute_error_is_magic(inputs, actual, extra_function_params, log_file, verbose):
     error = 0.0
     if type(actual) != type(1):
         error += 0.64
@@ -361,7 +362,7 @@ def eval_is_magic(inputs, actual, extra_function_params, log_file, verbose):
     return error,
 
 
-def eval_is_sorted(input, actual, extra_function_params, log_file, verbose):
+def compute_error_is_sorted(input, actual, extra_function_params, log_file, verbose):
     error = 0.0
     if type(actual) != type(1):
         error += 0.8
@@ -386,100 +387,87 @@ def eval_is_sorted(input, actual, extra_function_params, log_file, verbose):
     return error,
 
 
-def eval_is_sorted_self_test():
-    assert math.isclose(eval_is_sorted([[1, 2, 3, 4, 5]], 1, None, None, None)[0], 0.0)
-    assert math.isclose(eval_is_sorted([[1, 2, 3, 5, 4]], 1, None, None, None)[0], 0.25)
-    assert math.isclose(eval_is_sorted([[1, 2, 5, 4, 3]], 1, None, None, None)[0], 0.5)
-    assert math.isclose(eval_is_sorted([[1, 5, 4, 3, 2]], 1, None, None, None)[0], 0.75)
-    assert math.isclose(eval_is_sorted([[5, 4, 3, 2, 1]], 1, None, None, None)[0], 1.0)
-    assert math.isclose(eval_is_sorted([[5, 4, 3, 2, 1]], 0, None, None, None)[0], 0.0)
-    assert math.isclose(eval_is_sorted([[5, ]], 0, None, None, None)[0], 1.0)
-    assert math.isclose(eval_is_sorted([[5, ]], 1, None, None, None)[0], 0.0)
-    assert math.isclose(eval_is_sorted([[]], 0, None, None, None)[0], 1.0)
-    assert math.isclose(eval_is_sorted([[]], 1, None, None, None)[0], 0.0)
-
-
-def eval_merge_elem(input, actual, extra_function_params, log_file, verbose):
+def compute_error_merge_elem(input, actual, extra_function_params, log_file, verbose):
     elem = input[0]
     data = input[1]
     for i in range(1, len(data)):
         assert data[i-1] <= data[i]
     expect = data + [elem] 
     expect.sort()
-    return evaluate_list_of_ints(actual, expect)
+    return compute_error_list_of_ints(actual, expect)
 
 
-def eval_sort(input, actual, extra_function_params, log_file, verbose):
+def compute_error_sort(input, actual, extra_function_params, log_file, verbose):
     expect = copy.deepcopy(input[0])
     expect.sort()
-    return evaluate_list_of_ints(actual, expect)
+    return compute_error_list_of_ints(actual, expect)
 
 
-# ================================== EXACT evals voor testen van laagjes ==================
+# ================================== EXACT errors voor testen van laagjes ==================
 
 
-def eval_exact_inc(input, actual, extra_function_params, log_file, verbose):
+def compute_error_exact_inc(input, actual, extra_function_params, log_file, verbose):
     expect = input[0] + 1
     error = 0 if expect == actual else 1
     return error,
 
 
-def eval_exact_inc2(input, actual, extra_function_params, log_file, verbose):
+def compute_error_exact_inc2(input, actual, extra_function_params, log_file, verbose):
     expect = input[0] + 2
     error = 0 if expect == actual else 1
     return error,
 
 
-def eval_exact_inc3(input, actual, extra_function_params, log_file, verbose):
+def compute_error_exact_inc3(input, actual, extra_function_params, log_file, verbose):
     expect = input[0] + 3
     error = 0 if expect == actual else 1
     return error,
 
 
-def eval_exact_inc4(input, actual, extra_function_params, log_file, verbose):
+def compute_error_exact_inc4(input, actual, extra_function_params, log_file, verbose):
     expect = input[0] + 4
     error = 0 if expect == actual else 1
     return error,
 
 
-def eval_exact_inc5(input, actual, extra_function_params, log_file, verbose):
+def compute_error_exact_inc5(input, actual, extra_function_params, log_file, verbose):
     expect = input[0] + 5
     error = 0 if expect == actual else 1
     return error,
 
 
-def eval_exact_add(input, actual, extra_function_params, log_file, verbose):
+def compute_error_exact_add(input, actual, extra_function_params, log_file, verbose):
     expect = input[0] + input[1]
     error = 0 if expect == actual else 1
     return error,
 
 
-def eval_exact_add_and_inc(input, actual, extra_function_params, log_file, verbose):
+def compute_error_exact_add_and_inc(input, actual, extra_function_params, log_file, verbose):
     expect = (input[0] + input[1]) + 1
     error = 0 if expect == actual else 1
     return error,
 
 
-def eval_exact_inc_and_add(input, actual, extra_function_params, log_file, verbose):
+def compute_error_exact_inc_and_add(input, actual, extra_function_params, log_file, verbose):
     expect = (input[0] + 1) + (input[1] + 1)
     error = 0 if expect == actual else 1
     return error,
 
 
-def eval_exact_add3(input, actual, extra_function_params, log_file, verbose):
+def compute_error_exact_add3(input, actual, extra_function_params, log_file, verbose):
     expect = input[0] + input[1] + input[2]
     error = 0 if expect == actual else 1
     return error,
 
 
-def eval_get_diag1_cell(input, actual, extra_function_params, log_file, verbose):
+def compute_error_get_diag1_cell(input, actual, extra_function_params, log_file, verbose):
     board, i = input
     expect = board[i][i]
     error = 0 if expect == actual else 1
     return error,
 
 
-def eval_get_diag2_cell(input, actual, extra_function_params, log_file, verbose):
+def compute_error_get_diag2_cell(input, actual, extra_function_params, log_file, verbose):
     board, i = input
     expect = board[i][len(board)-1-i]
     error = 0 if expect == actual else 1
@@ -489,102 +477,94 @@ def eval_get_diag2_cell(input, actual, extra_function_params, log_file, verbose)
 # ============================================== INTERFACE ====================
 
 
-def evaluate_code(actual_code_str, expected_code_str):
-    def count_equal_prefix_length(str1, str2):
-        n_eq = 0
-        for i in range(min(len(str1), len(str2))):
-            if str1[i] != str2[i]:
-                break
-            n_eq += 1
-        return n_eq
-    return len(expected_code_str) - count_equal_prefix_length(actual_code_str, expected_code_str)
+def find_worst_raw_error_vector(raw_error_matrix):
+    worst_raw_error_vector = raw_error_matrix[0]
+    for raw_error_vector in raw_error_matrix[1:]:
+        if np.sum(worst_raw_error_vector) < np.sum(raw_error_vector):
+            worst_raw_error_vector = raw_error_vector
+    return worst_raw_error_vector
 
 
-def compute_eval_vectors(example_inputs, actual_outputs, evaluation_function, log_file, verbose, penalise_non_reacting_models=False):
-    '''Returns list of evaluation vectors, to be weighted dynamically using compute_weighted_sum'''
-    eval_vectors = []
-    if type(evaluation_function) == type(""):
-        function_name, extra_function_params = evaluation_function, []
+def compute_raw_error_matrix(example_inputs, actual_outputs, raw_error_function, log_file, verbose, penalise_non_reacting_models=False):
+    raw_error_matrix = []
+    if type(raw_error_function) == type(""):
+        function_name, extra_function_params = raw_error_function, []
     else:
-        function_name, extra_function_params = evaluation_function
-    eval_function = eval(function_name)
+        function_name, extra_function_params = raw_error_function
+    raw_error_function = eval(function_name)
     if verbose >= 4:
-        log_file.write(f"compute_error_vectors({function_name})\n")
+        log_file.write(f"compute_error_matrix({function_name})\n")
     assert len(example_inputs) == len (actual_outputs)
     domain_output_set = set()
-    for example_input, actual_output in zip(example_inputs, actual_outputs):
+    for i, (example_input, actual_output) in enumerate(zip(example_inputs, actual_outputs)):
         domain_output_set.add(recursive_tuple(actual_output))
-        eval_vector = eval_function(example_input, actual_output, extra_function_params, log_file, verbose)
-        eval_vector = np.array(eval_vector).astype(float)
+        raw_error_vector = raw_error_function(example_input, actual_output, extra_function_params, log_file, verbose)
+        raw_error_vector = np.array(raw_error_vector).astype(float)
         if verbose >= 4:
-            log_file.write(f"    {eval_vector} = error(input={example_input}, output={actual_output})\n")
-        eval_vectors.append(eval_vector)
+            log_file.write(f"    {raw_error_vector} = error(input={example_input}, output={actual_output})\n")
+        if i == 0:
+            raw_error_matrix = np.empty((len(example_inputs), raw_error_vector.shape[0]))
+        raw_error_matrix[i, :] = raw_error_vector
     if penalise_non_reacting_models:
         if len(domain_output_set) == 1:
-            global weights
-            if verbose >= 3:
-                log_file.write(f"penalise_non_reacting_models\n")
-                log_file.write(f"    domain_output_set {str(domain_output_set)}\n")
-                log_file.write(f"    len(domain_output_set) {len(domain_output_set)}\n")
-                vs = [np.sum(v*weights) for v in eval_vectors]
-                log_file.write(f"    old model evals {str(vs)}\n")
-            max_eval = eval_vectors[0]
-            for eval_vector in eval_vectors:
-                if np.sum(max_eval) < np.sum(eval_vector):
-                    max_eval = eval_vector
-            for eval_vector in eval_vectors:
-                eval_vector[...] = max_eval
-            if verbose >= 3:
-                vs = [np.sum(v*weights) for v in eval_vectors]
-                log_file.write(f"    new model evals {str(vs)}\n")
-    return eval_vectors
+            worst_raw_error_vector = find_worst_raw_error_vector(raw_error_matrix)
+            raw_error_matrix[:] = worst_raw_error_vector
+    return raw_error_matrix
 
 
-def mul_lists(a, b):
-    return 
+# ===================================== error normalisation ===============================
+
+def compute_raw_error(raw_error_matrix):
+    return float(np.sum(raw_error_matrix))
 
 
-def compute_model_evals(eval_vectors):
-    result = []
-    global weights
-    if weights.shape[0] != eval_vectors[0].shape[0]:
-        weights = np.ones((eval_vectors[0].shape[0])) / eval_vectors[0].shape[0]
-    for eval_vector in eval_vectors:
-        if False:
-            result.append(np.sum(eval_vector * weights))
-        else:
-            result.extend(list(eval_vector * weights))
-    return result
+def update_avg_raw_error_vector(raw_error_matrix_list):
+    global inv_avg_raw_error_vector
+    if inv_avg_raw_error_vector.shape[0] != raw_error_matrix_list[0][0].shape[0]:
+        inv_avg_raw_error_vector = np.ones((raw_error_matrix_list[0][0].shape[0]))
+    avg_raw_error_vector = np.zeros_like(inv_avg_raw_error_vector)
+    count = 0
+    for raw_error_matrix in raw_error_matrix_list:
+        avg_raw_error_vector += raw_error_matrix.sum(axis=0)
+        count += raw_error_matrix.shape[0]
+    avg_raw_error_vector /= count
+    inv_avg_raw_error_vector = np.copy(avg_raw_error_vector)
+    for i in range(inv_avg_raw_error_vector.shape[0]):
+        inv_avg_raw_error_vector[i] = 1/inv_avg_raw_error_vector[i] if inv_avg_raw_error_vector[i] > 0 else 1.0
 
 
-def compute_weighted_error(example_inputs, actual_outputs, evaluation_function, log_file, verbose, penalise_non_reacting_models=False):
-    eval_vectors = compute_eval_vectors(example_inputs, actual_outputs, evaluation_function, log_file, verbose)
-    weighted_error = sum(compute_model_evals(eval_vectors))
-    return weighted_error
+def compute_normalised_error_matrix(raw_error_matrix):
+    normalised_error_matrix = np.copy(raw_error_matrix)
+    global inv_avg_raw_error_vector
+    if inv_avg_raw_error_vector.shape[0] != raw_error_matrix[0].shape[0]:
+        inv_avg_raw_error_vector = np.ones((raw_error_matrix[0].shape[0]))
+    normalised_error_matrix[:] *= inv_avg_raw_error_vector
+    return normalised_error_matrix
 
 
-def init_dynamic_error_weight_adjustment():
-    global weights
-    weights = np.ones((6)) / 6
+def compute_normalised_error(normalised_error_matrix):
+    if False:
+        avg_normalised_error_vector = normalised_error_matrix.sum(axis=0) / normalised_error_matrix.shape[0]
+        rmse = math.sqrt(np.sum(avg_normalised_error_vector ** 2) / normalised_error_matrix.shape[1] )
+        return rmse
+    else:
+        return float(np.sum(normalised_error_matrix))
 
 
-def dynamic_error_weight_adjustment(log_file, verbose, prev_avg_errors, avg_errors):
-    global weights
-    n = len(weights)
-    assert n == len(avg_errors) and n == len(prev_avg_errors)
-    if verbose >= 1:
-        log_file.write(f"{weights} weights before \n")
-    for i in range(n):
-        if avg_errors[i] > prev_avg_errors[i]:
-            weights[i] *= 1.1
-        elif avg_errors[i] < prev_avg_errors[i]:
-            weights[i] /= 1.1
-        elif avg_errors[i] == 0.0:
-            pass
-    weights *= 1 / np.sum(weights)
-    if verbose >= 1:
-        log_file.write(f"{weights} weights after\n")
 
+def self_test():
+    raw_error_matrix = np.array([[4.0, 4.0], [4.0, 4.0]])
+    raw_error = compute_raw_error(raw_error_matrix)
+    update_avg_raw_error_vector([raw_error_matrix])
+    normalised_error_matrix = compute_normalised_error_matrix(raw_error_matrix)
+    normalised_error = compute_normalised_error(normalised_error_matrix)
+
+    assert raw_error == 16.0
+    assert list(inv_avg_raw_error_vector) == [0.25, 0.25]
+    assert [list(normalised_error_matrix[0]), list(normalised_error_matrix[1])] == [[1.0, 1.0], [1.0, 1.0]]
+    assert normalised_error == 4.0
+
+    print("selftest ok")
 
 if __name__ == "__main__":
-    eval_is_sorted_self_test()
+    self_test()

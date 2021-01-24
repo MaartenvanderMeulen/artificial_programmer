@@ -3,13 +3,14 @@ import sys
 import time
 import random
 import json
+import numpy as np
 
 import interpret
 import evaluate
 import find_new_function
 
 
-def is_solved_by_function(example_inputs, evaluation_function, fname, functions, log_file, verbose):
+def is_solved_by_function(example_inputs, error_function, fname, functions, log_file, verbose):
     actual_outputs = []
     if fname in functions:         
         formal_params = functions[fname]
@@ -26,23 +27,21 @@ def is_solved_by_function(example_inputs, evaluation_function, fname, functions,
             actual_outputs.append(actual_output)
     if len(used_example_inputs) == 0:
         return False
-    error = evaluate.compute_weighted_error(used_example_inputs, actual_outputs, evaluation_function, log_file, verbose)
-    if verbose >= 3:
-        log_file.write(f"is_solved_by_function({fname}), actual_outputs {actual_outputs}, error {error}\n")
-    return error <= 0.0
+    raw_error_matrix = evaluate.compute_raw_error_matrix(used_example_inputs, actual_outputs, error_function, log_file, verbose)
+    return np.sum(raw_error_matrix) <= 0.0
 
 
 def solve_by_existing_function(problem, functions, log_file, verbose):
-    problem_label, _, example_inputs, evaluation_function, _, _ = problem
+    problem_label, _, example_inputs, error_function, _, _ = problem
     if verbose >= 3:
         log_file.write(f"solve_by_existing_function {problem_label}\n")
     build_in_functions = interpret.get_build_in_functions()
     for fname in build_in_functions:
         layer0_no_functions = dict()
-        if is_solved_by_function(example_inputs, evaluation_function, fname, layer0_no_functions, log_file, verbose):
+        if is_solved_by_function(example_inputs, error_function, fname, layer0_no_functions, log_file, verbose):
             return fname
     for fname, (_, _) in functions.items():
-        if is_solved_by_function(example_inputs, evaluation_function, fname, functions, log_file, verbose):
+        if is_solved_by_function(example_inputs, error_function, fname, functions, log_file, verbose):
             return fname
     if verbose >= 3:
         log_file.write(f"solve_by_existing_function {problem_label} fails\n")
