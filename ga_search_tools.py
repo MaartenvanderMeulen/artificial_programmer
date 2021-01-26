@@ -195,9 +195,6 @@ def read_old_populations(toolbox, old_populations_folder, prefix):
             elif toolbox.old_populations_samplesize == 1:
                 toolbox.f.write("RuntimeWarning: stopped because no set covering needed, 0 evals\n")
                 exit()
-    if len(old_pops) != toolbox.old_populations_samplesize:
-        toolbox.f.write(f"read_old_populations : len(old_pops) = {len(old_pops)} != samplesize = {toolbox.old_populations_samplesize}\n")
-        # exit()
     if len(old_pops) == 0:
         toolbox.f.write(f"RuntimeError: no {prefix}* files in folder {old_populations_folder}\n")
         exit(1)
@@ -444,7 +441,7 @@ def refresh_toolbox_from_population(toolbox, population):
         raw_error_matrix_list = []
         for family_index, _ in toolbox.current_families_dict.items():
             raw_error_matrix_list.append(toolbox.families_list[family_index].raw_error_matrix)
-        evaluate.update_avg_raw_error_vector(raw_error_matrix_list)
+        toolbox.count_nonzero, toolbox.sum_nonzero = evaluate.update_avg_raw_error_vector(raw_error_matrix_list)
         for family in toolbox.families_list:
             family.update_normalised_errors()
         for ind in population:

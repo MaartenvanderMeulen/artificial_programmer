@@ -1,6 +1,0 @@
-{
-    "functions_file": "experimenten/functions_leeg.txt",
-    "inputs_file": "experimenten/inputs_LD.txt",
-    "verbose": 1,
-    "scenario": 1
-}

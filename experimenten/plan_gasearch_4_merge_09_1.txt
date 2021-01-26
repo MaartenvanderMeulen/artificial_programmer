@@ -407,3 +407,5 @@ Oplossing Maarten:
 
 rm tmp/acsh/*
 for seed in `seq 1000 1 1999` ; do tsp -n python solve_problems.py $seed acsh ; done
+
+echo overzicht ; grep solv lo* | wc -l ; grep stop lo* | wc -l ; grep evals lo* | wc -l ; ls lo* | wc -l

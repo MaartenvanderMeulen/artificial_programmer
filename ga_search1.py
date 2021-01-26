@@ -174,6 +174,27 @@ def track_stuck(toolbox, population):
     toolbox.prev_family_index.add(population[0].family_index)
 
 
+def log_info(toolbox, population):
+    toolbox.f.write(f"gen {toolbox.real_gen}")
+    toolbox.f.write(f" best_raw {population[0].raw_error:.3f} best_nor {population[0].normalised_error:.3f}")
+    count_best_nor = sum([1 for ind in population if ind.normalised_error == population[0].normalised_error])
+    toolbox.f.write(f" count_best_nor {count_best_nor}")
+    count_family = sum([1 for ind in population if ind.family_index == population[0].family_index])
+    toolbox.f.write(f" family {population[0].family_index} count_family {count_family}")
+    count_msg = " ".join([f"{n:.0f}" for n in toolbox.count_nonzero])
+    toolbox.f.write(f" count_nonzero {count_msg} ({np.sum(toolbox.count_nonzero):.0f})")
+    if False:
+        sum_msg = " ".join([f"{x:.0f}" for x in toolbox.sum_nonzero])
+        toolbox.f.write(f" sum_raw {sum_msg}")
+    if False:
+        sum_nonzero = np.zeros_like(toolbox.sum_nonzero)
+        for family_index, _ in toolbox.current_families_dict.items():
+            sum_nonzero += toolbox.families_list[family_index].normalised_error_matrix.sum(axis=0)
+        sum_msg = " ".join([f"{x:.0f}" for x in sum_nonzero])
+        toolbox.f.write(f" sum_nor {sum_msg}")
+    toolbox.f.write(f"\n")
+
+
 def ga_search_impl(toolbox):
     if toolbox.final_pop_file: # clear the file to avoid confusion with older output
         write_population(toolbox.final_pop_file, [], toolbox.functions)
@@ -191,11 +212,7 @@ def ga_search_impl(toolbox):
             while toolbox.gen < toolbox.ngen[toolbox.parachute_level]:
                 track_stuck(toolbox, population)
                 if toolbox.f and toolbox.verbose >= 1:
-                    count_best = sum([1 for ind in population if ind.normalised_error == population[0].normalised_error])
-                    toolbox.f.write(f"gen {toolbox.real_gen} ")
-                    toolbox.f.write(f"best_raw {population[0].raw_error:.3f} best_norm {population[0].normalised_error:.3f} ")
-                    toolbox.f.write(f"sc {toolbox.stuck_count} count_best {count_best} family {population[0].family_index} ")
-                    toolbox.f.write(f"{population[0].deap_str[:90]}\n")
+                    log_info(toolbox, population)
                 offspring = generate_offspring(toolbox, population, toolbox.nchildren[toolbox.parachute_level])
                 fraction = toolbox.parents_keep_fraction[toolbox.parachute_level]
                 if fraction < 1:

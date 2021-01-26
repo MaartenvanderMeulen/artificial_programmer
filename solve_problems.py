@@ -61,17 +61,17 @@ def solve_problems(problems, functions, log_file, params, append_functions_to_fi
                 interpret.add_function(function_code, functions, append_functions_to_file)
             new_functions = []
             current_layer = problem_layer
-            if verbose >= 1:
+            if verbose >= 3:
                 log_file.write(f"Solving problems, layer {current_layer} ...\n")
         elif problem_layer < current_layer:
             raise RuntimeError("Problems must be specified with nondecreasing layer number")
         function_str = solve_by_existing_function(problem, functions, log_file, verbose)
         if function_str:
-            if verbose >= 1:
+            if verbose >= 3:
                 log_file.write(f"problem  {problem_label} is solved by existing function {function_str}\n")
             pass
         else:
-            if verbose >= 1:
+            if verbose >= 3:
                 log_file.write(f"problem  {problem_label} ...\n")
             function_code = find_new_function.solve_by_new_function(problem, functions, log_file, params)
             if function_code:

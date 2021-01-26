@@ -518,20 +518,25 @@ def compute_raw_error(raw_error_matrix):
     return float(np.sum(raw_error_matrix))
 
 
+def analyse_nonzero(matrix_list):
+    n = matrix_list[0].shape[1]
+    sum_nonzero = np.zeros((n))
+    count_nonzero = np.zeros((n))
+    for matrix in matrix_list:
+        sum_nonzero += matrix.sum(axis=0)
+        for i in range(n):
+            count_nonzero[i] += np.count_nonzero(matrix[:,i])
+    return count_nonzero, sum_nonzero
+
+
 def update_avg_raw_error_vector(raw_error_matrix_list):
     global inv_avg_raw_error_vector
     if inv_avg_raw_error_vector.shape[0] != raw_error_matrix_list[0].shape[1]:
         inv_avg_raw_error_vector = np.ones((raw_error_matrix_list[0].shape[1]))
-    avg_raw_error_vector = np.zeros_like(inv_avg_raw_error_vector)
-    count = 0
-    for raw_error_matrix in raw_error_matrix_list:
-        avg_raw_error_vector += raw_error_matrix.sum(axis=0)
-        count += raw_error_matrix.shape[0]
-    avg_raw_error_vector /= count
-    inv_avg_raw_error_vector = np.copy(avg_raw_error_vector)
+    count_nonzero, sum_nonzero = analyse_nonzero(raw_error_matrix_list)
     for i in range(inv_avg_raw_error_vector.shape[0]):
-        inv_avg_raw_error_vector[i] = 1/inv_avg_raw_error_vector[i] if inv_avg_raw_error_vector[i] > 0 else 1.0
-    #print("DEBUG 534", inv_avg_raw_error_vector)
+        inv_avg_raw_error_vector[i] = count_nonzero[i]/sum_nonzero[i] if count_nonzero[i] > 0 else 1.0
+    return count_nonzero, sum_nonzero
 
 
 def compute_normalised_error_matrix(raw_error_matrix):

@@ -116,14 +116,11 @@ def basinhopper(toolbox):
                 toolbox.f.write(f"\t{gen}\tgen\t{len(best)}\tlen")
                 toolbox.f.write(f"\t{toolbox.eval_count}\tevals")
                 toolbox.f.write(f"\t{toolbox.eval_lookup_count}")
-            toolbox.f.write(f"\t{best.deap_str}")
             toolbox.f.write(f"\n")
             if toolbox.verbose >= 1:
                 error = ga_search_tools.forced_reevaluation_of_individual_for_debugging(toolbox, best, 4)
-                print("DEBUG 123", error)
                 assert error == 0
-            if toolbox.verbose >= 1:
-                ga_search_tools.write_path(toolbox, best)
+            ga_search_tools.write_path(toolbox, best)
             return result
         else:
             toolbox.f.write(f"stopped\t{toolbox.problem_name}\t{gen}\tgen\t{toolbox.eval_count}\tevals\n")
@@ -139,7 +136,7 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.monkey_mode = False
     toolbox.child_creation_retries = 99
     toolbox.f = f
-    if params["verbose"] >= 1 and len(toolbox.solution_deap_ind) > 0:
+    if params["verbose"] >= 3 and len(toolbox.solution_deap_ind) > 0:
         f.write(f"solution hint length {len(toolbox.solution_deap_ind)}\n")
 
     # tunable params

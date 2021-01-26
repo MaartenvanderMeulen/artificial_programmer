@@ -8,9 +8,9 @@
     "optimise_solution_length": false,
     "extensive_statistics": true,
     "keep_path": false,
-    "max_seconds": 3600,
-    "max_evaluations": 70000,
-    "max_stuck_count": 99,
+    "max_seconds": 900,
+    "max_evaluations": 100000000,
+    "max_stuck_count": 999,
     "new_initial_population": true,
     "old_populations_folder": "tmp/08G",
     "analyse_best": false,
@@ -34,7 +34,7 @@
     "max_individual_size": 40,
     "pcrossover": 0.4,
     "best_of_n_mut": 2,
-    "best_of_n_cx": 3,
+    "best_of_n_cx": 4,
     "parent_selection_strategy": 2,
     "weight_complementairity": 0.3,
     "penalise_non_reacting_models": true,
@@ -42,5 +42,5 @@
     "metaevolution_strategies": [], 
     "idea_victor": false,
     "hops": 1,
-    "dynamic_weights": false
+    "dynamic_weights": true
 }

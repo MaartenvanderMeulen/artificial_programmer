@@ -1,7 +1,0 @@
-{
-    "functions_file": "tmp/LC2/L1D3.txt",
-    "inputs_file": "experimenten/inputs_LC.txt",
-    "verbose": 1,
-    "scenario": 0,
-    "start_level": 3
-}

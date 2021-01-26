@@ -146,3 +146,11 @@ stopped	merge_elem	17	gen	150000	evals
 - eerst eens family op error_vec proberen.
 
 
+========================= maanda 25 Jan
+
+in bb, (9 minuten, op b van ook 9 minuten, op sameplesize 32)
+(base) :) for s in `grep -l solv lo* | sed 's/log_//' | sed 's/.txt//'` ; do expr $s / 32 ; done | uniq -c
+      1 36
+     27 39
+     32 43
+     32 46
