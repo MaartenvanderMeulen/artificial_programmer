@@ -8,7 +8,7 @@
     "optimise_solution_length": false,
     "extensive_statistics": true,
     "keep_path": false,
-    "max_seconds": 900,
+    "max_seconds": 3600,
     "max_evaluations": 100000000,
     "max_stuck_count": 999,
     "new_initial_population": true,

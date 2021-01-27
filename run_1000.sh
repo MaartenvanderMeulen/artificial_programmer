@@ -1,7 +1,7 @@
 for start_seed in `seq 1024 32 2047`
 do
-    echo start seed $start_seed
-    end_seed = `expr start_seed + 31`
+    export end_seed=`expr $start_seed + 31`
+    echo start seed $start_seed end seed $end_seed
     for seed in `seq $start_seed 1 $end_seed`
     do
         if python solve_problems.py $seed a ; then killall python ; fi &
