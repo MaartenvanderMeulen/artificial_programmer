@@ -181,8 +181,9 @@ def log_info(toolbox, population):
     toolbox.f.write(f" count_best_nor {count_best_nor}")
     count_family = sum([1 for ind in population if ind.family_index == population[0].family_index])
     toolbox.f.write(f" family {population[0].family_index} count_family {count_family}")
-    count_msg = " ".join([f"{n:.0f}" for n in toolbox.count_nonzero])
-    toolbox.f.write(f" count_nonzero {count_msg} ({np.sum(toolbox.count_nonzero):.0f})")
+    if toolbox.dynamic_weights:
+        count_msg = " ".join([f"{n:.0f}" for n in toolbox.count_nonzero])
+        toolbox.f.write(f" count_nonzero {count_msg} ({np.sum(toolbox.count_nonzero):.0f})")
     if False:
         sum_msg = " ".join([f"{x:.0f}" for x in toolbox.sum_nonzero])
         toolbox.f.write(f" sum_raw {sum_msg}")
