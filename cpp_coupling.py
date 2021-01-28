@@ -118,7 +118,13 @@ def create_ouput_buf():
     return output_buf, output_bufsize
 
 
-def convert_c_output_to_python_impl(output_buf, n_output, sp):
+global g_max_depth
+g_max_depth = 0
+
+def convert_c_output_to_python_impl(output_buf, n_output, sp, depth):
+    global g_max_depth
+    if g_max_depth < depth:
+        g_max_depth = depth
     if sp >= n_output:
         print("DEBUG : sp >= n_output at line 123")
         return None, sp
@@ -133,8 +139,18 @@ def convert_c_output_to_python_impl(output_buf, n_output, sp):
         result = []
         sp += 1
         for _ in range(arity):
-            subtree, sp = convert_c_output_to_python_impl(output_buf, n_output, sp)
-            result.append(subtree)
+            if output_buf[sp]._type == ITEM_INT:
+                result.append(int(output_buf[sp]._value))
+                sp += 1
+            else:
+                subtree, sp_out = convert_c_output_to_python_impl(output_buf, n_output, sp, depth+1)
+                assert sp_out > sp
+                assert type(subtree) == type(1) or sp_out >= sp + len(subtree)
+                sp = sp_out
+                if depth <= 12:
+                    result.append(subtree)
+                else:
+                    result.append([])            
     return result, sp
 
 
@@ -143,7 +159,7 @@ def convert_c_output_to_python(output_buf, n_output):
         result = 0
     else:
         sp = 0
-        result, sp = convert_c_output_to_python_impl(output_buf, n_output, sp)
+        result, sp = convert_c_output_to_python_impl(output_buf, n_output, sp, 0)
         assert sp == n_output
     #print("convert_c_output_to_python result", result)
     return result 

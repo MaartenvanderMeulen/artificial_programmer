@@ -4,7 +4,7 @@ do
     echo start seed $start_seed end seed $end_seed
     for seed in `seq $start_seed 1 $end_seed`
     do
-        if python solve_problems.py $seed a ; then killall python ; fi &
+        if python solve_problems.py $seed a 2>>err.txt ; then killall python ; fi &
     done
     wait
     echo solved problem `grep solv tmp/a/lo* | wc -l` times

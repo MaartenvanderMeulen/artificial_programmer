@@ -8,6 +8,7 @@ import time
 import json
 import cProfile
 import pstats
+import sys
 
 from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull, gp.from_string
 
@@ -102,7 +103,7 @@ def my_profile(toolbox):
     return toolbox.ga_search_impl_return_vallue
 
 
-def basinhopper(toolbox):
+def basinhopper(toolbox):    
     for _ in range(toolbox.hops):
         toolbox.eval_count = 0
         toolbox.eval_lookup_count = 0
@@ -151,6 +152,10 @@ def basinhopper(toolbox):
 
     
 def solve_by_new_function(problem, functions, f, params):
+    f.write(f"sys.getrecursionlimit() {sys.getrecursionlimit()}\n")
+    sys.setrecursionlimit(sys.getrecursionlimit() + 500)
+    f.write(f"sys.getrecursionlimit() {sys.getrecursionlimit()}\n")
+
     toolbox = Toolbox(problem, functions, params["seed"])
     toolbox.problem_name, toolbox.problem_params, _, _, _, _ = problem
     toolbox.monkey_mode = False

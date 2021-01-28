@@ -8,9 +8,9 @@
     "optimise_solution_length": false,
     "extensive_statistics": true,
     "keep_path": false,
-    "max_seconds": 100,
+    "max_seconds": 1800,
     "max_evaluations": 100000000,
-    "max_stuck_count": 999,
+    "max_stuck_count": 9999,
     "new_initial_population": true,
     "old_populations_folder": "tmp/08G",
     "analyse_best": false,
@@ -25,7 +25,7 @@
     ],
     "ngen": [
         3,
-        2000
+        4000
     ],
     "parents_keep_fraction": [
         0.5,

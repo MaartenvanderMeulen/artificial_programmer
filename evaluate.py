@@ -12,11 +12,23 @@ global avg_raw_error_vector, inv_avg_raw_error_vector
 avg_raw_error_vector = np.ones((8))
 inv_avg_raw_error_vector = np.ones((8))
 
+global g_recursive_tuple_max_depth
+g_recursive_tuple_max_depth = 0
 
-def recursive_tuple(value):
+def recursive_tuple(value, depth=0):
+    global g_recursive_tuple_max_depth
+    if g_recursive_tuple_max_depth < depth:
+        g_recursive_tuple_max_depth = depth
     if type(value) == type(1) or type(value) == type(""):
         return value
-    return tuple([recursive_tuple(v) for v in value])
+    result = []
+    for v in value:
+        if type(v) == type(1):
+            result.append(v)
+        else:
+            result.append(recursive_tuple(v, depth+1))
+    result = tuple(result)
+    return result
 
 
 def extract_numbers_list(values):
