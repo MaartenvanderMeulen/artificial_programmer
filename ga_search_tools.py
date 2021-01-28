@@ -16,11 +16,17 @@ from cpp_coupling import get_cpp_handle, run_on_all_inputs
 from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull, gp.from_string
 
 
+def make_pp_str(ind):
+    if True:
+        result = " ".join([x.name if isinstance(x, gp.Primitive) else str(x.value) for x in ind])
+    else:
+        result = str(ind)
+    return result
+
+
 def test_against_python_interpreter(toolbox, cpp_model_outputs, ind):
     t0 = time.time()
-    deap_str = ind.deap_str
-    assert deap_str == str(ind)
-    code = interpret.compile_deap(deap_str, toolbox.functions)
+    code = interpret.compile_deap(str(ind), toolbox.functions)
     toolbox.functions[toolbox.problem_name] = [toolbox.formal_params, code]
     py_model_outputs = []
     for input in toolbox.example_inputs:
@@ -83,25 +89,27 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
         ind.family_index = len(toolbox.families_list)
         toolbox.families_dict[model_outputs_tuple] = ind.family_index
         toolbox.families_list.append(Family(model_outputs, raw_error_matrix))
-    toolbox.t_eval += time.time() - t0
+    toolbox.t_error += time.time() - t0
 
 
 def evaluate_individual(toolbox, individual, debug=0):
     if time.time() >= toolbox.t0 + toolbox.max_seconds:
         raise RuntimeWarning("out of time")
-    deap_str = individual.deap_str
-    assert deap_str == str(individual)
+    t0 = time.time()
+    pp_str = individual.pp_str
+    assert pp_str == make_pp_str(individual)
     toolbox.eval_lookup_count += 1
-    if deap_str in toolbox.deap_str_to_family_index_dict:
-        individual.family_index = toolbox.deap_str_to_family_index_dict[deap_str]
+    if pp_str in toolbox.pp_str_to_family_index_dict:
+        individual.family_index = toolbox.pp_str_to_family_index_dict[pp_str]
     else:
         evaluate_individual_impl(toolbox, individual, debug)
-        toolbox.deap_str_to_family_index_dict[deap_str] = individual.family_index
+        toolbox.pp_str_to_family_index_dict[pp_str] = individual.family_index
     family = toolbox.families_list[individual.family_index]
     assert type(family.raw_error) == type(0.0)
     individual.raw_error = family.raw_error
     assert type(family.normalised_error) == type(0.0)
     individual.normalised_error = family.normalised_error
+    toolbox.t_eval += time.time() - t0
 
 
 def best_of_n(population, n):
@@ -114,7 +122,7 @@ def best_of_n(population, n):
 def log_population(toolbox, population, label):
     toolbox.f.write(f"write_population {label}\n")
     for i, ind in enumerate(population):
-        toolbox.f.write(f"    ind {i} {ind.raw_error:.3f} {len(ind)} {ind.deap_str}\n")
+        toolbox.f.write(f"    ind {i} {ind.raw_error:.3f} {len(ind)} {ind(ind)}\n")
     toolbox.f.write("\n")
     toolbox.f.flush()
 
@@ -123,7 +131,7 @@ def write_population(file_name, population, functions):
     with open(file_name, "w") as f:
         f.write("(\n")
         for ind in population:
-            code = interpret.compile_deap(ind.deap_str, functions)
+            code = interpret.compile_deap(str(ind), functions)
             code_str = interpret.convert_code_to_str(code)
             f.write(f"    {code_str} # {ind.raw_error:.3f}\n")
         f.write(")\n")
@@ -133,7 +141,7 @@ def write_final_population(toolbox, population):
     with open(toolbox.pop_file, "w") as f:
         f.write("(\n")
         for ind in population:
-            code = interpret.compile_deap(ind.deap_str, toolbox.functions)
+            code = interpret.compile_deap(str(ind), toolbox.functions)
             code_str = interpret.convert_code_to_str(code)
             f.write(f"    {code_str} # {ind.raw_error:.3f}\n")
         f.write(")\n")
@@ -142,7 +150,7 @@ def write_final_population(toolbox, population):
 def write_path(toolbox, ind, indent=0):
     #indent_str = "\t" * indent
     # operator_str = ["", "mutatie", "crossover"][len(ind.parents)]
-    code = interpret.compile_deap(ind.deap_str, toolbox.functions)
+    code = interpret.compile_deap(str(ind), toolbox.functions)
     code_str = interpret.convert_code_to_str(code)
     if False:
         if indent:
@@ -163,15 +171,15 @@ def generate_initial_population_impl(toolbox):
     retry_count = 0
     while len(population) < toolbox.pop_size[0]:
         ind = gp.PrimitiveTree(gp.genHalfAndHalf(pset=toolbox.pset, min_=2, max_=4))
-        ind.deap_str = str(ind)
-        if ind.deap_str in toolbox.ind_str_set or len(ind) > toolbox.max_individual_size:
+        ind.pp_str = make_pp_str(ind)
+        if ind.pp_str in toolbox.ind_str_set or len(ind) > toolbox.max_individual_size:
             if retry_count < toolbox.child_creation_retries:
                 retry_count += 1
                 continue
             else:
                 break
         retry_count = 0
-        toolbox.ind_str_set.add(ind.deap_str)
+        toolbox.ind_str_set.add(ind.pp_str)
         ind.parents = []
         evaluate_individual(toolbox, ind)
         population.append(ind)
@@ -225,13 +233,13 @@ def load_initial_population_impl(toolbox, old_pops):
                     # old_pop is list of lists/ints/strings making 
                     deap_str = interpret.convert_code_to_deap_str(code, toolbox)
                     ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)                    
-                    ind.deap_str = str(ind)
+                    assert deap_str == str(ind)
+                    ind.pp_str = make_pp_str(ind)
                     assert len(ind) == deap_len_of_code(code)
-                    assert deap_str == ind.deap_str
-                if ind.deap_str in toolbox.ind_str_set or len(ind) > toolbox.max_individual_size:
+                if ind.pp_str in toolbox.ind_str_set or len(ind) > toolbox.max_individual_size:
                     count_skipped += 1
                     continue
-                toolbox.ind_str_set.add(ind.deap_str)
+                toolbox.ind_str_set.add(ind.pp_str)
                 ind.parents = []
                 evaluate_individual(toolbox, ind)
                 population.append(ind)
@@ -243,19 +251,19 @@ def analyse_population_impl(toolbox, old_pops):
     count = 0
     for old_pop in old_pops:
         for code in old_pop:
-            deap_str = interpret.convert_code_to_deap_str(code, toolbox)
             count += 1
+            deap_str = interpret.convert_code_to_deap_str(code, toolbox)
             ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)
-            ind.deap_str = str(ind)
-            assert deap_str == ind.deap_str
+            assert deap_str == str(ind)
+            ind.pp_str = make_pp_str(ind)
             assert len(ind) == deap_len_of_code(code)
             ind.parents = []
             evaluate_individual(toolbox, ind) # required to set ind.family_index
             if ind.family_index not in families:
-                families[ind.family_index] = [ind.family_index, ind.deap_str, 0]
+                families[ind.family_index] = [ind.family_index, ind.pp_str, 0]
             families[ind.family_index][2] += 1
-            if len(families[ind.family_index][1]) > len(ind.deap_str):
-                families[ind.family_index][1] = ind.deap_str
+            if len(families[ind.family_index][1]) > len(ind.pp_str):
+                families[ind.family_index][1] = ind.pp_str
     del ind, deap_str
     filename = f"{toolbox.output_folder}/analysis.txt"
     print(f"anaysis of {count} individuals in {len(old_pops)} pops : result in {filename}")
@@ -266,7 +274,7 @@ def analyse_population_impl(toolbox, old_pops):
         sum_count = 0
         sum_raw_error_vector = np.zeros_like(toolbox.families_list[0].raw_error_matrix[-1])
         sum_nor_error_vector = np.zeros_like(toolbox.families_list[0].raw_error_matrix[-1])
-        for family_index, deap_str, count in data:
+        for family_index, _, count in data:
             raw_error = toolbox.families_list[family_index].raw_error
             nor_error = toolbox.families_list[family_index].normalised_error
             outputs = str(toolbox.families_list[family_index].model_outputs[-1])
@@ -314,14 +322,14 @@ def generate_initial_population(toolbox, old_pops=None):
 
 
 def copy_individual(toolbox, ind):
-    consistency_check_ind(toolbox, ind)
+    #consistency_check_ind(toolbox, ind)
     copy_ind = gp.PrimitiveTree(list(ind[:]))
-    copy_ind.deap_str = ind.deap_str
+    copy_ind.pp_str = ind.pp_str
     copy_ind.parents = [parent for parent in ind.parents]
     copy_ind.raw_error = ind.raw_error
     copy_ind.normalised_error = ind.normalised_error
     copy_ind.family_index = ind.family_index
-    consistency_check_ind(toolbox, copy_ind)
+    #consistency_check_ind(toolbox, copy_ind)
     return copy_ind
 
 
@@ -336,8 +344,8 @@ def cxOnePoint(toolbox, parent1, parent2):
     slice1 = parent1.searchSubtree(index1)
     slice2 = parent2.searchSubtree(index2)
     child[slice1] = parent2[slice2]
-    child.deap_str = str(child)
-    if child.deap_str in toolbox.ind_str_set or len(child) > toolbox.max_individual_size:
+    child.pp_str = make_pp_str(child)
+    if child.pp_str in toolbox.ind_str_set or len(child) > toolbox.max_individual_size:
         return None
     evaluate_individual(toolbox, child)
     return child
@@ -373,6 +381,8 @@ def crossover_with_local_search(toolbox, parent1, parent2):
     if len(parent1) < 2 or len(parent2) < 2:
         # No crossover on single node tree
         return None
+    t0 = time.time()
+    t_evaluate = toolbox.t_eval
     if parent1.normalised_error > parent2.normalised_error or (parent1.normalised_error == parent2.normalised_error and len(parent1) > len(parent2)):
         parent1, parent2 = parent2, parent1
     indexes1 = [i for i in range(len(parent1))]
@@ -389,11 +399,13 @@ def crossover_with_local_search(toolbox, parent1, parent2):
             slice1 = child.searchSubtree(index1)
             child[slice1] = expr2
             if len(child) <= toolbox.max_individual_size:
-                child.deap_str = str(child)
-                if child.deap_str not in toolbox.ind_str_set:
+                child.pp_str = make_pp_str(child)
+                if child.pp_str not in toolbox.ind_str_set:
                     evaluate_individual(toolbox, child)
                     if is_improvement(toolbox, child, best):
                         best = child
+    t_evaluate = toolbox.t_eval - t_evaluate
+    toolbox.t_cx_local_search += time.time() - t0 - t_evaluate
     return best
 
 
@@ -404,8 +416,8 @@ def mutUniform(toolbox, parent, expr, pset):
     slice_ = child.searchSubtree(index)
     type_ = child[index].ret
     child[slice_] = expr(pset=pset, type_=type_)
-    child.deap_str = str(child)
-    if child.deap_str in toolbox.ind_str_set or len(child) > toolbox.max_individual_size:
+    child.pp_str = make_pp_str(child)
+    if child.pp_str in toolbox.ind_str_set or len(child) > toolbox.max_individual_size:
         return None
     evaluate_individual(toolbox, child)
     return child
@@ -421,8 +433,8 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
         slice1 = child.searchSubtree(index)
         child[slice1] = expr
         if len(child) <= toolbox.max_individual_size:
-            child.deap_str = str(child)
-            if child.deap_str not in toolbox.ind_str_set:
+            child.pp_str = make_pp_str(child)
+            if child.pp_str not in toolbox.ind_str_set:
                 evaluate_individual(toolbox, child)
                 if is_improvement(toolbox, child, best):
                     best = child
@@ -430,7 +442,8 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
 
 
 def refresh_toolbox_from_population(toolbox, population):
-    toolbox.ind_str_set = {ind.deap_str for ind in population} # refresh set after deletion of non-fit individuals
+    t0 = time.time()
+    toolbox.ind_str_set = {ind.pp_str for ind in population} # refresh set after deletion of non-fit individuals
     toolbox.current_families_dict = dict()
     for ind in population:
         if ind.family_index not in toolbox.current_families_dict:
@@ -450,17 +463,19 @@ def refresh_toolbox_from_population(toolbox, population):
             ind.normalised_error = family.normalised_error
     # always sort!
     population.sort(key=toolbox.sort_ind_key)
+    toolbox.t_refresh += time.time() - t0
 
 
 def consistency_check_ind(toolbox, ind):
     if ind is not None:
-        assert hasattr(ind, "deap_str")
+        assert not hasattr(ind, "deap_str")
+        assert hasattr(ind, "pp_str")
         assert hasattr(ind, "parents")
         assert not hasattr(ind, "eval")
         assert hasattr(ind, "raw_error") # voor weergave aan mens
         assert hasattr(ind, "normalised_error") # voor vergelijken in local search en voor sorteren populatie
         assert hasattr(ind, "family_index")
-        assert ind.deap_str == str(ind)
+        assert ind.pp_str == make_pp_str(ind)
         assert ind.raw_error is not None
         assert ind.normalised_error is not None
         assert math.isclose(ind.raw_error, toolbox.families_list[ind.family_index].raw_error)
@@ -468,13 +483,65 @@ def consistency_check_ind(toolbox, ind):
 
 
 def consistency_check(toolbox, inds):
+    t0 = time.time()
     for ind in inds:
         consistency_check_ind(toolbox, ind)
+    toolbox.t_consistency_check += time.time() - t0
 
 
-def write_seconds(toolbox, seconds, label):
+def write_seconds(toolbox, timings, header):
     file_name = toolbox.params["output_folder"] + "/time_" + str(toolbox.params["seed"]) + ".txt"
     with open(file_name, "a") as f:
-        f.write(f"{label} {seconds}\n")
+        total = 0
+        for t, label in timings:
+            total += t
+        if total > 0:
+            f.write(f"\n{header}\n")
+            totalp = 0
+            for t, label in timings:
+                if t > 0:
+                    f.write(f"{t:.0f}\tsec\t{round(100*t/total)}\t%\t{label}\n")
+                totalp += round(100*t/total)
+            f.write(f"{total:.0f}\tsec\t{totalp}\t%\ttotal\n")
+
+
+def write_timings(toolbox, header):
+    if hasattr(toolbox, "t_total"):
+        timings = [
+            (toolbox.t_total, "t_total"),
+            ]
+        write_seconds(toolbox, timings, header)
+
+    timings = [
+        (toolbox.t_init, "init(total)"),
+        (toolbox.t_offspring, "offspring"),
+        (toolbox.t_refresh, "refresh"),
+        (toolbox.t_consistency_check, "consistency_check"),
+        ]
+    timings.sort(key=lambda item: -item[0])
+    write_seconds(toolbox, timings, header + " breakdown of total")
+
+    timings = [
+        (toolbox.t_select_parents, "t_select_parents"),
+        (toolbox.t_cx, "t_cx"),
+        (toolbox.t_mut, "t_mut"),
+        ]
+    timings.sort(key=lambda item: -item[0])
+    write_seconds(toolbox, timings, header + " breakdown of offspring")
+
+    timings = [
+        (toolbox.t_eval, "t_eval"),
+        ]
+    timings.sort(key=lambda item: -item[0])
+    write_seconds(toolbox, timings, header + " t_eval")
+
+    timings = [
+        (toolbox.t_cpp_interpret, "cpp_interpret"),
+        (toolbox.t_py_interpret, "py_interpret"),
+        (toolbox.t_error, "error"),
+        ]
+    timings.sort(key=lambda item: -item[0])
+    write_seconds(toolbox, timings, header + " breakdown of t_eval")
+
 
 

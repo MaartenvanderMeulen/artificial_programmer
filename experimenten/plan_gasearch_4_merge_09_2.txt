@@ -154,3 +154,124 @@ in bb, (9 minuten, op b van ook 9 minuten, op sameplesize 32)
      27 39
      32 43
      32 46
+
+
+============================= speed improvements wo 27 Jan
+met deap_str
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000   60.014   60.014 {built-in method builtins.exec}
+        1    0.002    0.002   60.014   60.014 /home/maarten/code_synthesis/ga_search1.py:214(ga_search_impl)
+       25    0.068    0.003   56.751    2.270 /home/maarten/code_synthesis/ga_search1.py:82(generate_offspring)
+      908    0.365    0.000   36.585    0.040 /home/maarten/code_synthesis/ga_search_tools.py:377(crossover_with_local_search)
+   167013    0.439    0.000   33.383    0.000 /home/maarten/code_synthesis/ga_search_tools.py:92(evaluate_individual)
+    84523    0.364    0.000   27.425    0.000 /home/maarten/code_synthesis/ga_search_tools.py:67(evaluate_individual_impl)
+   804653    0.388    0.000   26.687    0.000 /home/maarten/code_synthesis/ga_search_tools.py:19(make_pp_str)
+   804653   16.893    0.000   26.299    0.000 /home/maarten/miniconda3/lib/python3.8/site-packages/deap/gp.py:88(__str__)
+    84523    0.472    0.000   18.789    0.000 /home/maarten/code_synthesis/cpp_coupling.py:177(run_on_all_inputs)
+  1183322    6.611    0.000   16.250    0.000 /home/maarten/code_synthesis/cpp_coupling.py:152(run_once)
+
+met pp_str
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000   60.002   60.002 {built-in method builtins.exec}
+        1    0.002    0.002   60.002   60.002 /home/maarten/code_synthesis/ga_search1.py:214(ga_search_impl)
+       46    0.077    0.002   57.583    1.252 /home/maarten/code_synthesis/ga_search1.py:82(generate_offspring)
+   297530    0.735    0.000   46.806    0.000 /home/maarten/code_synthesis/ga_search_tools.py:93(evaluate_individual)
+   141381    0.596    0.000   44.535    0.000 /home/maarten/code_synthesis/ga_search_tools.py:68(evaluate_individual_impl)
+     1754    0.610    0.000   35.430    0.020 /home/maarten/code_synthesis/ga_search_tools.py:378(crossover_with_local_search)
+   141381    0.799    0.000   31.707    0.000 /home/maarten/code_synthesis/cpp_coupling.py:177(run_on_all_inputs)
+  1979334   11.070    0.000   27.458    0.000 /home/maarten/code_synthesis/cpp_coupling.py:152(run_once)
+  1979334    0.557    0.000   15.190    0.000 /home/maarten/code_synthesis/cpp_coupling.py:141(convert_c_output_to_python)
+
+met consistency check in copy_individual
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000   60.026   60.026 {built-in method builtins.exec}
+        1    0.002    0.002   60.026   60.026 /home/maarten/code_synthesis/ga_search1.py:214(ga_search_impl)
+       46    0.079    0.002   57.581    1.252 /home/maarten/code_synthesis/ga_search1.py:82(generate_offspring)
+   299667    0.756    0.000   46.764    0.000 /home/maarten/code_synthesis/ga_search_tools.py:92(evaluate_individual)
+   142053    0.617    0.000   44.462    0.000 /home/maarten/code_synthesis/ga_search_tools.py:67(evaluate_individual_impl)
+     1765    0.615    0.000   35.357    0.020 /home/maarten/code_synthesis/ga_search_tools.py:377(crossover_with_local_search)
+   142053    0.799    0.000   31.579    0.000 /home/maarten/code_synthesis/cpp_coupling.py:177(run_on_all_inputs)
+  1988742   11.079    0.000   27.304    0.000 /home/maarten/code_synthesis/cpp_coupling.py:152(run_once)
+  1988742    0.570    0.000   15.021    0.000 /home/maarten/code_synthesis/cpp_coupling.py:141(convert_c_output_to_python)
+20971019/1983567   13.407    0.000   14.450    0.000 /home/maarten/code_synthesis/cpp_coupling.py:121(convert_c_output_to_python_impl)
+     2577    0.102    0.000   10.161    0.004 /home/maarten/code_synthesis/ga_search_tools.py:423(replace_subtree_at_best_location)
+23541368/190157    5.064    0.000    7.976    0.000 /home/maarten/code_synthesis/evaluate.py:16(recursive_tuple)
+3971719/187459    2.912    0.000    7.837    0.000 /home/maarten/code_synthesis/evaluate.py:19(<listcomp>)
+  1426419    0.694    0.000    7.185    0.000 /home/maarten/code_synthesis/ga_search_tools.py:19(make_pp_str)
+  1426419    4.383    0.000    6.124    0.000 /home/maarten/code_synthesis/ga_search_tools.py:20(<listcomp>)
+   356099    0.620    0.000    5.946    0.000 /home/maarten/code_synthesis/ga_search_tools.py:321(copy_individual)
+   752798    1.120    0.000    5.477    0.000 /home/maarten/code_synthesis/ga_search_tools.py:466(consistency_check_ind)
+     5688    0.021    0.000    5.335    0.001 /home/maarten/code_synthesis/ga_search_tools.py:333(cxOnePoint)
+     3436    0.108    0.000    4.996    0.001 /home/maarten/code_synthesis/evaluate.py:488(compute_raw_error_matrix)
+     8627    0.027    0.000    4.018    0.000 /home/maarten/code_synthesis/ga_search_tools.py:409(mutUniform)
+    48104    0.064    0.000    3.854    0.000 /home/maarten/code_synthesis/evaluate.py:390(compute_error_merge_elem)
+    48104    0.959    0.000    3.778    0.000 /home/maarten/code_synthesis/evaluate.py:98(compute_error_list_of_ints)
+   142053    2.615    0.000    3.353    0.000 /home/maarten/code_synthesis/cpp_coupling.py:11(compile_deap)
+     7453    0.208    0.000    2.259    0.000 /home/maarten/code_synthesis/ga_search1.py:36(select_parents)
+        1    0.000    0.000    2.206    2.206 /home/maarten/code_synthesis/ga_search_tools.py:293(generate_initial_population)
+        1    0.014    0.014    2.206    2.206 /home/maarten/code_synthesis/ga_search_tools.py:165(generate_initial_population_impl)
+ 28600191    2.040    0.000    2.074    0.000 {built-in method builtins.isinstance}
+ 23823420    1.332    0.000    1.332    0.000 {method 'append' of 'list' objects}
+     7453    1.206    0.000    1.206    0.000 /home/maarten/code_synthesis/ga_search1.py:47(<listcomp>)
+   476394    0.743    0.000    0.929    0.000 /home/maarten/code_synthesis/evaluate.py:51(_distance_with_closest_numbers)
+
+
+Nu met 100 seconden, en pp_str weer terug naar str(ind)
+Thu Jan 28 10:22:14 2021    tmp/stats.txt
+
+         317107665 function calls (252470580 primitive calls) in 100.023 seconds
+
+   Ordered by: cumulative time
+   List reduced from 156 to 30 due to restriction <30>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000  100.024  100.024 {built-in method builtins.exec}
+        1    0.002    0.002  100.024  100.024 /home/maarten/code_synthesis/ga_search1.py:214(ga_search_impl)
+       65    0.083    0.001   96.512    1.485 /home/maarten/code_synthesis/ga_search1.py:82(generate_offspring)
+   460595    1.119    0.000   73.122    0.000 /home/maarten/code_synthesis/ga_search_tools.py:95(evaluate_individual)
+     2475    0.936    0.000   65.255    0.026 /home/maarten/code_synthesis/ga_search_tools.py:380(crossover_with_local_search)
+   193984    0.806    0.000   56.899    0.000 /home/maarten/code_synthesis/ga_search_tools.py:70(evaluate_individual_impl)
+   193984    1.038    0.000   41.260    0.000 /home/maarten/code_synthesis/cpp_coupling.py:182(run_on_all_inputs)
+  2715776    2.210    0.000   35.484    0.000 /home/maarten/code_synthesis/cpp_coupling.py:161(run_once)
+  1058203    0.504    0.000   34.819    0.000 /home/maarten/code_synthesis/ga_search_tools.py:19(make_pp_str)
+  1058403   22.019    0.000   34.323    0.000 /home/maarten/miniconda3/lib/python3.8/site-packages/deap/gp.py:88(__str__)
+  2715776    0.733    0.000   19.057    0.000 /home/maarten/code_synthesis/cpp_coupling.py:141(convert_c_output_to_python)
+     3727    0.151    0.000   18.594    0.005 /home/maarten/code_synthesis/ga_search_tools.py:426(replace_subtree_at_best_location)
+28067709/2709089   16.998    0.000   18.324    0.000 /home/maarten/code_synthesis/cpp_coupling.py:121(convert_c_output_to_python_impl)
+  2715776   12.680    0.000   14.031    0.000 /home/maarten/code_synthesis/cpp_coupling.py:152(call_cpp_interpreter)
+31035883/253470    6.377    0.000   10.033    0.000 /home/maarten/code_synthesis/evaluate.py:16(recursive_tuple)
+5271879/250261    3.655    0.000    9.848    0.000 /home/maarten/code_synthesis/evaluate.py:19(<listcomp>)
+     4249    0.130    0.000    5.549    0.001 /home/maarten/code_synthesis/evaluate.py:488(compute_raw_error_matrix)
+     5688    0.020    0.000    5.306    0.001 /home/maarten/code_synthesis/ga_search_tools.py:336(cxOnePoint)
+   193984    3.527    0.000    4.579    0.000 /home/maarten/code_synthesis/cpp_coupling.py:11(compile_deap)
+    59486    0.076    0.000    4.282    0.000 /home/maarten/code_synthesis/evaluate.py:390(compute_error_merge_elem)
+     8627    0.026    0.000    4.222    0.000 /home/maarten/code_synthesis/ga_search_tools.py:412(mutUniform)
+    59486    1.077    0.000    4.191    0.000 /home/maarten/code_synthesis/evaluate.py:98(compute_error_list_of_ints)
+ 68766295    3.769    0.000    3.769    0.000 {method 'append' of 'list' objects}
+  7715271    1.359    0.000    3.482    0.000 /home/maarten/miniconda3/lib/python3.8/site-packages/deap/gp.py:203(format)
+ 69533699    3.390    0.000    3.390    0.000 {built-in method builtins.len}
+        1    0.000    0.000    2.454    2.454 /home/maarten/code_synthesis/ga_search_tools.py:296(generate_initial_population)
+        1    0.013    0.013    2.454    2.454 /home/maarten/code_synthesis/ga_search_tools.py:168(generate_initial_population_impl)
+     8163    0.212    0.000    2.215    0.000 /home/maarten/code_synthesis/ga_search1.py:36(select_parents)
+  7715271    2.123    0.000    2.123    0.000 {method 'format' of 'str' objects}
+ 11545445    2.006    0.000    2.006    0.000 /home/maarten/miniconda3/lib/python3.8/site-packages/deap/gp.py:230(format
+
+
+Dus "laaghangend fruit":
+- gp __str__ 34% (--> make_pp_str 8%)
+
+
+- recursive_tuple 10%
+- listcomp 10%
+- compute_raw_error_matrix 6%
+
+Iets moeilijker, maar "the way forward":
+- convert_c_output_to_python 19%
+- compute_error_list_of_ints 4%
+
+Tesamen al 83%.  call_cpp_interpreter kost : 14%
+
+Verminderen van __str__ calls (in consistency checks en zxo) hielp ook al:
+- a_a32_experiment_doorloop4h/time_1396.txt : total 390 (32 threads)
+- a/time_1396.txt : total 160 (maar dit is singlecore).  Beter dit eens te doen met een opgewarmde CPU.
+- en na vervangen gp.__str__ door pp_str: totaal 126 (ook singlecore), 126/160=0.79

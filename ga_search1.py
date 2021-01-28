@@ -3,20 +3,22 @@
 import os
 import random
 import copy
-import interpret
-import evaluate
-from evaluate import recursive_tuple
 import math
 import time
 import json
-from ga_search_tools import write_population, consistency_check, log_population
-from ga_search_tools import best_of_n, generate_initial_population, generate_initial_population_impl
-from ga_search_tools import refresh_toolbox_from_population
-from ga_search_tools import load_initial_population_impl, evaluate_individual, consistency_check_ind
-from ga_search_tools import crossover_with_local_search, cxOnePoint, mutUniform, replace_subtree_at_best_location
 import numpy as np
 
 from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull, gp.from_string
+
+import interpret
+import evaluate
+from evaluate import recursive_tuple
+from ga_search_tools import write_population, consistency_check, log_population, make_pp_str
+from ga_search_tools import best_of_n, generate_initial_population, generate_initial_population_impl
+from ga_search_tools import refresh_toolbox_from_population, write_timings
+from ga_search_tools import load_initial_population_impl, evaluate_individual, consistency_check_ind
+from ga_search_tools import crossover_with_local_search, cxOnePoint, mutUniform, replace_subtree_at_best_location
+
 
 
 def compute_complementairity(toolbox, parent1, parent2):
@@ -78,6 +80,7 @@ def analyse_parents(toolbox, population):
 
 
 def generate_offspring(toolbox, population, nchildren):
+    t0_offspring = time.time()
     offspring = []
     expr_mut = lambda pset, type_: gp.genFull(pset=pset, min_=0, max_=2, type_=type_)
     retry_count = 0  
@@ -97,15 +100,20 @@ def generate_offspring(toolbox, population, nchildren):
     while len(offspring) < nchildren:
         op_choice = random.random()
         if op_choice < toolbox.pcrossover or only_cx: # Apply crossover
+            t0_select_parents = time.time()
             cxp_count += 1
             parent1, parent2 = select_parents(toolbox, population)
+            toolbox.t_select_parents += time.time() - t0_select_parents
+            t0_cx = time.time()
             if toolbox.parachute_level == 0:
                 child = cxOnePoint(toolbox, parent1, parent2)
             else:
                 child = crossover_with_local_search(toolbox, parent1, parent2)
             if child:
                 cx_count += 1
+            toolbox.t_cx += time.time() - t0_cx
         else: # Apply mutation
+            t0_mut = time.time()
             mutp_count += 1
             parent = best_of_n(population, toolbox.best_of_n_mut)
             if toolbox.parachute_level == 0:
@@ -115,6 +123,7 @@ def generate_offspring(toolbox, population, nchildren):
                 child = replace_subtree_at_best_location(toolbox, parent, expr)
             if child:
                 mut_count += 1
+            toolbox.t_mut += time.time() - t0_mut
         if child is None:
             if retry_count < toolbox.child_creation_retries:
                 retry_count += 1
@@ -123,8 +132,8 @@ def generate_offspring(toolbox, population, nchildren):
                 break
         retry_count = 0
         assert child.normalised_error is not None
-        assert child.deap_str == str(child)
-        toolbox.ind_str_set.add(child.deap_str)
+        assert child.pp_str == make_pp_str(child)
+        toolbox.ind_str_set.add(child.pp_str)
         if child.family_index not in toolbox.offspring_families_dict:
             toolbox.offspring_families_dict[child.family_index] = []
         toolbox.offspring_families_dict[child.family_index].append(child)
@@ -132,9 +141,9 @@ def generate_offspring(toolbox, population, nchildren):
         if False:
             if do_special_experiment and child.normalised_error < 77.61253 - 0.00001:
                 if False:
-                    toolbox.f.write(f"child\t{child.normalised_error:.3f}\tcode\t{child.deap_str}\n")
+                    toolbox.f.write(f"child\t{child.normalised_error:.3f}\tcode\t{child.pp_str}\n")
                     for parent in child.parents:
-                        toolbox.f.write(f"parent\t{parent.normalised_error:.3f}\tcode\t{parent.deap_str}\n")
+                        toolbox.f.write(f"parent\t{parent.normalised_error:.3f}\tcode\t{parent.pp_str}\n")
                 if False:
                     toolbox.f.write(f"{child.normalised_error:.3f}\t")
                     child.parents.sort(key=lambda item: item.normalised_error)
@@ -146,7 +155,8 @@ def generate_offspring(toolbox, population, nchildren):
         if do_special_experiment:
             expected_offspring_escapes_count = nchildren * all_escapes_count / (len(population) ** 2)
             toolbox.f.write(f"{all_escapes_count}\t{offspring_escapes_count}\t{expected_offspring_escapes_count}\n")
-    consistency_check(toolbox, offspring)
+    toolbox.t_offspring += time.time() - t0_offspring
+    #consistency_check(toolbox, offspring)
     return offspring
 
 
@@ -176,11 +186,16 @@ def track_stuck(toolbox, population):
 
 def log_info(toolbox, population):
     toolbox.f.write(f"gen {toolbox.real_gen}")
-    toolbox.f.write(f" best_raw {population[0].raw_error:.3f} best_nor {population[0].normalised_error:.3f}")
-    count_best_nor = sum([1 for ind in population if ind.normalised_error == population[0].normalised_error])
-    toolbox.f.write(f" count_best_nor {count_best_nor}")
-    count_family = sum([1 for ind in population if ind.family_index == population[0].family_index])
-    toolbox.f.write(f" family {population[0].family_index} count_family {count_family}")
+    msg = " ".join([f"{toolbox.families_list[family].raw_error:.0f}" for family, members in toolbox.current_families_dict.items()])
+    toolbox.f.write(f" fam_errors {msg}")
+    msg = " ".join([f"{len(members)}" for family, members in toolbox.current_families_dict.items()])
+    toolbox.f.write(f" fam_sizes {msg}")
+    if False:
+        toolbox.f.write(f" best_raw {population[0].raw_error:.3f} best_nor {population[0].normalised_error:.3f}")
+        count_best_nor = sum([1 for ind in population if ind.normalised_error == population[0].normalised_error])
+        toolbox.f.write(f" count_best_nor {count_best_nor}")
+        count_family = sum([1 for ind in population if ind.family_index == population[0].family_index])
+        toolbox.f.write(f" family {population[0].family_index} count_family {count_family}")
     if toolbox.dynamic_weights:
         count_msg = " ".join([f"{n:.0f}" for n in toolbox.count_nonzero])
         toolbox.f.write(f" count_nonzero {count_msg} ({np.sum(toolbox.count_nonzero):.0f})")
@@ -200,10 +215,17 @@ def ga_search_impl(toolbox):
     if toolbox.final_pop_file: # clear the file to avoid confusion with older output
         write_population(toolbox.final_pop_file, [], toolbox.functions)
     try:
+        t0 = time.time()
         population = [] # generate_initial_population may throw exception
         population = generate_initial_population(toolbox)
         consistency_check(toolbox, population)
         refresh_toolbox_from_population(toolbox, population)
+        toolbox.t_init = time.time() - t0
+        toolbox.t_eval = 0
+        toolbox.t_error = 0
+        toolbox.t_cpp_interpret = 0
+        toolbox.t_py_interpret = 0
+        write_timings(toolbox, "end of init")
         toolbox.prev_family_index = set()
         toolbox.stuck_count, toolbox.count_opschudding = 0, 0
         toolbox.parachute_level = 0

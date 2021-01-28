@@ -6,6 +6,10 @@ import copy
 import math
 import time
 import json
+import cProfile
+import pstats
+
+from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull, gp.from_string
 
 import interpret
 import evaluate
@@ -13,8 +17,6 @@ from evaluate import recursive_tuple
 import ga_search1
 import ga_search_tools
 from cpp_coupling import get_cpp_handle, run_on_all_inputs
-
-from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull, gp.from_string
 
 
 def f():
@@ -68,7 +70,7 @@ class Toolbox(object):
         self.reset()
 
     def reset(self):
-        self.deap_str_to_family_index_dict = dict()
+        self.pp_str_to_family_index_dict = dict()
         self.families_list = []
         self.families_dict = dict()
         random.seed(self.seed)
@@ -86,30 +88,48 @@ class Toolbox(object):
         return result == 0.0
 
 
-def write_timings(toolbox):
-    ga_search_tools.write_seconds(toolbox, toolbox.t_total, "total")
-    ga_search_tools.write_seconds(toolbox, toolbox.t_cpp_interpret, "cpp_interpret")
-    if toolbox.t_py_interpret > 0:
-        ga_search_tools.write_seconds(toolbox, toolbox.t_py_interpret, "py_interpret")
-    ga_search_tools.write_seconds(toolbox, toolbox.t_eval, "eval")
+def call_ga_search(toolbox):
+    '''store return value of ga_search1.ga_search_impl, I don't know how to get them with cProfile runctx'''
+    toolbox.ga_search_impl_return_vallue = ga_search1.ga_search_impl(toolbox)
+
+
+def my_profile(toolbox):
+    cProfile.runctx("call_ga_search(toolbox)", globals(), locals(), filename="tmp/stats.txt")
+    p = pstats.Stats("tmp/stats.txt")
+    p.strip_dirs().sort_stats(pstats.SortKey.CUMULATIVE).print_stats(30)
+    # toolbox.t_total = time.time() - toolbox.t0
+    # ga_search_tools.write_timings(toolbox, "end of hop")
+    return toolbox.ga_search_impl_return_vallue
 
 
 def basinhopper(toolbox):
     for _ in range(toolbox.hops):
         toolbox.eval_count = 0
         toolbox.eval_lookup_count = 0
-        toolbox.t0 = time.time()
-        toolbox.t_py_interpret = 0
         toolbox.t_cpp_interpret = 0
-        toolbox.t_eval = 0
+        toolbox.t_py_interpret = 0
+        toolbox.t_error = 0
+        toolbox.t_eval = 0 # is t_interpret + t_error
+        toolbox.t_init = 0
+        toolbox.t_refresh = 0
+        toolbox.t_offspring = 0
+        toolbox.t_consistency_check = 0
+        toolbox.t_select_parents = 0
+        toolbox.t_cx = 0
+        toolbox.t_mut = 0
+        toolbox.t_cx_local_search = 0
 
-        best, gen = ga_search1.ga_search_impl(toolbox)
+        toolbox.t0 = time.time()
+        if toolbox.use_cprofile:
+            best, gen = my_profile(toolbox)
+        else:
+            best, gen = ga_search1.ga_search_impl(toolbox)
+        toolbox.t_total = time.time() - toolbox.t0
+        ga_search_tools.write_timings(toolbox, "end of hop")
         if best and toolbox.best_ind_file:
             ga_search_tools.write_population(toolbox.best_ind_file, [best], toolbox.functions)
-        toolbox.t_total = time.time() - toolbox.t0
-        write_timings(toolbox)
         if best and toolbox.is_solution(best):
-            code = interpret.compile_deap(best.deap_str, toolbox.functions)
+            code = interpret.compile_deap(str(best), toolbox.functions)
             result = ["function", toolbox.problem_name, toolbox.problem_params, code]
             toolbox.f.write(f"solved\t{toolbox.problem_name}")
             if toolbox.extensive_statistics:                
@@ -176,6 +196,7 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.metaevolution_strategies = params["metaevolution_strategies"]
     toolbox.idea_victor = params["idea_victor"]
     toolbox.dynamic_weights = params["dynamic_weights"]
+    toolbox.use_cprofile = params["use_cprofile"]
     
     # search
     toolbox.all_generations_ind = []

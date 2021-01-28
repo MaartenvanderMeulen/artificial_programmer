@@ -149,15 +149,20 @@ def convert_c_output_to_python(output_buf, n_output):
     return result 
 
 
-def run_once(lib, c_param_sizes, c_params, n_local_variables, c_code, output_bufsize, output_buf, debug):
-    c_n_params = ctypes.c_int(len(c_param_sizes))
-    n_output = ctypes.c_int()
-    n_output.value = 0
+def call_cpp_interpreter(lib, c_n_params, c_param_sizes, c_params, n_local_variables, c_code, output_bufsize, output_buf, n_output, debug):
+    '''In a separate python function to get exact timings on the C++ part via cProfile'''
     lib.run_non_recursive_level1_function( \
         c_n_params, ctypes.byref(c_param_sizes), ctypes.byref(c_params), \
         ctypes.c_int(n_local_variables), \
         ctypes.byref(c_code), ctypes.c_int(len(c_code)), \
         ctypes.c_int(output_bufsize), ctypes.byref(output_buf), ctypes.byref(n_output), ctypes.c_int(debug))
+
+
+def run_once(lib, c_param_sizes, c_params, n_local_variables, c_code, output_bufsize, output_buf, debug):
+    c_n_params = ctypes.c_int(len(c_param_sizes))
+    n_output = ctypes.c_int()
+    n_output.value = 0
+    call_cpp_interpreter(lib, c_n_params, c_param_sizes, c_params, n_local_variables, c_code, output_bufsize, output_buf, n_output, debug)
     return convert_c_output_to_python(output_buf, n_output.value)
 
 
