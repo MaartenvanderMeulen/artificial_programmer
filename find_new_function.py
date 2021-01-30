@@ -202,6 +202,15 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.idea_victor = params["idea_victor"]
     toolbox.dynamic_weights = params["dynamic_weights"]
     toolbox.use_cprofile = params["use_cprofile"]
+    evaluate.g_w1 = params["w1"]
+    evaluate.g_w2a = params["w2a"]
+    evaluate.g_w2b = params["w2b"]
+    evaluate.g_w3 = params["w3"]
+    evaluate.g_w4 = params["w4"]
+    evaluate.g_w5 = params["w5"]
+    evaluate.g_w6 = params["w6"]
+    evaluate.g_w7 = params["w7"]
+    evaluate.g_w8 = params["w8"]
     
     # search
     toolbox.all_generations_ind = []

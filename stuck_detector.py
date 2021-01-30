@@ -3,70 +3,57 @@ import math
 import sys
 
 
-def handle_file(filename, count_non_stuck, count_stuck, count_stopped_early):
+global max_iters_same_family_but_still_solved, count_iters_saved
+max_iters_same_family_but_still_solved, count_iters_saved = 0, 0
+
+
+def handle_file(filename):
+    global max_iters_same_family_but_still_solved, count_iters_saved
+    print(filename)
     with open(filename, "r") as f:
-        prev_eval = None
-        count_iters = 0
+        print("14", filename)
+        prev_family = None
+        count_iters_this_family = 0
+        max_iters_same_family = 0
+        count_iters_since_max = 0
         for line in f:
             if len(line) >= 3 and line[:3] ==  "gen":
-                eval = float(line[12:19])
-                if prev_eval is not None:
-                    if prev_eval > eval:
-                        if count_iters not in count_non_stuck:
-                            count_non_stuck[count_iters] = 0
-                        count_non_stuck[count_iters] += 1
-                        count_iters = 0
-                prev_eval = eval
-                count_iters += 1
-            elif len(line) >= 7 and line[:7] == "stopped":
-                if count_iters not in count_stuck:
-                    count_stuck[count_iters] = 0
-                count_stuck[count_iters] += 1
-                if count_iters <= 2:
-                    count_stopped_early[0] += 1
-                    print(filename, count_iters)
+                items = line.split(" ")
+                assert items[2] == "family_index"
+                family = int(items[3])
+                if prev_family is not None:
+                    if prev_family != family:
+                        count_iters_this_family = 0
+                prev_family = family
+                count_iters_this_family += 1
+                if max_iters_same_family < count_iters_this_family:
+                    max_iters_same_family = count_iters_this_family
+                if max_iters_same_family_but_still_solved < count_iters_this_family or count_iters_since_max > 0:
+                    count_iters_since_max += 1
             elif len(line) >= 6 and line[:6] == "solved":
-                if count_iters not in count_non_stuck:
-                    count_non_stuck[count_iters] = 0
-                count_non_stuck[count_iters] += 1
-
-
-def normalise(count_non_stuck, count_stuck):
-    n = sum([value for key, value in count_non_stuck.items()])
-    n += sum([value for key, value in count_stuck.items()])
-    for key, _ in count_non_stuck.items():
-        count_non_stuck[key] /= n
-    for key, _ in count_stuck.items():
-        count_stuck[key] /= n
-
-
-def write_to_file(count_dict, file_name):
-    count_list =[(key, value) for key, value in count_dict.items()]
-    count_list.sort(key=lambda item: item[0])
-    with open(file_name, "w") as f:
-        for key, value in count_list:
-            f.write(f"{key}\t{value}\n")
+                if max_iters_same_family_but_still_solved < max_iters_same_family:
+                    max_iters_same_family_but_still_solved = max_iters_same_family
+            elif len(line) >= 6 and line[:6] == "stoppe":
+                count_iters_saved += count_iters_since_max
 
 
 def stuck_detector(folder):
-    count_non_stuck = dict()
-    count_stuck = dict()
-    count_stopped_early = [0]
+    global max_iters_same_family_but_still_solved, count_iters_saved
     filenames = []
+    print("debug 38", folder)
     for filename in os.listdir(folder):
         if filename[:3] == "log":
             filenames.append(filename)
     filenames.sort()
     for filename in filenames:
-        handle_file(folder + "/" + filename, count_non_stuck, count_stuck, count_stopped_early)
+        handle_file(folder + "/" + filename)
+    count_iters_saved = 0
+    for filename in filenames:
+        handle_file(folder + "/" + filename)
+    print("max iterations stuck but still solved", max_iters_same_family_but_still_solved)
+    print("count iterations saved", count_iters_saved)
     
-    normalise(count_non_stuck, count_stuck)
-    write_to_file(count_non_stuck, "tmp/count_non_stuck.txt")
-    write_to_file(count_stuck, "tmp/count_stuck.txt")
-    print("count_stopped_early", count_stopped_early)
-    
-
 
 if __name__ == "__main__":
-    id = sys.argv[1] if len(sys.argv) >= 2 else "09AC"
-    stuck_detector(f"tmp/{id}")
+    id = sys.argv[1] if len(sys.argv) >= 2 else "aa"
+    stuck_detector("tmp/" + id)

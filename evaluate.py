@@ -106,7 +106,8 @@ def compute_error_int(actual, expect, debug=False):
     errors.append(error)
     return errors
 
-
+global g_w1, g_w2a, g_w2b, g_w3, g_w4, g_w5, g_w6, g_w7, g_w8
+g_w1, g_w2a, g_w2b, g_w3, g_w4, g_w5, g_w6, g_w7, g_w8 = 1.0, 2.0, 1.1, 1.5, 1.5, 1.5, 1.0, 1.0, 1.0
 def compute_error_list_of_ints(actual, expect, debug=False):
     '''compute and return error on this output'''
     errors = []
@@ -116,24 +117,39 @@ def compute_error_list_of_ints(actual, expect, debug=False):
 
     # error1 : type difference
     error = 0.0
-    if type(actual) != type([]):
-        error = 1.0
-        assert type(actual) == type(1)
-        actual = [actual]
-    else:
-        for i in range(min(len(expect), len(actual))):
-            if type(actual[i]) != type(1):
-                error += 1/len(expect)
-        if len(actual) == 0:
-            actual = [0]
+    if True:
+        if type(actual) != type([]):
             error = 1.0
+            assert type(actual) == type(1)
+            actual = [actual]
+        else:
+            for i in range(min(len(expect), len(actual))):
+                if type(actual[i]) != type(1):
+                    error += 1/len(expect)
+            if len(actual) == 0:
+                actual = [0]
+                error = 1.0
+    else:
+        if type(actual) != type([]):
+            error = 1.0 + len(expect)
+            assert type(actual) == type(1)
+            actual = [actual]
+        else:
+            for i in range(expect):
+                if i < len(actual):
+                    if type(actual[i]) != type(1):
+                        error += 1
+                else:
+                    error += 1
+    if error > 0:
+        error = error ** g_w1
     errors.append(error)
     k = len(expect)
     if k == 0:
         raise RuntimeError("TODO: handle case were expect output is empty")
     # error2 : aantal outputs
     actual_list = extract_numbers_list(actual)
-    n = 2 if len(actual_list) < len(expect) else 1.1
+    n = g_w2a if len(actual_list) < len(expect) else g_w2b
     errors.append(abs(len(actual_list) - len(expect)) ** n)
     # error3 : hoever zitten de expect getallen van de model getallen af
     actual_set = set(actual_list)
@@ -141,12 +157,12 @@ def compute_error_list_of_ints(actual, expect, debug=False):
         actual_set = set([0])
     error = 0.0
     for expected_number in expect:
-        error += _distance_with_closest_numbers(expected_number, actual_set) ** 1.5
+        error += _distance_with_closest_numbers(expected_number, actual_set) ** g_w3
     errors.append(error)
     # error4 : hoever zitten de model getallen van de expect getallen af
     error = 0.0
     for actual_number in actual_set:
-        error += _distance_with_closest_numbers(actual_number, expect) ** 1.5
+        error += _distance_with_closest_numbers(actual_number, expect) ** g_w4
     errors.append(error)
     # error5 : absolute verschil van de outputs met de gewenste output
     error = 0.0
@@ -154,9 +170,9 @@ def compute_error_list_of_ints(actual, expect, debug=False):
         assert type(expect[i]) == type(1)
         if i < len(actual):
             if type(actual[i]) == type(1):
-                error += (abs(actual[i] - expect[i])) ** 1.5
+                error += (abs(actual[i] - expect[i])) ** g_w5
             else:
-                error += (abs(expect[i])) ** 1.5
+                error += (abs(expect[i])) ** g_w5
     errors.append(error)
     # error6 : hoeveel staan er in volgorde?
     error = 0.0
@@ -166,6 +182,8 @@ def compute_error_list_of_ints(actual, expect, debug=False):
             j += 1
         if j >= len(actual_list):
             error += 1/len(expect)
+    if error > 0:
+        error = error ** g_w6
     errors.append(error)
     # error7 : hoeveel staan er in volgorde (kijkend van achter naar voren)?
     error = 0.0
@@ -177,9 +195,14 @@ def compute_error_list_of_ints(actual, expect, debug=False):
         if j < 0:
             error += 1/len(expect)
         i -= 1
+    if error > 0:
+        error = error ** g_w7
     errors.append(error)
     # error 8: # empty sublists
-    errors.append(count_empty_sublists(actual))
+    error = count_empty_sublists(actual)
+    if error > 0:
+        error = error ** g_w8
+    errors.append(error)
 
     if False:
         # geeft hele slechte resultaten!

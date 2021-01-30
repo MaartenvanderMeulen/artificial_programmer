@@ -43,5 +43,14 @@
     "idea_victor": false,
     "hops": 1,
     "dynamic_weights": false,
-    "use_cprofile": false
+    "use_cprofile": false,
+    "w1": 1.0,
+    "w2a": 2.0,
+    "w2b": 1.1,
+    "w3": 1.5,
+    "w4": 1.5,
+    "w5": 1.5,
+    "w6": 0.9,
+    "w7": 1.0,
+    "w8": 1.0
 }

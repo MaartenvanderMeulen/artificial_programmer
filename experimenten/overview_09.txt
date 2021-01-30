@@ -78,3 +78,12 @@ bk4
 acsh 2/1000
 bk1000 91/300
 bk32 6/100
+
+================== Fri 29 JAn
+
+a zonder dw 1700s : 239/1024=23.3%.  Doorloop 19:05-01:49=6:44, 3:41-11:13=6:32.  Totaal 13:16.  18.04 oplossingen per uur.
+
+Na uitgebreide analyse van de resultaten hetvolgende advies : gebruik a5m voor tuning.
+Verwachtte doorlooptijd 2.6 uur, met 54/1024 oplossingen (~5%).  Eens meten of dat klopt!
+
+a zonder bw 5m : 

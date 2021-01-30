@@ -185,7 +185,7 @@ def track_stuck(toolbox, population):
 
 
 def log_info(toolbox, population):
-    toolbox.f.write(f"gen {toolbox.real_gen}")
+    toolbox.f.write(f"gen {toolbox.real_gen} family_index {population[0].family_index}")
     msg = " ".join([f"{toolbox.families_list[family].raw_error:.0f}" for family, members in toolbox.current_families_dict.items()])
     toolbox.f.write(f" fam_errors {msg}")
     msg = " ".join([f"{len(members)}" for family, members in toolbox.current_families_dict.items()])
