@@ -41,8 +41,8 @@ class Context(object):
                 sys.stdout.write(f" {count_complete}")
                 sys.stdout.flush()
                 time.sleep(10)
-            time.sleep(2) # make sure everything is finished
             prev_count_complete = count_complete
+        # time.sleep(1) # make sure everything is finished
         sys.stdout.write("\n")
 
     def get_score(self):

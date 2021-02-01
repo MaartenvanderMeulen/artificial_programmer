@@ -1,67 +1,67 @@
+import math
 import numpy as np
 
 
-global dynamic_weights_matrix
+global dynamic_weights_matrix, estimated_remaining_iterations_matrix, prev_best_matrix
 dynamic_weights_matrix = None
+estimated_remaining_iterations_matrix= None
+prev_best_matrix = None
 
 
-def compute_normalised_error(raw_error_matrix):
+def allocate_like(example):
+    global estimated_remaining_iterations_matrix, dynamic_weights_matrix
+    if estimated_remaining_iterations_matrix is None or estimated_remaining_iterations_matrix.shape != example.shape:
+        estimated_remaining_iterations_matrix = np.ones_like(example) * 100
+    if dynamic_weights_matrix is None or dynamic_weights_matrix.shape != example.shape:
+        dynamic_weights_matrix = np.ones_like(example)
+
+    
+def compute_normalised_error(matrix, alpha=2):
+    '''alpha > 1 penalises differences between weighted matrix components'''
     global dynamic_weights_matrix
-    if dynamic_weights_matrix is None or dynamic_weights_matrix.shape != raw_error_matrix.shape:
-        dynamic_weights_matrix = np.ones_like(raw_error_matrix)
-    return np.sum(dynamic_weights_matrix * raw_error_matrix)
+    return np.sum((dynamic_weights_matrix * matrix) ** alpha)
 
 
-def update_iterations_from_family_difference(reference_family, family):
+def update_iterations_from_matrix_difference(reference_matrix, matrix):
     global estimated_remaining_iterations_matrix
-    for i in range(family.raw_error_matrix.shape[0]):
-        for j in range(family.raw_error_matrix.shape[1]):
-            v, vref = family.raw_error_matrix[i, j], reference_family[i, j]
+    for i in range(matrix.shape[0]):
+        for j in range(matrix.shape[1]):
+            v, vref = matrix[i, j], reference_matrix[i, j]
             if v < vref:
-                estimated_remaining_iterations_matrix[i, j] = (vref - v) / vref
+                if estimated_remaining_iterations_matrix[i, j] > (vref - v) / vref:
+                    estimated_remaining_iterations_matrix[i, j] = (vref - v) / vref
 
 
-def compute_dynamic_weights(best_raw_error_matrix, estimated_remaining_iterations_matrix):
-    global dynamic_weights_matrix
-    if dynamic_weights_matrix is None or dynamic_weights_matrix.shape != best_raw_error_matrix.shape:
-        dynamic_weights_matrix = np.ones_like(raw_error_matrix)
+def compute_dynamic_weights(best_matrix):
+    global dynamic_weights_matrix, estimated_remaining_iterations_matrix
     dynamic_weights_matrix.fill(1.0)
-    for i in range(best_raw_error_matrix.shape[0]):
-        for j in range(best_raw_error_matrix.shape[1]):
-            if best_raw_error_matrix[i, j] > 0:
-                weight = estimated_remaining_iterations_matrix[i, j] / 
-                assert math.isclose(weight * best_raw_error_matrix, estimated_remaining_iterations_matrix[i, j])
+    for i in range(best_matrix.shape[0]):
+        for j in range(best_matrix.shape[1]):
+            if best_matrix[i, j] > 0:
+                weight = estimated_remaining_iterations_matrix[i, j] / best_matrix[i, j]
+                assert math.isclose(weight * best_matrix[i, j], estimated_remaining_iterations_matrix[i, j])
                 dynamic_weights_matrix[i, j] = weight
 
 
-def update_dynamic_weights(best_family, all_families):
-    global prev_best_family, estimated_remaining_iterations_matrix, dynamic_weights_matrix
-    if prev_best_family is None:
-        prev_best_family = best_family
-        estimated_remaining_iterations_matrix = np.ones_like(best_family.raw_error_matrix) * 100
-        dynamic_weights_matrix = np.ones_like(best_family.raw_error_matrix)
-        return
-    if estimated_remaining_iterations_matrix is None or estimated_remaining_iterations_matrix.shape != raw_error_matrix.shape:
-        estimated_remaining_iterations_matrix = np.ones_like(best_family.raw_error_matrix, dtype="int")
-    if best_family is prev_best_family:
-        estimated_remaining_iterations_matrix += 1
-    update_iterations_from_family_difference(prev_best_family, best_family)
-    for family in all_families:
-        if family is not best_family:
-            update_iterations_from_family_difference(best_family, family)
-    compute_dynamic_weights(best_family.raw_error_matrix, estimated_remaining_iterations_matrix)
+def update_dynamic_weights(best_matrix, all_matrices):
+    global prev_best_matrix, estimated_remaining_iterations_matrix, dynamic_weights_matrix
+    allocate_like(best_matrix)
+    estimated_remaining_iterations_matrix += 1
+    if prev_best_matrix is not None:
+        update_iterations_from_matrix_difference(prev_best_matrix, best_matrix)
+    for matrix in all_matrices:
+        if matrix is not best_matrix:
+            update_iterations_from_matrix_difference(best_matrix, matrix)
+    compute_dynamic_weights(best_matrix)
+    prev_best_matrix = best_matrix
 
 
 def self_test():
-    raw_error_matrix = np.array([[4.0, 4.0], [4.0, 4.0]])
-    raw_error = compute_raw_error(raw_error_matrix)
-    update_avg_raw_error_vector([raw_error_matrix])
-    normalised_error_matrix = compute_normalised_error_matrix(raw_error_matrix)
-    normalised_error = compute_normalised_error(normalised_error_matrix)
-    assert raw_error == 16.0
-    assert list(inv_avg_raw_error_vector) == [0.25, 0.25]
-    assert [list(normalised_error_matrix[0]), list(normalised_error_matrix[1])] == [[1.0, 1.0], [1.0, 1.0]]
-    assert normalised_error == 4.0
+    matrix1 = np.array([[4.0, 4.0], [4.0, 4.0]])
+    matrix2 = np.array([[2.0, 3.0], [4.0, 5.0]])
+    update_dynamic_weights(matrix1, [matrix1, matrix2])
+    print(compute_normalised_error(matrix1))
+    print(compute_normalised_error(matrix2))
     print("selftest ok")
 
 if __name__ == "__main__":
