@@ -113,24 +113,22 @@ class Context(object):
 
 
 if __name__ == "__main__":
-    for n_runs in [3*31, 3*3*31, 3*3*3*31,]:
-        print("Start calibration with", n_runs, "runs")
-        context = Context(n_runs)
-        continue_searching = True
-        while continue_searching:
-            continue_searching = False
-            for i, param in enumerate([
-                    "w3",
-                    "w4",
-                    "w5",
-                    "w2a",
-                    "w2b",
-                    "w8",
-                    "w1",
-                    "w6",
-                    "w7",
-                    ]):
-                params = context.read_params(context.best_params_file)
-                if context.autocal(param, params[param]):
-                    continue_searching = True
+    n_runs = 3*31
+    print("Start calibration with", n_runs, "runs")
+    context = Context(n_runs)
+    for i, param in enumerate([
+            #"w3",
+            #"w4",
+            #"w5",
+            #"w2a",
+            #"w2b",
+            "w8",
+            #"w1",
+            #"w6",
+            #"w7",
+            ]):
+        params = context.read_params(context.best_params_file)
+        # value = params[param]
+        value = 0.2
+        context.autocal(param, value)
 

@@ -87,3 +87,8 @@ Na uitgebreide analyse van de resultaten hetvolgende advies : gebruik a5m voor t
 Verwachtte doorlooptijd 2.6 uur, met 54/1024 oplossingen (~5%).  Eens meten of dat klopt!
 
 a zonder bw 5m : 
+
+===================== Ma 1 Feb
+
+a zonder dw maxevals 560000 :
+	om te vergelijken met tmp/a_baseline_solved56_doorloop3h max evaluations 560000, 29 Jan
