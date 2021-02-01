@@ -132,19 +132,14 @@ def basinhopper(toolbox):
         if best and toolbox.is_solution(best):
             code = interpret.compile_deap(str(best), toolbox.functions)
             result = ["function", toolbox.problem_name, toolbox.problem_params, code]
-            toolbox.f.write(f"solved\t{toolbox.problem_name}")
-            if toolbox.extensive_statistics:                
-                toolbox.f.write(f"\t{gen}\tgen\t{len(best)}\tlen")
-                toolbox.f.write(f"\t{toolbox.eval_count}\tevals")
-                toolbox.f.write(f"\t{toolbox.eval_lookup_count}")
-            toolbox.f.write(f"\n")
+            toolbox.f.write(f"solved\t{gen}\tgen\t{toolbox.eval_count}\tevals\t{toolbox.max_observed_stuck_count}\tmax_sc\n")
             if toolbox.verbose >= 1:
                 error = ga_search_tools.forced_reevaluation_of_individual_for_debugging(toolbox, best, 4)
                 assert error == 0
             ga_search_tools.write_path(toolbox, best)
             return result
         else:
-            toolbox.f.write(f"stopped\t{toolbox.problem_name}\t{gen}\tgen\t{toolbox.eval_count}\tevals\n")
+            toolbox.f.write(f"stopped\t{gen}\tgen\t{toolbox.eval_count}\tevals\t{toolbox.max_observed_stuck_count}\tmax_sc\n")
         toolbox.f.flush()
         
     toolbox.f.write(f"failed\t{toolbox.problem_name}\n")

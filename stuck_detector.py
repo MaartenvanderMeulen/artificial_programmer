@@ -9,9 +9,7 @@ max_iters_same_family_but_still_solved, count_iters_saved = 0, 0
 
 def handle_file(filename):
     global max_iters_same_family_but_still_solved, count_iters_saved
-    print(filename)
     with open(filename, "r") as f:
-        print("14", filename)
         prev_family = None
         count_iters_this_family = 0
         max_iters_same_family = 0
@@ -40,7 +38,6 @@ def handle_file(filename):
 def stuck_detector(folder):
     global max_iters_same_family_but_still_solved, count_iters_saved
     filenames = []
-    print("debug 38", folder)
     for filename in os.listdir(folder):
         if filename[:3] == "log":
             filenames.append(filename)
@@ -55,5 +52,5 @@ def stuck_detector(folder):
     
 
 if __name__ == "__main__":
-    id = sys.argv[1] if len(sys.argv) >= 2 else "aa"
+    id = sys.argv[1] if len(sys.argv) >= 2 else "aa_w1_0p9"
     stuck_detector("tmp/" + id)

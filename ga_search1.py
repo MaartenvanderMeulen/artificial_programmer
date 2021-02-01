@@ -164,6 +164,8 @@ def track_stuck(toolbox, population):
     # track if we are stuck
     if population[0].family_index in toolbox.prev_family_index:                        
         toolbox.stuck_count += 1
+        if toolbox.max_observed_stuck_count < toolbox.stuck_count:
+            toolbox.max_observed_stuck_count = toolbox.stuck_count
         if toolbox.stuck_count >= toolbox.max_stuck_count + 1:            
             if "reenter_parachuting_phase" not in toolbox.metaevolution_strategies or toolbox.count_opschudding > 0:
                 raise RuntimeWarning("max stuck count exceeded")
@@ -231,6 +233,7 @@ def ga_search_impl(toolbox):
         toolbox.parachute_level = 0
         toolbox.gen = 0
         toolbox.real_gen = 0
+        toolbox.max_observed_stuck_count = 0
         while toolbox.parachute_level < len(toolbox.ngen):
             while toolbox.gen < toolbox.ngen[toolbox.parachute_level]:
                 track_stuck(toolbox, population)

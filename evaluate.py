@@ -117,7 +117,7 @@ def compute_error_list_of_ints(actual, expect, debug=False):
 
     # error1 : type difference
     error = 0.0
-    if True:
+    if False:
         if type(actual) != type([]):
             error = 1.0
             assert type(actual) == type(1)
@@ -135,7 +135,7 @@ def compute_error_list_of_ints(actual, expect, debug=False):
             assert type(actual) == type(1)
             actual = [actual]
         else:
-            for i in range(expect):
+            for i in range(len(expect)):
                 if i < len(actual):
                     if type(actual[i]) != type(1):
                         error += 1
@@ -181,7 +181,7 @@ def compute_error_list_of_ints(actual, expect, debug=False):
         while j < len(actual_list) and expect[i] != actual_list[j]:
             j += 1
         if j >= len(actual_list):
-            error += 1/len(expect)
+            error += 1 # /len(expect)
     if error > 0:
         error = error ** g_w6
     errors.append(error)
@@ -193,7 +193,7 @@ def compute_error_list_of_ints(actual, expect, debug=False):
         while j >= 0 and expect[i] != actual_list[j]:
             j -= 1
         if j < 0:
-            error += 1/len(expect)
+            error += 1 # /len(expect)
         i -= 1
     if error > 0:
         error = error ** g_w7

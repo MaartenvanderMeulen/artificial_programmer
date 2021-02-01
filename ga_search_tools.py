@@ -158,7 +158,8 @@ def write_path(toolbox, ind, indent=0):
         else:
             toolbox.f.write(f"child\t{ind.raw_error:.3f}\tcode\t{code_str}\n")
     else:
-        toolbox.f.write(f"{code_str} {ind.raw_error:.3f} \n")
+        toolbox.f.write(f"{code_str} # {ind.raw_error:.3f} len {len(ind)}\n")
+
     # evaluate_individual_impl(toolbox, ind, toolbox.verbose)
     if indent == 0:
         for parent in ind.parents:
