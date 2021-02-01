@@ -12,10 +12,9 @@ class Context(object):
         self.min_value = 0.1
         self.max_value = 2.0
         self.precision = 0.1
-        self.current_score = None
+        self.best_score = None
         self.first_seed = 1000
         self.n_runs = n_runs
-        self.last_seed = self.first_seed + self.n_runs - 1
 
     def read_params(self, paramfile):
         with open(paramfile, "r") as f:
@@ -27,21 +26,23 @@ class Context(object):
             json.dump(params, f, sort_keys=True, indent=4)
 
     def launch_run(self):
-        cmd = f"rm -f tmp/{self.scenario}/* ; for seed in `seq {self.first_seed} 1 {self.last_seed}` ; do tsp -n python solve_problems.py $seed {self.scenario} ; done"
+        last_seed = self.first_seed + self.n_runs - 1
+        cmd = f"rm -f tmp/{self.scenario}/* ; for seed in `seq {self.first_seed} 1 {last_seed}` ; do tsp -n python solve_problems.py $seed {self.scenario} ; done"
         os.system(cmd)
 
     def wait_for_completion(self):
-        count_complete = 0
-        while count_complete <= self.last_seed - self.first_seed:
+        count_complete, prev_count_complete = 0, 0
+        while count_complete < self.n_runs:
             count_complete = 0
-            for seed in range(self.first_seed, self.last_seed+1, 1):
-                if os.path.exists(f"tmp/{self.scenario}/end_{seed}.txt"):
+            for i in range(self.n_runs):
+                if os.path.exists(f"tmp/{self.scenario}/end_{self.first_seed+i}.txt"):
                     count_complete += 1
-            if count_complete <= self.last_seed - self.first_seed:
+            if count_complete < self.n_runs and count_complete > prev_count_complete:
                 sys.stdout.write(f" {count_complete}")
                 sys.stdout.flush()
                 time.sleep(10)
             time.sleep(2) # make sure everything is finished
+            prev_count_complete = count_complete
         sys.stdout.write("\n")
 
     def get_score(self):
@@ -68,40 +69,43 @@ class Context(object):
         score = self.get_score()
         print(self.param_name, "value", value, "score", score)
         self.scores_cache[lookup_value] = score
-        if self.current_score is not None and self.current_score < score:
+        if self.best_score is not None and self.best_score < score:
             print(self.param_name, "value", value, "new best score", score, "write_params", self.best_params_file)
             self.write_params(params, self.best_params_file)
         return score
 
-    def autocal(self, param_name, current_value):
-        print(param_name, "value", current_value, "start calibration of this param, clear score cache")
+    def autocal(self, param_name, best_value):
+        print(param_name, "value", best_value, "start calibration of this param, clear score cache")
         self.scores_cache = dict()
         self.param_name = param_name
-        self.current_value = current_value
-        if self.current_score is None:
-            self.current_score = self.compute_score(self.current_value)
+        self.best_value = best_value
+        if self.best_score is None:
+            self.best_score = self.compute_score(self.best_value)
         else:
-            self.store_value(self.current_value, self.current_score)
+            print(param_name, "value", best_value, "score", self.best_score, "add to score cache")
+            self.store_value(self.best_value, self.best_score)
         epsilon = 0.001    
         continue_searching = True
         count_improvements = 0
         while continue_searching:
             continue_searching = False
-            if self.min_value - epsilon <= self.current_value - self.precision:
-                print(self.param_name, "current best value", self.current_value, "check down", self.precision)
-                new_value = self.current_value - self.precision
+            if self.min_value - epsilon <= self.best_value - self.precision:
+                print(self.param_name, "best value", self.best_value, "score", self.best_score, "check down", self.precision)
+                new_value = self.best_value - self.precision
                 new_score = self.compute_score(new_value)
-                if self.current_score < new_score:
-                    self.current_score = new_score
+                if self.best_score < new_score:
+                    self.best_score = new_score
+                    self.best_value = new_value
                     continue_searching = True
                     count_improvements += 1
                     continue
-            if self.max_value + epsilon >= self.current_value + self.precision:
-                print(self.param_name, "current best value", self.current_value, "check up", self.precision)
-                new_value = self.current_value + self.precision
+            if self.max_value + epsilon >= self.best_value + self.precision:
+                print(self.param_name, "best value", self.best_value, "check up", self.precision)
+                new_value = self.best_value + self.precision
                 new_score = context.compute_score(new_value)
-                if self.current_score < new_score:
-                    self.current_score = new_score
+                if self.best_score < new_score:
+                    self.best_score = new_score
+                    self.best_value = new_value
                     continue_searching = True
                     count_improvements += 1
                     continue   
@@ -109,16 +113,23 @@ class Context(object):
 
 
 if __name__ == "__main__":
-    for n_runs in [31, 3*31, 3*3*31, 3*3*3*31]:
+    for n_runs in [3*31, 3*3*31, 3*3*3*31,]:
         print("Start calibration with", n_runs, "runs")
         context = Context(n_runs)
         continue_searching = True
         while continue_searching:
             continue_searching = False
             for i, param in enumerate([
-                    # "w1", "w2a", "w2b",
-                    # "w3",
-                    "w4", "w5", "w6", "w7", "w8"]):
+                    "w3",
+                    "w4",
+                    "w5",
+                    "w2a",
+                    "w2b",
+                    "w8",
+                    "w1",
+                    "w6",
+                    "w7",
+                    ]):
                 params = context.read_params(context.best_params_file)
                 if context.autocal(param, params[param]):
                     continue_searching = True
