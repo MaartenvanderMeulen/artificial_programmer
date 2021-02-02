@@ -228,7 +228,8 @@ def ga_search_impl(toolbox):
         population = [] # generate_initial_population may throw exception
         population = generate_initial_population(toolbox)
         consistency_check(toolbox, population)
-        population.sort(key=toolbox.sort_ind_key) # keep this here, it fixes bug at gen == 0 in log_info
+        # The line below BREAKS reproducability of tmp/a_calibration_result
+        # population.sort(key=toolbox.sort_ind_key) # keep this here, it fixes bug at gen == 0 in log_info
         refresh_toolbox_from_population(toolbox, population)
         toolbox.t_init = time.time() - t0
         toolbox.t_eval = 0
