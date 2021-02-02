@@ -192,8 +192,6 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.optimise_solution_length = params["optimise_solution_length"]
     toolbox.extensive_statistics = params["extensive_statistics"]
     toolbox.keep_path = params["keep_path"]
-    toolbox.evolution_strategies = params["evolution_strategies"]
-    toolbox.metaevolution_strategies = params["metaevolution_strategies"]
     toolbox.idea_victor = params["idea_victor"]
     toolbox.dynamic_weights = params["dynamic_weights"]
     toolbox.use_cprofile = params["use_cprofile"]
@@ -206,7 +204,8 @@ def solve_by_new_function(problem, functions, f, params):
     evaluate.g_w6 = params["w6"]
     evaluate.g_w7 = params["w7"]
     evaluate.g_w8 = params["w8"]
-    # toolbox.stuck_count_for_opschudding = params["stuck_count_for_opschudding"]
+    toolbox.max_reenter_parachuting_phase = params["max_reenter_parachuting_phase"]
+    toolbox.stuck_count_for_opschudding = params["stuck_count_for_opschudding"]
     
     # search
     toolbox.all_generations_ind = []

@@ -4,7 +4,6 @@
     "best_of_n_mut": 2,
     "do_not_overwrite_logfile": false,
     "dynamic_weights": false,
-    "evolution_strategies": [],
     "extensive_statistics": true,
     "functions_file": "experimenten/functions_leeg.txt",
     "hops": 1,
@@ -12,9 +11,9 @@
     "keep_path": false,
     "max_evaluations": 91000000,
     "max_individual_size": 40,
+    "max_reenter_parachuting_phase": 1,
     "max_seconds": 420,
     "max_stuck_count": 99170,
-    "metaevolution_strategies": [],
     "nchildren": [
         4000,
         100
@@ -41,6 +40,7 @@
     "seed_prefix": 0,
     "show_path_depth": 1,
     "skip_seeds": [],
+    "stuck_count_for_opschudding": 9,
     "use_cprofile": false,
     "verbose": 1,
     "w1": 0.30000000000000004,

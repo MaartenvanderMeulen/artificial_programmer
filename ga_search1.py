@@ -166,31 +166,38 @@ def track_stuck(toolbox, population):
         toolbox.stuck_count += 1
         if toolbox.max_observed_stuck_count < toolbox.stuck_count:
             toolbox.max_observed_stuck_count = toolbox.stuck_count
-        if toolbox.stuck_count >= toolbox.max_stuck_count + 1:            
-            if "reenter_parachuting_phase" not in toolbox.metaevolution_strategies or toolbox.count_opschudding > 0:
-                raise RuntimeWarning("max stuck count exceeded")
-            if "reenter_parachuting_phase" in toolbox.metaevolution_strategies:
-                toolbox.f.write("reenter_parachuting_phase\n")
+        if toolbox.stuck_count > toolbox.max_stuck_count:            
+            raise RuntimeWarning("max stuck count exceeded")
+        if toolbox.stuck_count >= toolbox.stuck_count_for_opschudding:            
+            if toolbox.count_opschudding >= toolbox.max_reenter_parachuting_phase:
+                # toolbox.f.write("max reenter_parachuting_phase exceeded (skipped)\n")
+                pass
+            else:
+                toolbox.f.write(f"reenter_parachuting_phase {toolbox.count_opschudding} < {toolbox.max_reenter_parachuting_phase}\n")
                 toolbox.parachute_level = 0
                 toolbox.gen = 0
                 toolbox.prev_family_index = set()
                 toolbox.stuck_count = 0
                 toolbox.count_opschudding += 1
-                toolbox.reset()
                 for ind in population:
                     ind.parents = []
                 refresh_toolbox_from_population(toolbox, population)
     else:
         toolbox.stuck_count = 0
+        toolbox.count_opschudding = 0
         # verandering t.o.v. vorige iteratie
     toolbox.prev_family_index.add(population[0].family_index)
 
 
 def log_info(toolbox, population):
-    toolbox.f.write(f"gen {toolbox.real_gen} family_index {population[0].family_index}")
+    toolbox.f.write(f"gen {toolbox.real_gen} fam_index {population[0].family_index}")
     msg = " ".join([f"{toolbox.families_list[family].raw_error:.0f}" for family, members in toolbox.current_families_dict.items()])
+    if len(msg) > 50:
+        msg = msg[:47] + "..."
     toolbox.f.write(f" fam_errors {msg}")
     msg = " ".join([f"{len(members)}" for family, members in toolbox.current_families_dict.items()])
+    if len(msg) > 50:
+        msg = msg[:47] + "..."
     toolbox.f.write(f" fam_sizes {msg}")
     if False:
         toolbox.f.write(f" best_raw {population[0].raw_error:.3f} best_nor {population[0].normalised_error:.3f}")
@@ -221,6 +228,7 @@ def ga_search_impl(toolbox):
         population = [] # generate_initial_population may throw exception
         population = generate_initial_population(toolbox)
         consistency_check(toolbox, population)
+        population.sort(key=toolbox.sort_ind_key) # keep this here, it fixes bug at gen == 0 in log_info
         refresh_toolbox_from_population(toolbox, population)
         toolbox.t_init = time.time() - t0
         toolbox.t_eval = 0
