@@ -52,5 +52,5 @@
     "w7": 0.1,
     "w8": 0.4,
     "stuck_count_for_opschudding": 20,
-    "max_reenter_parachuting_phase": 999
+    "max_reenter_parachuting_phase": 1
 }
