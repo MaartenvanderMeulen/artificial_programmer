@@ -206,6 +206,7 @@ def solve_by_new_function(problem, functions, f, params):
     evaluate.g_w6 = params["w6"]
     evaluate.g_w7 = params["w7"]
     evaluate.g_w8 = params["w8"]
+    # toolbox.stuck_count_for_opschudding = params["stuck_count_for_opschudding"]
     
     # search
     toolbox.all_generations_ind = []

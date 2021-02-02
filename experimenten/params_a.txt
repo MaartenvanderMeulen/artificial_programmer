@@ -8,9 +8,9 @@
     "optimise_solution_length": false,
     "extensive_statistics": true,
     "keep_path": false,
-    "max_seconds": 900,
+    "max_seconds": 9900,
     "max_evaluations": 560000,
-    "max_stuck_count": 170,
+    "max_stuck_count": 9170,
     "new_initial_population": true,
     "old_populations_folder": "tmp/08G",
     "analyse_best": false,
@@ -52,5 +52,5 @@
     "w5": 1.5,
     "w6": 0.1,
     "w7": 0.1,
-    "w8": 0.5,
+    "w8": 0.4
 }

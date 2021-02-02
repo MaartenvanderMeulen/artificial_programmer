@@ -5,15 +5,15 @@ import json
 
 
 class Context(object):
-    def __init__(self, n_runs):
+    def __init__(self, n_runs, min_value=0.1, max_value=2.0, precision=0.1):
         self.best_params_file = "experimenten/params_calbest.txt"
         self.scenario = "c"
         self.working_params_file = f"experimenten/params_{self.scenario}.txt"
-        self.min_value = 0.1
-        self.max_value = 2.0
-        self.precision = 0.1
+        self.min_value = min_value
+        self.max_value = max_value
+        self.precision = precision
         self.best_score = None
-        self.first_seed = 1000
+        self.first_seed = 1000 + n_runs # zoadat 
         self.n_runs = n_runs
 
     def read_params(self, paramfile):
@@ -115,20 +115,24 @@ class Context(object):
 if __name__ == "__main__":
     n_runs = 3*31
     print("Start calibration with", n_runs, "runs")
-    context = Context(n_runs)
-    for i, param in enumerate([
-            #"w3",
-            #"w4",
-            #"w5",
-            #"w2a",
-            #"w2b",
-            "w8",
-            #"w1",
-            #"w6",
-            #"w7",
-            ]):
-        params = context.read_params(context.best_params_file)
-        # value = params[param]
-        value = 0.2
-        context.autocal(param, value)
+    if False:
+        context = Context(n_runs)
+        for i, param in enumerate([
+                #"w3",
+                #"w4",
+                #"w5",
+                #"w2a",
+                #"w2b",
+                "w8",
+                #"w1",
+                #"w6",
+                #"w7",
+                ]):
+            params = context.read_params(context.best_params_file)
+            # value = params[param]
+            value = 0.3
+            context.autocal(param, value)
+    if True:
+        context = Context(n_runs, 5, 20, 2)
+        context.autocal("stuck_count_for_opschudding", 9)
 
