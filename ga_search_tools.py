@@ -10,6 +10,7 @@ import numpy as np
 
 import interpret
 import evaluate
+import dynamic_weights
 from evaluate import recursive_tuple
 from cpp_coupling import get_cpp_handle, run_on_all_inputs
 
@@ -48,13 +49,11 @@ class Family:
         self.model_outputs = model_outputs
         self.raw_error_matrix = raw_error_matrix
         self.raw_error = evaluate.compute_raw_error(self.raw_error_matrix)
-        self.update_normalised_errors()
+        self.update_normalised_error()
 
-    def update_normalised_errors(self):
-        self.normalised_error_matrix = evaluate.compute_normalised_error_matrix(self.raw_error_matrix)
-        assert self.normalised_error_matrix.shape == self.raw_error_matrix.shape
-        self.normalised_error = evaluate.compute_normalised_error(self.normalised_error_matrix)
-        assert type(self.normalised_error) == type(0.0)
+    def update_normalised_error(self):
+        self.normalised_error = dynamic_weights.compute_normalised_error(self.raw_error_matrix, 1.0)
+        assert math.isclose(self.raw_error, self.normalised_error)
 
 
 def forced_reevaluation_of_individual_for_debugging(toolbox, ind, debug_level):
@@ -62,9 +61,8 @@ def forced_reevaluation_of_individual_for_debugging(toolbox, ind, debug_level):
     model_outputs = run_on_all_inputs(toolbox.cpp_handle, ind)
     raw_error_matrix = evaluate.compute_raw_error_matrix(toolbox.example_inputs, model_outputs, toolbox.error_function, \
         toolbox.f, toolbox.verbose)
-    normalised_error_matrix = evaluate.compute_normalised_error_matrix(raw_error_matrix)
-    normalised_error = evaluate.compute_normalised_error(normalised_error_matrix)
-    return normalised_error
+    raw_error = evaluate.compute_raw_error(raw_error_matrix)
+    return raw_error
 
 
 def evaluate_individual_impl(toolbox, ind, debug=0):
@@ -107,7 +105,7 @@ def evaluate_individual(toolbox, individual, debug=0):
     family = toolbox.families_list[individual.family_index]
     assert type(family.raw_error) == type(0.0)
     individual.raw_error = family.raw_error
-    assert type(family.normalised_error) == type(0.0)
+    assert type(family.normalised_error) == np.float64
     individual.normalised_error = family.normalised_error
     toolbox.t_eval += time.time() - t0
 
@@ -274,24 +272,20 @@ def analyse_population_impl(toolbox, old_pops):
         data.sort(key=lambda item: -toolbox.families_list[item[0]].weighted_error)
         sum_count = 0
         sum_raw_error_vector = np.zeros_like(toolbox.families_list[0].raw_error_matrix[-1])
-        sum_nor_error_vector = np.zeros_like(toolbox.families_list[0].raw_error_matrix[-1])
         for family_index, _, count in data:
             raw_error = toolbox.families_list[family_index].raw_error
-            nor_error = toolbox.families_list[family_index].normalised_error
             outputs = str(toolbox.families_list[family_index].model_outputs[-1])
             raw_error_vector = toolbox.families_list[family_index].raw_error_matrix[-1]
-            nor_error_vector = toolbox.families_list[family_index].normalised_error_matrix[-1]
             sum_raw_error_vector += np.array(raw_error_vector)
-            sum_nor_error_vector += np.array(nor_error_vector)
             raw_error_vector = " ".join([f"{v:5.3f}" for v in raw_error_vector])
-            nor_error_vector = " ".join([f"{v:5.3f}" for v in nor_error_vector])
             sum_count += count
-            f.write(f"{raw_error:8.3f} {nor_error:8.3f} {family_index:6d} {count:5d} {outputs[:48]:48} ")
-            f.write(f"{raw_error_vector[:48]:48} {nor_error_vector[:48]:48}\n")
+            nor_error = toolbox.families_list[family_index].normalised_error
+            f.write(f"{raw_error:8.3f} {nor_error:8.3f} {family_index:6d} {count:5d} {outputs[:48]:48}")
+            f.write(f" {raw_error_vector[:48]:48}")
+            f.write(f"\n")
         sum_raw_error_vector = " ".join([f"{v/len(data):5.3f}" for v in sum_raw_error_vector])
-        sum_nor_error_vector = " ".join([f"{v/len(data):5.3f}" for v in sum_nor_error_vector])
         f.write(f"{' ':8} {' ':8} {len(toolbox.families_list):6} {sum_count:5} {'last_output':48} ")
-        f.write(f"{sum_raw_error_vector:48} {sum_nor_error_vector:48}\n")
+        f.write(f"{sum_raw_error_vector:48}\n")
 
 
 def generate_initial_population(toolbox, old_pops=None):
@@ -365,12 +359,6 @@ def is_improvement(toolbox, ind, best):
     if best.normalised_error != ind.normalised_error:
         return best.normalised_error > ind.normalised_error
     # now they have equal .normalised_error
-    if False:
-        best_family_size = get_family_size(toolbox, best)
-        ind_family_size = get_family_size(toolbox, ind)
-        if best_family_size != ind_family_size:
-            return best_family_size > ind_family_size
-        # now they have equal family size
     return len(best) > len(ind)
 
 
@@ -380,7 +368,7 @@ def crossover_with_local_search(toolbox, parent1, parent2):
         return None
     t0 = time.time()
     t_evaluate = toolbox.t_eval
-    if parent1.normalised_error > parent2.normalised_error or (parent1.normalised_error == parent2.normalised_error and len(parent1) > len(parent2)):
+    if parent1.raw_error > parent2.raw_error or (parent1.raw_error == parent2.raw_error and len(parent1) > len(parent2)):
         parent1, parent2 = parent2, parent1
     indexes1 = [i for i in range(len(parent1))]
     indexes2 = [i for i in range(len(parent2))]
@@ -438,8 +426,11 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
     return best
 
 
-def refresh_toolbox_from_population(toolbox, population):
+def refresh_toolbox_from_population(toolbox, population, population_is_sorted):
     t0 = time.time()
+    if not population_is_sorted:
+        # population.sort(key=toolbox.sort_ind_key)
+        pass
     toolbox.ind_str_set = {ind.pp_str for ind in population} # refresh set after deletion of non-fit individuals
     toolbox.current_families_dict = dict()
     for ind in population:
@@ -451,9 +442,12 @@ def refresh_toolbox_from_population(toolbox, population):
         raw_error_matrix_list = []
         for family_index, _ in toolbox.current_families_dict.items():
             raw_error_matrix_list.append(toolbox.families_list[family_index].raw_error_matrix)
-        toolbox.count_nonzero, toolbox.sum_nonzero = evaluate.update_avg_raw_error_vector(raw_error_matrix_list)
+        best_raw_error_matrix = toolbox.families_list[population[0].family_index].raw_error_matrix
+        dynamic_weights.update_dynamic_weights(toolbox.prev_best_raw_error_matrix, best_raw_error_matrix, raw_error_matrix_list)
+        dynamic_weights.log_info(toolbox.f)
+        toolbox.prev_best_raw_error_matrix = best_raw_error_matrix
         for family in toolbox.families_list:
-            family.update_normalised_errors()
+            family.update_normalised_error()
         for ind in population:
             family = toolbox.families_list[ind.family_index]
             ind.raw_error = family.raw_error

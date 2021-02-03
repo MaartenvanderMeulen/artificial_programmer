@@ -17,6 +17,7 @@ def allocate_like(example):
     
 def compute_normalised_error(matrix, alpha):
     '''alpha > 1 penalises differences between weighted matrix components'''
+    allocate_like(matrix)
     global dynamic_weights_matrix
     return np.sum((dynamic_weights_matrix * matrix) ** alpha)
 
@@ -53,8 +54,21 @@ def update_dynamic_weights(prev_best_matrix, best_matrix, all_matrices):
     for matrix in all_matrices:
         if matrix is not best_matrix:
             update_iterations_from_matrix_difference(best_matrix, matrix, True)
-    compute_dynamic_weights(best_matrix)
-    prev_best_matrix = best_matrix
+    if False:
+        compute_dynamic_weights(best_matrix)
+
+
+def log_info(f):
+    global estimated_remaining_iterations_matrix, dynamic_weights_matrix
+    msg = " ".join([f"{iter:.0f}" for iter in estimated_remaining_iterations_matrix[-1]])
+    if len(msg) > 80:
+        msg = msg[:77] + "..."
+    f.write("remaining iterations, last row: " + msg + "\n")
+    if False:
+        msg = " ".join([f"{w:.1f}" for w in dynamic_weights_matrix[-1]])
+        if len(msg) > 80:
+            msg = msg[:77] + "..."
+        f.write("dynamic weights, last row: " + msg + "\n")
 
 
 def self_test():

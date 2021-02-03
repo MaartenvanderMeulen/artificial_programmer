@@ -71,6 +71,7 @@ class Toolbox(object):
         self.reset()
 
     def reset(self):
+        self.prev_best_raw_error_matrix = None
         self.pp_str_to_family_index_dict = dict()
         self.families_list = []
         self.families_dict = dict()
@@ -83,7 +84,7 @@ class Toolbox(object):
         return result
 
     def is_solution(self, ind):
-        result = ind.normalised_error
+        result = ind.raw_error
         if self.optimise_solution_length and result == 0.0 and len(ind) > len(self.solution_deap_ind):
             return False
         return result == 0.0

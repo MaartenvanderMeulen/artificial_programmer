@@ -547,65 +547,6 @@ def compute_raw_error_matrix(example_inputs, actual_outputs, raw_error_function,
     return raw_error_matrix
 
 
-# ===================================== error normalisation ===============================
-
 def compute_raw_error(raw_error_matrix):
     return float(np.sum(raw_error_matrix))
 
-
-def analyse_nonzero(matrix_list):
-    n = matrix_list[0].shape[1]
-    sum_nonzero = np.zeros((n))
-    count_nonzero = np.zeros((n))
-    for matrix in matrix_list:
-        sum_nonzero += matrix.sum(axis=0)
-        for i in range(n):
-            count_nonzero[i] += np.count_nonzero(matrix[:,i])
-    return count_nonzero, sum_nonzero
-
-
-def update_avg_raw_error_vector(raw_error_matrix_list):
-    global inv_avg_raw_error_vector
-    if inv_avg_raw_error_vector.shape[0] != raw_error_matrix_list[0].shape[1]:
-        inv_avg_raw_error_vector = np.ones((raw_error_matrix_list[0].shape[1]))
-    count_nonzero, sum_nonzero = analyse_nonzero(raw_error_matrix_list)
-    for i in range(inv_avg_raw_error_vector.shape[0]):
-        inv_avg_raw_error_vector[i] = count_nonzero[i]/sum_nonzero[i] if count_nonzero[i] > 0 else 1.0
-    return count_nonzero, sum_nonzero
-
-
-def compute_normalised_error_matrix(raw_error_matrix):
-    normalised_error_matrix = np.copy(raw_error_matrix)
-    global inv_avg_raw_error_vector
-    if inv_avg_raw_error_vector.shape[0] != raw_error_matrix[0].shape[0]:
-        inv_avg_raw_error_vector = np.ones((raw_error_matrix[0].shape[0]))
-    normalised_error_matrix[:] *= inv_avg_raw_error_vector
-    return normalised_error_matrix
-
-
-def compute_normalised_error(normalised_error_matrix):
-    if False:
-        avg_normalised_error_vector = normalised_error_matrix.sum(axis=0) / normalised_error_matrix.shape[0]
-        rmse = math.sqrt(np.sum(avg_normalised_error_vector ** 2) / normalised_error_matrix.shape[1] )
-        return rmse
-    else:
-        return float(np.sum(normalised_error_matrix))
-
-
-
-def self_test():
-    raw_error_matrix = np.array([[4.0, 4.0], [4.0, 4.0]])
-    raw_error = compute_raw_error(raw_error_matrix)
-    update_avg_raw_error_vector([raw_error_matrix])
-    normalised_error_matrix = compute_normalised_error_matrix(raw_error_matrix)
-    normalised_error = compute_normalised_error(normalised_error_matrix)
-
-    assert raw_error == 16.0
-    assert list(inv_avg_raw_error_vector) == [0.25, 0.25]
-    assert [list(normalised_error_matrix[0]), list(normalised_error_matrix[1])] == [[1.0, 1.0], [1.0, 1.0]]
-    assert normalised_error == 4.0
-
-    print("selftest ok")
-
-if __name__ == "__main__":
-    self_test()

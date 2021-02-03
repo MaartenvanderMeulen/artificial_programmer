@@ -22,14 +22,14 @@ from ga_search_tools import crossover_with_local_search, cxOnePoint, mutUniform,
 
 
 def compute_complementairity(toolbox, parent1, parent2):
-    normalised_error_matrix1 = toolbox.families_list[parent1.family_index].normalised_error_matrix
-    normalised_error_matrix2 = toolbox.families_list[parent2.family_index].normalised_error_matrix
-    normalised_improvement = normalised_error_matrix1 - normalised_error_matrix2
-    complementairity = np.sum(normalised_improvement[normalised_improvement > 0])
-    complementairity /= parent1.normalised_error
+    raw_error_matrix1 = toolbox.families_list[parent1.family_index].raw_error_matrix
+    raw_error_matrix2 = toolbox.families_list[parent2.family_index].raw_error_matrix
+    raw_improvement = raw_error_matrix1 - raw_error_matrix2
+    complementairity = np.sum(raw_improvement[raw_improvement > 0])
+    complementairity /= parent1.raw_error
     assert complementairity >= 0
     if complementairity > 1: # fix any rounding issues: the
-        complementairity = 1 # max complementairity is that the whole parent1.normalised_error is removed
+        complementairity = 1 # max complementairity is that the whole parent1.raw_error is removed
     return complementairity
 
 
@@ -44,7 +44,7 @@ def select_parents(toolbox, population):
     # * p = (p_fitness(parent1) * p_fitness(parent2)) ^ alpha * p_complementair(parent1, parent2) ^ beta
     best_p = -1
     assert toolbox.best_of_n_cx > 0
-    max_normalised_error = max([ind.normalised_error for ind in population])
+    max_raw_error = max([ind.raw_error for ind in population])
     for _ in range(toolbox.best_of_n_cx):
         # select two parents
         family1_index, family2_index = random.sample(list(toolbox.current_families_dict), 2) # sample always returns a list
@@ -52,11 +52,11 @@ def select_parents(toolbox, population):
         index1, index2 = random.randrange(0, len(family1_members)), random.randrange(0, len(family2_members))
         parent1, parent2 = family1_members[index1], family2_members[index2] # all individuals in the same family have the same error
         # sort
-        if parent1.normalised_error > parent2.normalised_error or (parent1.normalised_error == parent2.normalised_error and len(parent1) > len(parent2)):
+        if parent1.raw_error > parent2.raw_error or (parent1.raw_error == parent2.raw_error and len(parent1) > len(parent2)):
             parent1, parent2 = parent2, parent1
         # compute p        
-        p_fitness1 = (1 - parent1.normalised_error/(max_normalised_error*1.1))
-        p_fitness2 = (1 - parent2.normalised_error/(max_normalised_error*1.1))
+        p_fitness1 = (1 - parent1.raw_error/(max_raw_error*1.1))
+        p_fitness2 = (1 - parent2.raw_error/(max_raw_error*1.1))
         assert 0 <= p_fitness1 and p_fitness1 <= 1
         assert 0 <= p_fitness2 and p_fitness2 <= 1
         p_complementair = compute_complementairity(toolbox, parent1, parent2)
@@ -74,7 +74,7 @@ def analyse_parents(toolbox, population):
     for parent1 in population:
         for parent2 in population:
             child = crossover_with_local_search(toolbox, parent1, parent2)
-            if child and child.normalised_error < 77.61253 - 0.00001:
+            if child and child.raw_error < 77.61253 - 0.00001:
                 escapes_count += 1
     return escapes_count
 
@@ -91,7 +91,7 @@ def generate_offspring(toolbox, population, nchildren):
     only_cx = False
     toolbox.offspring_families_dict = dict()
     if False:
-        do_special_experiment = False # math.isclose(population[0].normalised_error, 77.61253, abs_tol=0.00001)
+        do_special_experiment = False # math.isclose(population[0].raw_error, 77.61253, abs_tol=0.00001)
         if do_special_experiment:
             only_cx = True
             all_escapes_count = analyse_parents(toolbox, population)
@@ -131,7 +131,7 @@ def generate_offspring(toolbox, population, nchildren):
             else:
                 break
         retry_count = 0
-        assert child.normalised_error is not None
+        assert child.raw_error is not None
         assert child.pp_str == make_pp_str(child)
         toolbox.ind_str_set.add(child.pp_str)
         if child.family_index not in toolbox.offspring_families_dict:
@@ -139,16 +139,16 @@ def generate_offspring(toolbox, population, nchildren):
         toolbox.offspring_families_dict[child.family_index].append(child)
         offspring.append(child)
         if False:
-            if do_special_experiment and child.normalised_error < 77.61253 - 0.00001:
+            if do_special_experiment and child.raw_error < 77.61253 - 0.00001:
                 if False:
-                    toolbox.f.write(f"child\t{child.normalised_error:.3f}\tcode\t{child.pp_str}\n")
+                    toolbox.f.write(f"child\t{child.raw_error:.3f}\tcode\t{child.pp_str}\n")
                     for parent in child.parents:
-                        toolbox.f.write(f"parent\t{parent.normalised_error:.3f}\tcode\t{parent.pp_str}\n")
+                        toolbox.f.write(f"parent\t{parent.raw_error:.3f}\tcode\t{parent.pp_str}\n")
                 if False:
-                    toolbox.f.write(f"{child.normalised_error:.3f}\t")
-                    child.parents.sort(key=lambda item: item.normalised_error)
+                    toolbox.f.write(f"{child.raw_error:.3f}\t")
+                    child.parents.sort(key=lambda item: item.raw_error)
                     for parent in child.parents:
-                        toolbox.f.write(f"\t{parent.normalised_error:.3f}")
+                        toolbox.f.write(f"\t{parent.raw_error:.3f}")
                     toolbox.f.write(f"\n")
                 offspring_escapes_count += 1
     if False:
@@ -199,24 +199,6 @@ def log_info(toolbox, population):
     if len(msg) > 50:
         msg = msg[:47] + "..."
     toolbox.f.write(f" fam_sizes {msg}")
-    if False:
-        toolbox.f.write(f" best_raw {population[0].raw_error:.3f} best_nor {population[0].normalised_error:.3f}")
-        count_best_nor = sum([1 for ind in population if ind.normalised_error == population[0].normalised_error])
-        toolbox.f.write(f" count_best_nor {count_best_nor}")
-        count_family = sum([1 for ind in population if ind.family_index == population[0].family_index])
-        toolbox.f.write(f" family {population[0].family_index} count_family {count_family}")
-    if toolbox.dynamic_weights:
-        count_msg = " ".join([f"{n:.0f}" for n in toolbox.count_nonzero])
-        toolbox.f.write(f" count_nonzero {count_msg} ({np.sum(toolbox.count_nonzero):.0f})")
-    if False:
-        sum_msg = " ".join([f"{x:.0f}" for x in toolbox.sum_nonzero])
-        toolbox.f.write(f" sum_raw {sum_msg}")
-    if False:
-        sum_nonzero = np.zeros_like(toolbox.sum_nonzero)
-        for family_index, _ in toolbox.current_families_dict.items():
-            sum_nonzero += toolbox.families_list[family_index].normalised_error_matrix.sum(axis=0)
-        sum_msg = " ".join([f"{x:.0f}" for x in sum_nonzero])
-        toolbox.f.write(f" sum_nor {sum_msg}")
     toolbox.f.write(f"\n")
 
 
@@ -228,8 +210,7 @@ def ga_search_impl(toolbox):
         population = [] # generate_initial_population may throw exception
         population = generate_initial_population(toolbox)
         consistency_check(toolbox, population)
-        population.sort(key=toolbox.sort_ind_key) # keep this here, it fixes bug at gen == 0 in log_info
-        refresh_toolbox_from_population(toolbox, population)
+        refresh_toolbox_from_population(toolbox, population, False)
         toolbox.t_init = time.time() - t0
         toolbox.t_eval = 0
         toolbox.t_error = 0
@@ -257,7 +238,7 @@ def ga_search_impl(toolbox):
                     return population[0], toolbox.real_gen + 1
                 population[:] = population[:toolbox.pop_size[toolbox.parachute_level]]
                 consistency_check(toolbox, population)
-                refresh_toolbox_from_population(toolbox, population)
+                refresh_toolbox_from_population(toolbox, population, True)
                 toolbox.gen += 1
                 toolbox.real_gen += 1
             toolbox.parachute_level += 1
