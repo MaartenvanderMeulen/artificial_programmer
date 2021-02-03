@@ -40,7 +40,7 @@
     "seed_prefix": 0,
     "show_path_depth": 1,
     "skip_seeds": [],
-    "stuck_count_for_opschudding": 10,
+    "stuck_count_for_opschudding": 50000,
     "use_cprofile": false,
     "verbose": 1,
     "w1": 0.30000000000000004,

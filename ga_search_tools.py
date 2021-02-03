@@ -301,6 +301,9 @@ def generate_initial_population(toolbox, old_pops=None):
     if toolbox.new_initial_population:
         population = generate_initial_population_impl(toolbox)
     else:
+        # zorg dat de bron van de populatie niet uitmaakt voor de eindtoestand
+        # dit was nodig om bij interne opschuddingen hetzelfde resultaat te krijgen als bij set covering op 1 vastloper
+        toolbox.reset() # zorgt voor reproduceerbare toolbox
         if old_pops:
             # old_pops is list of individuals
             population = load_initial_population_impl(toolbox, old_pops)
@@ -309,6 +312,7 @@ def generate_initial_population(toolbox, old_pops=None):
             old_pops = read_old_populations(toolbox, toolbox.old_populations_folder, "pop")
             # old_pops is list of deap strings
             population = load_initial_population_impl(toolbox, old_pops)
+        random.seed(toolbox.seed) # zorgt voor reproduceerbare state
     return population
 
 
