@@ -544,6 +544,9 @@ def compute_raw_error_matrix(example_inputs, actual_outputs, raw_error_function,
         if len(domain_output_set) == 1:
             worst_raw_error_vector = find_worst_raw_error_vector(raw_error_matrix)
             raw_error_matrix[:] = worst_raw_error_vector
+    simplify = True
+    if simplify:
+        raw_error_matrix = np.sum(raw_error_matrix, axis=0).reshape((1, raw_error_matrix.shape[1]))
     return raw_error_matrix
 
 

@@ -124,8 +124,6 @@ class Context(object):
 
 
 if __name__ == "__main__":
-    n_runs = 3*3*31
-    print("Start calibration with", n_runs, "runs")
     if False:
         context = Context(n_runs)
         for i, param in enumerate([
@@ -143,10 +141,19 @@ if __name__ == "__main__":
             # value = params[param]
             value = 0.3
             context.autocal(param, value)
-    if True:
+    if False:
         context = Context(n_runs, 1, 500, 1)
         params = context.read_params(context.best_params_file)
         param = "stuck_count_for_opschudding"
         for value in [5, 10, 20, 50000]:
             context.compute_score(param, value)
+    if True:
+        for n_runs in [3*31, 3*3*31, ]:
+            print("Start calibration with", n_runs, "runs")
+            context = Context(n_runs, 1, 1.1, 0.001)
+            params = context.read_params(context.best_params_file)
+            param = "dynamic_weights_adaptation_speed"
+            for value in [1.1, 1.01, 1.001]:
+                context.compute_score(param, value)
+        
 

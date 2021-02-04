@@ -195,6 +195,7 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.keep_path = params["keep_path"]
     toolbox.idea_victor = params["idea_victor"]
     toolbox.dynamic_weights = params["dynamic_weights"]
+    toolbox.dynamic_weights_adaptation_speed = params["dynamic_weights_adaptation_speed"]
     toolbox.use_cprofile = params["use_cprofile"]
     evaluate.g_w1 = params["w1"]
     evaluate.g_w2a = params["w2a"]

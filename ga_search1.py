@@ -18,7 +18,7 @@ from ga_search_tools import best_of_n, generate_initial_population, generate_ini
 from ga_search_tools import refresh_toolbox_from_population, write_timings
 from ga_search_tools import load_initial_population_impl, evaluate_individual, consistency_check_ind
 from ga_search_tools import crossover_with_local_search, cxOnePoint, mutUniform, replace_subtree_at_best_location
-
+import dynamic_weights
 
 
 def compute_complementairity(toolbox, parent1, parent2):
@@ -190,16 +190,33 @@ def track_stuck(toolbox, population):
 
 
 def log_info(toolbox, population):
-    toolbox.f.write(f"gen {toolbox.real_gen} fam_index {population[0].family_index}")
-    msg = " ".join([f"{toolbox.families_list[family].raw_error:.0f}" for family, members in toolbox.current_families_dict.items()])
-    if len(msg) > 50:
-        msg = msg[:47] + "..."
-    toolbox.f.write(f" fam_errors {msg}")
-    msg = " ".join([f"{len(members)}" for family, members in toolbox.current_families_dict.items()])
-    if len(msg) > 50:
-        msg = msg[:47] + "..."
-    toolbox.f.write(f" fam_sizes {msg}")
+
+    toolbox.f.write(f"gen {toolbox.real_gen}")
+    done = set()
+    msg = ""
+    for ind in population:
+        if ind.family_index not in done:
+            i = ind.family_index
+            done.add(ind.family_index)
+            size = len(toolbox.current_families_dict[i])
+            msg += f" ({i},{toolbox.families_list[i].normalised_error:.0f},{toolbox.families_list[i].raw_error:.0f},{size})"
+    if len(msg) > 150:
+        msg = msg[:(150-3)] + "..."
+    # toolbox.f.write(f" (idx,dw,raw,#)")
+    toolbox.f.write(msg)
     toolbox.f.write(f"\n")
+    toolbox.f.write(f"best_ind.raw_error_matrix\n")
+    i = population[0].family_index
+    dynamic_weights.dump_matrix(toolbox.f, toolbox.families_list[i].raw_error_matrix)
+    if False:
+        dynamic_weights.dump_dw_matrix(toolbox.f)
+        for i in [38, 671]:
+            if i in done:
+                toolbox.f.write(f"family[{i}].raw_error_matrix\n")
+                dynamic_weights.dump_matrix(toolbox.f, toolbox.families_list[i].raw_error_matrix)
+                toolbox.f.write(f"family[{i}].dw_error_matrix\n")
+                dw_error_matrix = dynamic_weights.compute_normalised_error_matrix(toolbox.families_list[i].raw_error_matrix)
+                dynamic_weights.dump_matrix(toolbox.f, dw_error_matrix)
 
 
 def ga_search_impl(toolbox):
@@ -207,6 +224,8 @@ def ga_search_impl(toolbox):
         write_population(toolbox.final_pop_file, [], toolbox.functions)
     try:
         t0 = time.time()
+        toolbox.gen = 0
+        toolbox.real_gen = 0
         population = [] # generate_initial_population may throw exception
         population = generate_initial_population(toolbox)
         consistency_check(toolbox, population)
@@ -220,8 +239,6 @@ def ga_search_impl(toolbox):
         toolbox.prev_family_index = set()
         toolbox.stuck_count, toolbox.count_opschudding = 0, 0
         toolbox.parachute_level = 0
-        toolbox.gen = 0
-        toolbox.real_gen = 0
         toolbox.max_observed_stuck_count = 0
         while toolbox.parachute_level < len(toolbox.ngen):
             while toolbox.gen < toolbox.ngen[toolbox.parachute_level]:
@@ -234,11 +251,11 @@ def ga_search_impl(toolbox):
                     population = random.sample(population, k=int(len(population)*fraction))
                 population += offspring
                 population.sort(key=toolbox.sort_ind_key)
-                if toolbox.is_solution(population[0]):
-                    return population[0], toolbox.real_gen + 1
                 population[:] = population[:toolbox.pop_size[toolbox.parachute_level]]
                 consistency_check(toolbox, population)
                 refresh_toolbox_from_population(toolbox, population, True)
+                if toolbox.is_solution(population[0]): # do this after refresh, for debugging refresh
+                    return population[0], toolbox.real_gen + 1
                 toolbox.gen += 1
                 toolbox.real_gen += 1
             toolbox.parachute_level += 1

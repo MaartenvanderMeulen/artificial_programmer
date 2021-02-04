@@ -53,7 +53,6 @@ class Family:
 
     def update_normalised_error(self):
         self.normalised_error = dynamic_weights.compute_normalised_error(self.raw_error_matrix, 1.0)
-        assert math.isclose(self.raw_error, self.normalised_error)
 
 
 def forced_reevaluation_of_individual_for_debugging(toolbox, ind, debug_level):
@@ -433,7 +432,7 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
 def refresh_toolbox_from_population(toolbox, population, population_is_sorted):
     t0 = time.time()
     if not population_is_sorted:
-        # population.sort(key=toolbox.sort_ind_key)
+        # population.sort(key=toolbox.sort_ind_key) # influences reproducability with older runs
         pass
     toolbox.ind_str_set = {ind.pp_str for ind in population} # refresh set after deletion of non-fit individuals
     toolbox.current_families_dict = dict()
@@ -444,10 +443,16 @@ def refresh_toolbox_from_population(toolbox, population, population_is_sorted):
     toolbox.offspring_families_dict = dict()
     if toolbox.dynamic_weights:
         raw_error_matrix_list = []
-        for family_index, _ in toolbox.current_families_dict.items():
-            raw_error_matrix_list.append(toolbox.families_list[family_index].raw_error_matrix)
+        if False:
+            for index, _ in toolbox.current_families_dict.items():
+                family = toolbox.families_list[index]
+                raw_error_matrix_list.append(family.raw_error_matrix)
+        else:
+            for family in toolbox.families_list:
+                raw_error_matrix_list.append(family.raw_error_matrix)
         best_raw_error_matrix = toolbox.families_list[population[0].family_index].raw_error_matrix
-        dynamic_weights.update_dynamic_weights(toolbox.prev_best_raw_error_matrix, best_raw_error_matrix, raw_error_matrix_list)
+        dynamic_weights.update_dynamic_weights(toolbox.prev_best_raw_error_matrix, best_raw_error_matrix, \
+            raw_error_matrix_list, toolbox.dynamic_weights_adaptation_speed)
         dynamic_weights.log_info(toolbox.f)
         toolbox.prev_best_raw_error_matrix = best_raw_error_matrix
         for family in toolbox.families_list:
