@@ -53,7 +53,7 @@ def update_remaining_iterations_v1(prev_best_matrix, best_matrix, all_matrices):
     estimated_remaining_iterations_matrix[best_matrix == 0] = 0
 
 
-def update_remaining_iterations(prev_best_matrix, best_matrix, all_matrices):
+def update_remaining_iterations_v2(prev_best_matrix, best_matrix, all_matrices):
     global estimated_remaining_iterations_matrix
     estimated_remaining_iterations_matrix += 1
     if prev_best_matrix is not None:
@@ -91,7 +91,7 @@ def adjust_dynamic_weights_v1(adaptation_speed):
     # dynamic_weights_matrix *= n / np.sum(dynamic_weights_matrix)
 
 
-def adjust_dynamic_weights(adaptation_speed):
+def adjust_dynamic_weights_v2(adaptation_speed):
     global estimated_remaining_iterations_matrix, dynamic_weights_matrix
     beta = adaptation_speed
     components = []
@@ -125,20 +125,8 @@ def dump_dw_matrix(f):
     
 def update_dynamic_weights(prev_best_matrix, best_matrix, all_matrices, adaptation_speed):
     allocate_like(best_matrix)    
-    #global estimated_remaining_iterations_matrix
-    #print("update_dynamic_weights")
-    #if prev_best_matrix is not None:
-    #    print("    prev_best_matrix[-1, -3]", prev_best_matrix[-1, -3])
-    #print("    best_matrix[-1, -3]", best_matrix[-1, -3])
-    #print("    at start iters[-1, -3]", estimated_remaining_iterations_matrix[-1, -3], estimated_remaining_iterations_matrix[-1, -3] == 1)
-    #value0 = estimated_remaining_iterations_matrix[-1, -3]
-    update_remaining_iterations(prev_best_matrix, best_matrix, all_matrices)
-    #print("    at end iters[-1, -3]", estimated_remaining_iterations_matrix[-1, -3], estimated_remaining_iterations_matrix[-1, -3] < 1)
-    #value1 = estimated_remaining_iterations_matrix[-1, -3]
-    #if prev_best_matrix is not None:
-    #    if prev_best_matrix[-1, -3] == best_matrix[-1, -3] and value0 == 1.0 and value1 < 1.0:
-    #        exit()
-    adjust_dynamic_weights(adaptation_speed)
+    update_remaining_iterations_v2(prev_best_matrix, best_matrix, all_matrices)
+    adjust_dynamic_weights_v2(adaptation_speed)
 
 
 def log_info(f):
