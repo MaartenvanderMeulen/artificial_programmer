@@ -40,7 +40,7 @@
     "penalise_non_reacting_models": true,
     "idea_victor": false,
     "hops": 1,
-    "dynamic_weights": true,
+    "dynamic_weights": false,
     "dynamic_weights_adaptation_speed": 1.01,
     "dynamic_weights_source": "all_families",
     "dynamic_weights_parts": 3,

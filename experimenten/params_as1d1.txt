@@ -41,7 +41,7 @@
     "idea_victor": false,
     "hops": 1,
     "dynamic_weights": true,
-    "dynamic_weights_adaptation_speed": 1.001,
+    "dynamic_weights_adaptation_speed": 1.01,
     "dynamic_weights_source": "all_families",
     "dynamic_weights_parts": 3,
     "use_cprofile": false,
@@ -55,5 +55,5 @@
     "w7": 0.1,
     "w8": 0.4,
     "stuck_count_for_opschudding": 9,
-    "max_reenter_parachuting_phase": 0
+    "max_reenter_parachuting_phase": 999
 }
