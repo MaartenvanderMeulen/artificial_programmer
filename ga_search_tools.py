@@ -77,7 +77,7 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
         test_against_python_interpreter(toolbox, model_outputs, ind)
 
     t0 = time.time()
-    family_key_is_error_matrix = False
+    family_key_is_error_matrix = True
     if family_key_is_error_matrix:
         raw_error_matrix = evaluate.compute_raw_error_matrix(toolbox.example_inputs, model_outputs, toolbox.error_function, \
             toolbox.f, debug, toolbox.penalise_non_reacting_models)
@@ -382,7 +382,8 @@ def crossover_with_local_search(toolbox, parent1, parent2):
                         best = child
     t_evaluate = toolbox.t_eval - t_evaluate
     toolbox.t_cx_local_search += time.time() - t0 - t_evaluate
-    return best, make_pp_str(best)
+    pp_str = None if best is None else make_pp_str(best) 
+    return best, pp_str
 
 
 def mutUniform(toolbox, parent, expr, pset):
@@ -412,7 +413,8 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
                 evaluate_individual(toolbox, child, pp_str, 0)
                 if is_improvement(toolbox, child, best):
                     best = child
-    return best, make_pp_str(best)
+    pp_str = None if best is None else make_pp_str(best) 
+    return best, pp_str
 
 
 def refresh_toolbox_from_population(toolbox, population, population_is_sorted):
