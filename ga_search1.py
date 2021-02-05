@@ -22,14 +22,14 @@ import dynamic_weights
 
 
 def compute_complementairity(toolbox, parent1, parent2):
-    raw_error_matrix1 = toolbox.families_list[parent1.family_index].raw_error_matrix
-    raw_error_matrix2 = toolbox.families_list[parent2.family_index].raw_error_matrix
+    raw_error_matrix1 = toolbox.families_list[parent1.fam.family_index].raw_error_matrix
+    raw_error_matrix2 = toolbox.families_list[parent2.fam.family_index].raw_error_matrix
     raw_improvement = raw_error_matrix1 - raw_error_matrix2
     complementairity = np.sum(raw_improvement[raw_improvement > 0])
-    complementairity /= parent1.raw_error
+    complementairity /= parent1.fam.raw_error
     assert complementairity >= 0
     if complementairity > 1: # fix any rounding issues: the
-        complementairity = 1 # max complementairity is that the whole parent1.raw_error is removed
+        complementairity = 1 # max complementairity is that the whole parent1.fam.raw_error is removed
     return complementairity
 
 
@@ -44,7 +44,7 @@ def select_parents(toolbox, population):
     # * p = (p_fitness(parent1) * p_fitness(parent2)) ^ alpha * p_complementair(parent1, parent2) ^ beta
     best_p = -1
     assert toolbox.best_of_n_cx > 0
-    max_raw_error = max([ind.raw_error for ind in population])
+    max_raw_error = max([ind.fam.raw_error for ind in population])
     for _ in range(toolbox.best_of_n_cx):
         # select two parents
         family1_index, family2_index = random.sample(list(toolbox.current_families_dict), 2) # sample always returns a list
@@ -52,11 +52,11 @@ def select_parents(toolbox, population):
         index1, index2 = random.randrange(0, len(family1_members)), random.randrange(0, len(family2_members))
         parent1, parent2 = family1_members[index1], family2_members[index2] # all individuals in the same family have the same error
         # sort
-        if parent1.raw_error > parent2.raw_error or (parent1.raw_error == parent2.raw_error and len(parent1) > len(parent2)):
+        if parent1.fam.raw_error > parent2.fam.raw_error or (parent1.fam.raw_error == parent2.fam.raw_error and len(parent1) > len(parent2)):
             parent1, parent2 = parent2, parent1
         # compute p        
-        p_fitness1 = (1 - parent1.raw_error/(max_raw_error*1.1))
-        p_fitness2 = (1 - parent2.raw_error/(max_raw_error*1.1))
+        p_fitness1 = (1 - parent1.fam.raw_error/(max_raw_error*1.1))
+        p_fitness2 = (1 - parent2.fam.raw_error/(max_raw_error*1.1))
         assert 0 <= p_fitness1 and p_fitness1 <= 1
         assert 0 <= p_fitness2 and p_fitness2 <= 1
         p_complementair = compute_complementairity(toolbox, parent1, parent2)
@@ -74,7 +74,7 @@ def analyse_parents(toolbox, population):
     for parent1 in population:
         for parent2 in population:
             child = crossover_with_local_search(toolbox, parent1, parent2)
-            if child and child.raw_error < 77.61253 - 0.00001:
+            if child and child.fam.raw_error < 77.61253 - 0.00001:
                 escapes_count += 1
     return escapes_count
 
@@ -89,9 +89,8 @@ def generate_offspring(toolbox, population, nchildren):
     all_escapes_count = 0   
     toolbox.keep_path = False
     only_cx = False
-    toolbox.offspring_families_dict = dict()
     if False:
-        do_special_experiment = False # math.isclose(population[0].raw_error, 77.61253, abs_tol=0.00001)
+        do_special_experiment = False # math.isclose(population[0].fam.raw_error, 77.61253, abs_tol=0.00001)
         if do_special_experiment:
             only_cx = True
             all_escapes_count = analyse_parents(toolbox, population)
@@ -106,9 +105,9 @@ def generate_offspring(toolbox, population, nchildren):
             toolbox.t_select_parents += time.time() - t0_select_parents
             t0_cx = time.time()
             if toolbox.parachute_level == 0:
-                child = cxOnePoint(toolbox, parent1, parent2)
+                child, pp_str = cxOnePoint(toolbox, parent1, parent2)
             else:
-                child = crossover_with_local_search(toolbox, parent1, parent2)
+                child, pp_str = crossover_with_local_search(toolbox, parent1, parent2)
             if child:
                 cx_count += 1
             toolbox.t_cx += time.time() - t0_cx
@@ -117,10 +116,10 @@ def generate_offspring(toolbox, population, nchildren):
             mutp_count += 1
             parent = best_of_n(population, toolbox.best_of_n_mut)
             if toolbox.parachute_level == 0:
-                child = mutUniform(toolbox, parent, expr=expr_mut, pset=toolbox.pset)
+                child, pp_str = mutUniform(toolbox, parent, expr=expr_mut, pset=toolbox.pset)
             else:
                 expr = gp.genFull(pset=toolbox.pset, min_=0, max_=2)
-                child = replace_subtree_at_best_location(toolbox, parent, expr)
+                child, pp_str = replace_subtree_at_best_location(toolbox, parent, expr)
             if child:
                 mut_count += 1
             toolbox.t_mut += time.time() - t0_mut
@@ -131,25 +130,12 @@ def generate_offspring(toolbox, population, nchildren):
             else:
                 break
         retry_count = 0
-        assert child.raw_error is not None
-        assert child.pp_str == make_pp_str(child)
-        toolbox.ind_str_set.add(child.pp_str)
-        if child.family_index not in toolbox.offspring_families_dict:
-            toolbox.offspring_families_dict[child.family_index] = []
-        toolbox.offspring_families_dict[child.family_index].append(child)
+        assert child.fam is not None
+        assert pp_str == make_pp_str(child)
+        toolbox.ind_str_set.add(pp_str)
         offspring.append(child)
         if False:
-            if do_special_experiment and child.raw_error < 77.61253 - 0.00001:
-                if False:
-                    toolbox.f.write(f"child\t{child.raw_error:.3f}\tcode\t{child.pp_str}\n")
-                    for parent in child.parents:
-                        toolbox.f.write(f"parent\t{parent.raw_error:.3f}\tcode\t{parent.pp_str}\n")
-                if False:
-                    toolbox.f.write(f"{child.raw_error:.3f}\t")
-                    child.parents.sort(key=lambda item: item.raw_error)
-                    for parent in child.parents:
-                        toolbox.f.write(f"\t{parent.raw_error:.3f}")
-                    toolbox.f.write(f"\n")
+            if do_special_experiment and child.fam.raw_error < 77.61253 - 0.00001:
                 offspring_escapes_count += 1
     if False:
         if do_special_experiment:
@@ -162,7 +148,7 @@ def generate_offspring(toolbox, population, nchildren):
 
 def track_stuck(toolbox, population):
     # track if we are stuck
-    if population[0].family_index in toolbox.prev_family_index:                        
+    if population[0].fam.family_index in toolbox.prev_family_index:                        
         toolbox.stuck_count += 1
         if toolbox.max_observed_stuck_count < toolbox.stuck_count:
             toolbox.max_observed_stuck_count = toolbox.stuck_count
@@ -179,14 +165,12 @@ def track_stuck(toolbox, population):
                 toolbox.prev_family_index = set()
                 toolbox.stuck_count = 0
                 toolbox.count_opschudding += 1
-                for ind in population:
-                    ind.parents = []
-                refresh_toolbox_from_population(toolbox, population)
+                refresh_toolbox_from_population(toolbox, population, True)
     else:
         toolbox.stuck_count = 0
         toolbox.count_opschudding = 0
         # verandering t.o.v. vorige iteratie
-    toolbox.prev_family_index.add(population[0].family_index)
+    toolbox.prev_family_index.add(population[0].fam.family_index)
 
 
 def log_info(toolbox, population):
@@ -195,11 +179,12 @@ def log_info(toolbox, population):
     done = set()
     msg = ""
     for ind in population:
-        if ind.family_index not in done:
-            i = ind.family_index
-            done.add(ind.family_index)
+        i = ind.fam.family_index
+        fam = ind.fam
+        if i not in done:
+            done.add(i)
             size = len(toolbox.current_families_dict[i])
-            msg += f" ({i},{toolbox.families_list[i].normalised_error:.0f},{toolbox.families_list[i].raw_error:.0f},{size})"
+            msg += f" ({i},{fam.normalised_error:.0f},{fam.raw_error:.0f},{size})"
     if len(msg) > 150:
         msg = msg[:(150-3)] + "..."
     # toolbox.f.write(f" (idx,dw,raw,#)")
@@ -207,7 +192,7 @@ def log_info(toolbox, population):
     toolbox.f.write(f"\n")
     if False:
         toolbox.f.write(f"best_ind.raw_error_matrix\n")
-        i = population[0].family_index
+        i = population[0].fam.family_index
         dynamic_weights.dump_matrix(toolbox.f, toolbox.families_list[i].raw_error_matrix)
         dynamic_weights.dump_dw_matrix(toolbox.f)
         for i in [38, 671]:

@@ -78,13 +78,13 @@ class Toolbox(object):
         random.seed(self.seed)
 
     def sort_ind_key(self, ind):
-        result = ind.normalised_error
+        result = ind.fam.normalised_error
         if self.optimise_solution_length and result == 0.0 and len(ind) > len(self.solution_deap_ind):
             result = 0.001 + (len(ind) - len(self.solution_deap_ind)) / 100000.0
         return result
 
     def is_solution(self, ind):
-        result = ind.raw_error
+        result = ind.fam.raw_error
         if self.optimise_solution_length and result == 0.0 and len(ind) > len(self.solution_deap_ind):
             return False
         return result == 0.0

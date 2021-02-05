@@ -45,8 +45,8 @@ def test_against_python_interpreter(toolbox, cpp_model_outputs, ind):
 
 
 class Family:
-    def __init__(self, model_outputs, raw_error_matrix):
-        self.model_outputs = model_outputs
+    def __init__(self, family_index, raw_error_matrix):
+        self.family_index = family_index
         self.raw_error_matrix = raw_error_matrix
         self.raw_error = evaluate.compute_raw_error(self.raw_error_matrix)
         self.update_normalised_error()
@@ -77,41 +77,56 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
         test_against_python_interpreter(toolbox, model_outputs, ind)
 
     t0 = time.time()
-    model_outputs_tuple = recursive_tuple(model_outputs)
-    if model_outputs_tuple in toolbox.families_dict:
-        ind.family_index = toolbox.families_dict[model_outputs_tuple]
-    else:
+    family_key_is_error_matrix = False
+    if family_key_is_error_matrix:
         raw_error_matrix = evaluate.compute_raw_error_matrix(toolbox.example_inputs, model_outputs, toolbox.error_function, \
             toolbox.f, debug, toolbox.penalise_non_reacting_models)
-        ind.family_index = len(toolbox.families_list)
-        toolbox.families_dict[model_outputs_tuple] = ind.family_index
-        toolbox.families_list.append(Family(model_outputs, raw_error_matrix))
+        raw_error_matrix_tuple = tuple(raw_error_matrix.flatten())
+        if raw_error_matrix_tuple in toolbox.families_dict:
+            family_index = toolbox.families_dict[raw_error_matrix_tuple]
+            ind.fam = toolbox.families_list[family_index]
+        else:
+            family_index = len(toolbox.families_list)
+            toolbox.families_dict[raw_error_matrix_tuple] = family_index
+            ind.fam = Family(family_index, raw_error_matrix)
+            toolbox.families_list.append(ind.fam)
+    else:
+        model_outputs_tuple = recursive_tuple(model_outputs)
+        if model_outputs_tuple in toolbox.families_dict:
+            family_index = toolbox.families_dict[model_outputs_tuple]
+            ind.fam = toolbox.families_list[family_index]
+        else:
+            raw_error_matrix = evaluate.compute_raw_error_matrix(toolbox.example_inputs, model_outputs, toolbox.error_function, \
+                toolbox.f, debug, toolbox.penalise_non_reacting_models)
+            family_index = len(toolbox.families_list)
+            toolbox.families_dict[model_outputs_tuple] = family_index
+            ind.fam = Family(family_index, raw_error_matrix)
+            toolbox.families_list.append(ind.fam)
     toolbox.t_error += time.time() - t0
 
 
-def evaluate_individual(toolbox, individual, debug=0):
+def evaluate_individual(toolbox, individual, pp_str, debug):
+    assert type(pp_str) == type("") and type(debug) == type(1)
     if time.time() >= toolbox.t0 + toolbox.max_seconds:
         raise RuntimeWarning("out of time")
     t0 = time.time()
-    pp_str = individual.pp_str
     assert pp_str == make_pp_str(individual)
     toolbox.eval_lookup_count += 1
     if pp_str in toolbox.pp_str_to_family_index_dict:
-        individual.family_index = toolbox.pp_str_to_family_index_dict[pp_str]
+        family_index = toolbox.pp_str_to_family_index_dict[pp_str]
+        individual.fam = toolbox.families_list[family_index]
     else:
         evaluate_individual_impl(toolbox, individual, debug)
-        toolbox.pp_str_to_family_index_dict[pp_str] = individual.family_index
-    family = toolbox.families_list[individual.family_index]
+        toolbox.pp_str_to_family_index_dict[pp_str] = individual.fam.family_index
+    family = individual.fam
     assert type(family.raw_error) == type(0.0)
-    individual.raw_error = family.raw_error
     assert type(family.normalised_error) == np.float64
-    individual.normalised_error = family.normalised_error
     toolbox.t_eval += time.time() - t0
 
 
 def best_of_n(population, n):
     inds = random.sample(population, n) # sample always returns a list
-    ind = min(inds, key=lambda ind: ind.normalised_error)
+    ind = min(inds, key=lambda ind: ind.fam.normalised_error)
     return ind
 
 
@@ -119,7 +134,7 @@ def best_of_n(population, n):
 def log_population(toolbox, population, label):
     toolbox.f.write(f"write_population {label}\n")
     for i, ind in enumerate(population):
-        toolbox.f.write(f"    ind {i} {ind.raw_error:.3f} {len(ind)} {ind(ind)}\n")
+        toolbox.f.write(f"    ind {i} {ind.fam.raw_error:.3f} {len(ind)} {ind(ind)}\n")
     toolbox.f.write("\n")
     toolbox.f.flush()
 
@@ -130,7 +145,7 @@ def write_population(file_name, population, functions):
         for ind in population:
             code = interpret.compile_deap(str(ind), functions)
             code_str = interpret.convert_code_to_str(code)
-            f.write(f"    {code_str} # {ind.raw_error:.3f}\n")
+            f.write(f"    {code_str} # {ind.fam.raw_error:.3f}\n")
         f.write(")\n")
 
 
@@ -140,27 +155,22 @@ def write_final_population(toolbox, population):
         for ind in population:
             code = interpret.compile_deap(str(ind), toolbox.functions)
             code_str = interpret.convert_code_to_str(code)
-            f.write(f"    {code_str} # {ind.raw_error:.3f}\n")
+            f.write(f"    {code_str} # {ind.fam.raw_error:.3f}\n")
         f.write(")\n")
 
 
 def write_path(toolbox, ind, indent=0):
     #indent_str = "\t" * indent
-    # operator_str = ["", "mutatie", "crossover"][len(ind.parents)]
+    # operator_str = ["", "mutatie", "crossover"]
     code = interpret.compile_deap(str(ind), toolbox.functions)
     code_str = interpret.convert_code_to_str(code)
     if False:
         if indent:
-            toolbox.f.write(f"parent\t{ind.raw_error:.3f}\tcode\t{code_str}\n")
+            toolbox.f.write(f"parent\t{ind.fam.raw_error:.3f}\tcode\t{code_str}\n")
         else:
-            toolbox.f.write(f"child\t{ind.raw_error:.3f}\tcode\t{code_str}\n")
+            toolbox.f.write(f"child\t{ind.fam.raw_error:.3f}\tcode\t{code_str}\n")
     else:
-        toolbox.f.write(f"{code_str} # {ind.raw_error:.3f} len {len(ind)}\n")
-
-    # evaluate_individual_impl(toolbox, ind, toolbox.verbose)
-    if indent == 0:
-        for parent in ind.parents:
-            write_path(toolbox, parent, indent+1)
+        toolbox.f.write(f"{code_str} # {ind.fam.raw_error:.3f} len {len(ind)}\n")
 
 
 def generate_initial_population_impl(toolbox):
@@ -169,17 +179,16 @@ def generate_initial_population_impl(toolbox):
     retry_count = 0
     while len(population) < toolbox.pop_size[0]:
         ind = gp.PrimitiveTree(gp.genHalfAndHalf(pset=toolbox.pset, min_=2, max_=4))
-        ind.pp_str = make_pp_str(ind)
-        if ind.pp_str in toolbox.ind_str_set or len(ind) > toolbox.max_individual_size:
+        pp_str = make_pp_str(ind)
+        if pp_str in toolbox.ind_str_set or len(ind) > toolbox.max_individual_size:
             if retry_count < toolbox.child_creation_retries:
                 retry_count += 1
                 continue
             else:
                 break
         retry_count = 0
-        toolbox.ind_str_set.add(ind.pp_str)
-        ind.parents = []
-        evaluate_individual(toolbox, ind)
+        toolbox.ind_str_set.add(pp_str)
+        evaluate_individual(toolbox, ind, pp_str, 0)
         population.append(ind)
     return population
 
@@ -232,14 +241,13 @@ def load_initial_population_impl(toolbox, old_pops):
                     deap_str = interpret.convert_code_to_deap_str(code, toolbox)
                     ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)                    
                     assert deap_str == str(ind)
-                    ind.pp_str = make_pp_str(ind)
+                    pp_str = make_pp_str(ind)
                     assert len(ind) == deap_len_of_code(code)
-                if ind.pp_str in toolbox.ind_str_set or len(ind) > toolbox.max_individual_size:
+                if pp_str in toolbox.ind_str_set or len(ind) > toolbox.max_individual_size:
                     count_skipped += 1
                     continue
                 toolbox.ind_str_set.add(ind.pp_str)
-                ind.parents = []
-                evaluate_individual(toolbox, ind)
+                evaluate_individual(toolbox, ind, pp_str, 0)
                 population.append(ind)
     return population
 
@@ -253,15 +261,15 @@ def analyse_population_impl(toolbox, old_pops):
             deap_str = interpret.convert_code_to_deap_str(code, toolbox)
             ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)
             assert deap_str == str(ind)
-            ind.pp_str = make_pp_str(ind)
+            pp_str = make_pp_str(ind)
             assert len(ind) == deap_len_of_code(code)
-            ind.parents = []
-            evaluate_individual(toolbox, ind) # required to set ind.family_index
-            if ind.family_index not in families:
-                families[ind.family_index] = [ind.family_index, ind.pp_str, 0]
-            families[ind.family_index][2] += 1
-            if len(families[ind.family_index][1]) > len(ind.pp_str):
-                families[ind.family_index][1] = ind.pp_str
+            evaluate_individual(toolbox, ind, pp_str, 0) # required to set ind.fam
+            family_index = ind.fam.family_index
+            if family_index not in families:
+                families[family_index] = [family_index, pp_str, 0]
+            families[family_index][2] += 1
+            if len(families[family_index][1]) > len(pp_str):
+                families[family_index][1] = pp_str
     del ind, deap_str
     filename = f"{toolbox.output_folder}/analysis.txt"
     print(f"anaysis of {count} individuals in {len(old_pops)} pops : result in {filename}")
@@ -273,13 +281,12 @@ def analyse_population_impl(toolbox, old_pops):
         sum_raw_error_vector = np.zeros_like(toolbox.families_list[0].raw_error_matrix[-1])
         for family_index, _, count in data:
             raw_error = toolbox.families_list[family_index].raw_error
-            outputs = str(toolbox.families_list[family_index].model_outputs[-1])
             raw_error_vector = toolbox.families_list[family_index].raw_error_matrix[-1]
             sum_raw_error_vector += np.array(raw_error_vector)
             raw_error_vector = " ".join([f"{v:5.3f}" for v in raw_error_vector])
             sum_count += count
             nor_error = toolbox.families_list[family_index].normalised_error
-            f.write(f"{raw_error:8.3f} {nor_error:8.3f} {family_index:6d} {count:5d} {outputs[:48]:48}")
+            f.write(f"{raw_error:8.3f} {nor_error:8.3f} {family_index:6d} {count:5d} ")
             f.write(f" {raw_error_vector[:48]:48}")
             f.write(f"\n")
         sum_raw_error_vector = " ".join([f"{v/len(data):5.3f}" for v in sum_raw_error_vector])
@@ -316,51 +323,33 @@ def generate_initial_population(toolbox, old_pops=None):
 
 
 def copy_individual(toolbox, ind):
-    #consistency_check_ind(toolbox, ind)
     copy_ind = gp.PrimitiveTree(list(ind[:]))
-    copy_ind.pp_str = ind.pp_str
-    copy_ind.parents = [parent for parent in ind.parents]
-    copy_ind.raw_error = ind.raw_error
-    copy_ind.normalised_error = ind.normalised_error
-    copy_ind.family_index = ind.family_index
-    #consistency_check_ind(toolbox, copy_ind)
+    copy_ind.fam = ind.fam
     return copy_ind
 
 
 def cxOnePoint(toolbox, parent1, parent2):
     if len(parent1) < 2 or len(parent2) < 2:
         # No crossover on single node tree
-        return None
+        return None, None
     child = copy_individual(toolbox, parent1)
-    child.parents = [parent1, parent2] if toolbox.keep_path else []
     index1 = random.randrange(0, len(parent1))
     index2 = random.randrange(0, len(parent2))
     slice1 = parent1.searchSubtree(index1)
     slice2 = parent2.searchSubtree(index2)
     child[slice1] = parent2[slice2]
-    child.pp_str = make_pp_str(child)
-    if child.pp_str in toolbox.ind_str_set or len(child) > toolbox.max_individual_size:
-        return None
-    evaluate_individual(toolbox, child)
-    return child
-
-
-def get_family_size(toolbox, ind):
-    n = 0
-    c = toolbox.current_families_dict
-    if ind.family_index in c:
-        n += len(c[ind.family_index])
-    o = toolbox.offspring_families_dict
-    if ind.family_index in o:
-        n += len(o[ind.family_index])
-    return n
+    pp_str = make_pp_str(child)
+    if pp_str in toolbox.ind_str_set or len(child) > toolbox.max_individual_size:
+        return None, None
+    evaluate_individual(toolbox, child, pp_str, 0)
+    return child, pp_str
 
 
 def is_improvement(toolbox, ind, best):
     if best is None:
         return True
-    if best.normalised_error != ind.normalised_error:
-        return best.normalised_error > ind.normalised_error
+    if best.fam.normalised_error != ind.fam.normalised_error:
+        return best.fam.normalised_error > ind.fam.normalised_error
     # now they have equal .normalised_error
     return len(best) > len(ind)
 
@@ -368,10 +357,10 @@ def is_improvement(toolbox, ind, best):
 def crossover_with_local_search(toolbox, parent1, parent2):
     if len(parent1) < 2 or len(parent2) < 2:
         # No crossover on single node tree
-        return None
+        return None, None
     t0 = time.time()
     t_evaluate = toolbox.t_eval
-    if parent1.raw_error > parent2.raw_error or (parent1.raw_error == parent2.raw_error and len(parent1) > len(parent2)):
+    if parent1.fam.raw_error > parent2.fam.raw_error or (parent1.fam.raw_error == parent2.fam.raw_error and len(parent1) > len(parent2)):
         parent1, parent2 = parent2, parent1
     indexes1 = [i for i in range(len(parent1))]
     indexes2 = [i for i in range(len(parent2))]
@@ -383,32 +372,30 @@ def crossover_with_local_search(toolbox, parent1, parent2):
         expr2 = parent2[slice2]
         for index1 in indexes1:
             child = copy_individual(toolbox, parent1)
-            child.parents = [parent1, parent2] if toolbox.keep_path else []
             slice1 = child.searchSubtree(index1)
             child[slice1] = expr2
             if len(child) <= toolbox.max_individual_size:
-                child.pp_str = make_pp_str(child)
-                if child.pp_str not in toolbox.ind_str_set:
-                    evaluate_individual(toolbox, child)
+                pp_str = make_pp_str(child)
+                if pp_str not in toolbox.ind_str_set:
+                    evaluate_individual(toolbox, child, pp_str, 0)
                     if is_improvement(toolbox, child, best):
                         best = child
     t_evaluate = toolbox.t_eval - t_evaluate
     toolbox.t_cx_local_search += time.time() - t0 - t_evaluate
-    return best
+    return best, make_pp_str(best)
 
 
 def mutUniform(toolbox, parent, expr, pset):
     child = copy_individual(toolbox, parent)
-    child.parents = [parent,] if toolbox.keep_path else []
     index = random.randrange(0, len(child))
     slice_ = child.searchSubtree(index)
     type_ = child[index].ret
     child[slice_] = expr(pset=pset, type_=type_)
-    child.pp_str = make_pp_str(child)
-    if child.pp_str in toolbox.ind_str_set or len(child) > toolbox.max_individual_size:
-        return None
-    evaluate_individual(toolbox, child)
-    return child
+    pp_str = make_pp_str(child)
+    if pp_str in toolbox.ind_str_set or len(child) > toolbox.max_individual_size:
+        return None, None
+    evaluate_individual(toolbox, child, pp_str, 0)
+    return child, pp_str
 
 
 def replace_subtree_at_best_location(toolbox, parent, expr):
@@ -417,16 +404,15 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
     best = None
     for index in indexes:
         child = copy_individual(toolbox, parent)
-        child.parents = [parent,] if toolbox.keep_path else []
         slice1 = child.searchSubtree(index)
         child[slice1] = expr
         if len(child) <= toolbox.max_individual_size:
-            child.pp_str = make_pp_str(child)
-            if child.pp_str not in toolbox.ind_str_set:
-                evaluate_individual(toolbox, child)
+            pp_str = make_pp_str(child)
+            if pp_str not in toolbox.ind_str_set:
+                evaluate_individual(toolbox, child, pp_str, 0)
                 if is_improvement(toolbox, child, best):
                     best = child
-    return best
+    return best, make_pp_str(best)
 
 
 def refresh_toolbox_from_population(toolbox, population, population_is_sorted):
@@ -434,13 +420,13 @@ def refresh_toolbox_from_population(toolbox, population, population_is_sorted):
     if not population_is_sorted:
         # population.sort(key=toolbox.sort_ind_key) # influences reproducability with older runs
         pass
-    toolbox.ind_str_set = {ind.pp_str for ind in population} # refresh set after deletion of non-fit individuals
+    toolbox.ind_str_set = {make_pp_str(ind) for ind in population} # refresh set after deletion of non-fit individuals
     toolbox.current_families_dict = dict()
     for ind in population:
-        if ind.family_index not in toolbox.current_families_dict:
-            toolbox.current_families_dict[ind.family_index] = []
-        toolbox.current_families_dict[ind.family_index].append(ind)
-    toolbox.offspring_families_dict = dict()
+        family_index = ind.fam.family_index        
+        if family_index not in toolbox.current_families_dict:
+            toolbox.current_families_dict[family_index] = []
+        toolbox.current_families_dict[family_index].append(ind)
     if toolbox.dynamic_weights:
         raw_error_matrix_list = []
         if False:
@@ -450,17 +436,13 @@ def refresh_toolbox_from_population(toolbox, population, population_is_sorted):
         else:
             for family in toolbox.families_list:
                 raw_error_matrix_list.append(family.raw_error_matrix)
-        best_raw_error_matrix = toolbox.families_list[population[0].family_index].raw_error_matrix
+        best_raw_error_matrix = population[0].fam.raw_error_matrix
         dynamic_weights.update_dynamic_weights(toolbox.prev_best_raw_error_matrix, best_raw_error_matrix, \
             raw_error_matrix_list, toolbox.dynamic_weights_adaptation_speed)
         dynamic_weights.log_info(toolbox.f)
         toolbox.prev_best_raw_error_matrix = best_raw_error_matrix
         for family in toolbox.families_list:
             family.update_normalised_error()
-        for ind in population:
-            family = toolbox.families_list[ind.family_index]
-            ind.raw_error = family.raw_error
-            ind.normalised_error = family.normalised_error
     # always sort!
     population.sort(key=toolbox.sort_ind_key)
     toolbox.t_refresh += time.time() - t0
@@ -468,18 +450,16 @@ def refresh_toolbox_from_population(toolbox, population, population_is_sorted):
 
 def consistency_check_ind(toolbox, ind):
     if ind is not None:
+        assert hasattr(ind, "fam")
+        assert ind.fam is not None
+
         assert not hasattr(ind, "deap_str")
-        assert hasattr(ind, "pp_str")
-        assert hasattr(ind, "parents")
+        assert not hasattr(ind, "pp_str")
+        assert not hasattr(ind, "parents")
         assert not hasattr(ind, "eval")
-        assert hasattr(ind, "raw_error") # voor weergave aan mens
-        assert hasattr(ind, "normalised_error") # voor vergelijken in local search en voor sorteren populatie
-        assert hasattr(ind, "family_index")
-        assert ind.pp_str == make_pp_str(ind)
-        assert ind.raw_error is not None
-        assert ind.normalised_error is not None
-        assert math.isclose(ind.raw_error, toolbox.families_list[ind.family_index].raw_error)
-        assert math.isclose(ind.normalised_error, toolbox.families_list[ind.family_index].normalised_error)
+        assert not hasattr(ind, "raw_error") # voor weergave aan mens
+        assert not hasattr(ind, "normalised_error") # voor vergelijken in local search en voor sorteren populatie
+        assert not hasattr(ind, "family_index")
 
 
 def consistency_check(toolbox, inds):
