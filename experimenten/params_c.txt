@@ -4,7 +4,7 @@
     "best_of_n_mut": 2,
     "do_not_overwrite_logfile": false,
     "dynamic_weights": true,
-    "dynamic_weights_adaptation_speed": 1.1,
+    "dynamic_weights_adaptation_speed": 1.005,
     "extensive_statistics": true,
     "functions_file": "experimenten/functions_leeg.txt",
     "hops": 1,

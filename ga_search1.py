@@ -205,10 +205,10 @@ def log_info(toolbox, population):
     # toolbox.f.write(f" (idx,dw,raw,#)")
     toolbox.f.write(msg)
     toolbox.f.write(f"\n")
-    toolbox.f.write(f"best_ind.raw_error_matrix\n")
-    i = population[0].family_index
-    dynamic_weights.dump_matrix(toolbox.f, toolbox.families_list[i].raw_error_matrix)
     if False:
+        toolbox.f.write(f"best_ind.raw_error_matrix\n")
+        i = population[0].family_index
+        dynamic_weights.dump_matrix(toolbox.f, toolbox.families_list[i].raw_error_matrix)
         dynamic_weights.dump_dw_matrix(toolbox.f)
         for i in [38, 671]:
             if i in done:

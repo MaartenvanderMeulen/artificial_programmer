@@ -30,7 +30,7 @@ def compute_normalised_error(matrix, alpha):
     return np.sum((dynamic_weights_matrix * matrix) ** alpha)
 
 
-def update_remaining_iterations(prev_best_matrix, best_matrix, all_matrices):
+def update_remaining_iterations_v1(prev_best_matrix, best_matrix, all_matrices):
     global estimated_remaining_iterations_matrix
     estimated_remaining_iterations_matrix += 1
     if prev_best_matrix is not None:
@@ -50,6 +50,21 @@ def update_remaining_iterations(prev_best_matrix, best_matrix, all_matrices):
                         if estimated_remaining_iterations_matrix[i, j] > iters:
                             estimated_remaining_iterations_matrix[i, j] = iters
             estimated_remaining_iterations_matrix[matrix == 0] = 1
+    estimated_remaining_iterations_matrix[best_matrix == 0] = 0
+
+
+def update_remaining_iterations(prev_best_matrix, best_matrix, all_matrices):
+    global estimated_remaining_iterations_matrix
+    estimated_remaining_iterations_matrix += 1
+    if prev_best_matrix is not None:
+        for i in range(estimated_remaining_iterations_matrix.shape[0]):
+            for j in range(estimated_remaining_iterations_matrix.shape[1]):
+                if prev_best_matrix[i, j] > best_matrix[i, j]:
+                    iters = best_matrix[i, j] / (prev_best_matrix[i, j] - best_matrix[i, j])
+                    estimated_remaining_iterations_matrix[i, j] = iters
+                elif prev_best_matrix[i, j] < best_matrix[i, j]:
+                    iters = best_matrix[i, j] / (best_matrix[i, j] - prev_best_matrix[i, j])
+                    estimated_remaining_iterations_matrix[i, j] = iters
     estimated_remaining_iterations_matrix[best_matrix == 0] = 0
 
 
@@ -87,7 +102,7 @@ def adjust_dynamic_weights(adaptation_speed):
     components.sort(key=lambda item: item[0] + 1/(1000*item[3]))
     n = (estimated_remaining_iterations_matrix.shape[0] * estimated_remaining_iterations_matrix.shape[1])
     assert n == len(components)
-    m = dynamic_weights_matrix.shape[1]
+    m = 2 # dynamic_weights_matrix.shape[1]
     for iters, i, j, _ in components[:n*1//m]:
         dynamic_weights_matrix[i, j] /= beta
     for iters, i, j, _ in components[n*(m-1)//m:]:

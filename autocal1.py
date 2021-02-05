@@ -148,12 +148,12 @@ if __name__ == "__main__":
         for value in [5, 10, 20, 50000]:
             context.compute_score(param, value)
     if True:
-        for n_runs in [3*31, 3*3*31, ]:
+        for n_runs in [3*31, ]:
             print("Start calibration with", n_runs, "runs")
             context = Context(n_runs, 1, 1.1, 0.001)
             params = context.read_params(context.best_params_file)
             param = "dynamic_weights_adaptation_speed"
-            for value in [1.1, 1.01, 1.001]:
+            for value in [1.001, 1.002, 1.005, ]:
                 context.compute_score(param, value)
         
 
