@@ -3,8 +3,8 @@
     "best_of_n_cx": 4,
     "best_of_n_mut": 2,
     "do_not_overwrite_logfile": false,
-    "dynamic_weights": true,
-    "dynamic_weights_adaptation_speed": 1.1,
+    "dynamic_weights": false,
+    "dynamic_weights_adaptation_speed": 1.0,
     "extensive_statistics": true,
     "functions_file": "experimenten/functions_leeg.txt",
     "hops": 1,
@@ -13,7 +13,7 @@
     "max_evaluations": 91000000,
     "max_individual_size": 40,
     "max_reenter_parachuting_phase": 0,
-    "max_seconds": 420,
+    "max_seconds": 540,
     "max_stuck_count": 99170,
     "nchildren": [
         4000,
@@ -53,5 +53,8 @@
     "w6": 0.1,
     "w7": 0.1,
     "w8": 0.4,
-    "weight_complementairity": 0.3
+    "family_key_is_error_matrix": false,
+    "parent_selection_weight_complementairity": 0.3,
+    "parent_selection_weight_cx_count": 0.0,
+    "parent_selection_weight_p_out_of_pop": 0.0
 }

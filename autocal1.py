@@ -147,7 +147,7 @@ if __name__ == "__main__":
         param = "stuck_count_for_opschudding"
         for value in [5, 10, 20, 50000]:
             context.compute_score(param, value)
-    if True:
+    if False:
         for n_runs in [3*31, ]:
             print("Start calibration with", n_runs, "runs")
             context = Context(n_runs, 1, 1.1, 0.001)
@@ -155,5 +155,14 @@ if __name__ == "__main__":
             param = "dynamic_weights_adaptation_speed"
             for value in [1.001, 1.002, 1.005, ]:
                 context.compute_score(param, value)
+    if True:
+        n_runs = 3*31
+        print("Start calibration with", n_runs, "runs")
+        context = Context(n_runs, 0.001, 2.0, 0.001)
+        params = context.read_params(context.best_params_file)
+        param = "parent_selection_weight_cx_count"
+        # param = "parent_selection_weight_p_out_of_pop"
+        for value in [0.1, 2.0]:
+            context.compute_score(param, value)
         
 

@@ -10,9 +10,11 @@ g++ -shared -fPIC -O2 -o cpp_interpret.so cpp_interpret.cpp
 #include <vector>
 #include <string>
 #include <map>
+#include <set>
 #include <exception>
 #include <string.h> // strncmp
 #include <cassert>
+#include <cmath> // pow
 
 using namespace std;
 
@@ -226,7 +228,7 @@ void print_code_impl2(const Item* code, int& i, int len) {
     Assert(i < len, "print_code index out of range");
     while (i < len) {
         switch (code[i]._type) {
-            case ITEM_INT : printf(" %d", code->_value); break;
+            case ITEM_INT : printf(" i%d", code[i]._value); break;
             case ITEM_FCALL : printf(" %s", g_fname[code[i]._value]); break;
             case ITEM_VAR : printf(" v%d", code[i]._value); break;
             case ITEM_LIST : printf(" L%d", code[i]._arity); break;
@@ -239,7 +241,6 @@ void print_code_impl2(const Item* code, int& i, int len) {
 
 
 void print_code(const Item* program, int i, int len) {
-    const Item* sp = program;
     print_code_impl2(program, i, len);
     printf("\n");
 }
@@ -873,6 +874,247 @@ int run_non_recursive_level1_function(
     }
     for (int i = 0; i < *n_output; ++i) {
         output_buf[i] = result[i];
+    }
+    return 0;
+}
+
+
+
+void extract_numbers_list(int actual_output_size, Item* actual_output, int& sp, vector<int>& result) {
+    Assert(sp < actual_output_size, "buffer size error in model output");
+    if (actual_output[sp]._type == ITEM_INT) {
+        result.push_back(actual_output[sp]._value);
+        sp++;
+    } else {
+        Assert(actual_output[sp]._type == ITEM_LIST, "expected a tree of integers");
+        int n = actual_output[sp]._arity;
+        sp++;
+        for (int i = 0; i < n; ++i) {
+            extract_numbers_list(actual_output_size, actual_output, sp, result);
+        }
+    }
+}
+
+
+int count_empty_sublists(int actual_output_size, Item* actual_output, int& sp) {
+    int result = 0;
+    if (actual_output[sp]._type == ITEM_INT) {
+        sp++;
+    } else {
+        Assert(actual_output[sp]._type == ITEM_LIST, "expected a tree of integers");
+        int n = actual_output[sp]._arity;
+        sp++;
+        if (n == 0) {
+            result += 1;
+        } else {
+            for (int i = 0; i < n; ++i) {
+                result += count_empty_sublists(actual_output_size, actual_output, sp);
+            }
+        }
+    }
+    return result;
+}
+
+
+int _distance_with_closest_numbers(int x, const set<int>& values) {
+    int result;
+    if (x > 1000000) {
+        x = 1000000;
+    }
+    if (values.size() > 0) {
+        result = 1000000;
+        for (auto value : values) {
+            if (value > 1000000) {
+                value = 1000000;
+            }
+            if (result > abs(x - value)) {
+               result = abs(x - value);
+               if (result == 0) {
+                   break;
+               }
+            }
+        }
+    } else {
+        result = abs(x - 0);
+    }
+    return result;
+}
+
+
+const double g_w1 = 0.3;
+const double g_w2a = 1.5;
+const double g_w2b = 1.1;
+const double g_w3 = 1.6;
+const double g_w4 = 1.5;
+const double g_w5 = 1.5;
+const double g_w6 = 0.1;
+const double g_w7 = 0.1;
+const double g_w8 = 0.4;
+
+void compute_error_vector_impl(
+    int expected_output_size, int* expected_output,
+    int actual_output_size, Item* actual_output,
+    int error_vector_size, double* error_vector, 
+    int debug
+) {
+    if (debug) {
+        printf("actual output:");
+        int sp = 0;
+        print_code(actual_output, sp, actual_output_size);
+    }
+
+
+    // error1 : type difference
+    double error = 0.0;
+    if (actual_output[0]._type != ITEM_LIST) {
+        Assert(actual_output[0]._type == ITEM_INT, "unexpected model output");
+        error = 1.0 + expected_output_size;
+        int value = actual_output[0]._value;
+        actual_output[0]._type = ITEM_LIST;
+        actual_output[0]._value = 0;
+        actual_output[0]._arity = 1;
+        Assert(actual_output_size >= 2, "actual_output_size must be at least 2, fix this");
+        actual_output[1]._type = ITEM_INT;
+        actual_output[1]._value = value;
+        actual_output[1]._arity = 0;
+    } else {
+        for (int i = 0; i < expected_output_size; ++i) {
+            int sp = 1;
+            if (i < actual_output[0]._arity) {
+                if (actual_output[sp]._type != ITEM_INT) {
+                    error += 1;
+                }
+                skip_subtree(actual_output, sp);
+            } else {
+                error += 1;
+            }
+        }
+    }
+    if (error > 0) {
+        if (debug) {
+            printf("interpreter, line %d: error %f\n", __LINE__, error);
+        }
+        error = pow(error, g_w1);
+    }
+    error_vector[0] = error;
+
+    // error2 : length difference
+    vector<int> actual_list;
+    int sp = 0;
+    extract_numbers_list(actual_output_size, actual_output, sp, actual_list);
+    Assert(sp == actual_output_size, "model output syntax error");
+    if (int(actual_list.size()) < expected_output_size) {
+        error_vector[1] = pow(double(expected_output_size - int(actual_list.size())), g_w2a);
+    } else if (actual_output[0]._arity > expected_output_size) {
+        error_vector[1] = pow(double(int(actual_list.size()) - expected_output_size), g_w2b);
+    } else {
+        error_vector[1] = 0.0;
+    }
+
+    // error3 : set getallen vergelijken
+    set<int> actual_set;
+    for (int actual : actual_list) {        
+        actual_set.insert(actual);
+    }
+    if (actual_set.size() == 0) {
+        actual_set.insert(0);
+    }
+    error = 0.0;
+    for (int i = 0; i < expected_output_size; ++i) {
+        error += pow(double(_distance_with_closest_numbers(expected_output[i], actual_set)), g_w3);
+    }
+    error_vector[2] = error;
+     
+    // error4 : set getallen vergelijken
+    set<int> expect_set;
+    for ( int i = 0; i < expected_output_size; ++i) {        
+        expect_set.insert(expected_output[i]);
+    }
+    error = 0.0;
+    for (int actual : actual_set) {
+        error += pow(double(_distance_with_closest_numbers(actual, expect_set)), g_w4);
+    }
+    error_vector[3] = error;
+     
+    // error5 : staan ze op de juiste plaats
+    error = 0.0;
+    sp = 1;
+    for (int i = 0; i < expected_output_size; ++i) {
+        if (i < actual_output[0]._arity) {
+            if (actual_output[sp]._type == ITEM_INT) {
+                error += pow(abs(actual_output[sp]._value - expected_output[i]), g_w5);
+            } else {
+                error += pow(abs(expected_output[i]), g_w5);
+            }
+            skip_subtree(actual_output, sp);
+        }
+    }
+    error_vector[4] = error;
+     
+    // error6 : staan ze op de juiste volgorde voor naar achter
+    error = 0.0;
+    int j = 0 ;
+    for (int i = 0; i < expected_output_size; ++i) {
+        while (j < int(actual_list.size()) && expected_output[i] != actual_list[j]) {
+            j += 1;
+        }
+        if (j >= int(actual_list.size())) {
+            error += 1;
+        }
+    }
+    if (error > 0) {
+        error = pow(error, g_w6);
+    }
+    error_vector[5] = error;
+
+    // error7 : staan ze op de juiste volgorde achter naar voor
+    error = 0.0;
+    j = int(actual_list.size()) - 1;
+    for (int i = expected_output_size-1; i >= 0; --i) {
+        while (j >= 0 && expected_output[i] != actual_list[j]) {
+            j -= 1;
+        }
+        if (j < 0) {
+            error += 1;
+        }
+    }
+    if (error > 0) {
+        error = pow(error, g_w7);
+    }
+    error_vector[6] = error;
+
+    // error8 : aantal nul subtrees
+    sp = 0;
+    error = count_empty_sublists(actual_output_size, actual_output, sp);
+    Assert(sp == actual_output_size, "model output syntax error");
+    if (error > 0) {
+        error = pow(error, g_w8);
+    }
+    error_vector[7] = error;
+}
+
+extern "C"
+#if defined(_MSC_VER)
+__declspec(dllexport)
+#endif
+int compute_error_vector(
+        int expected_output_size, int* expected_output,
+        int actual_output_size, Item* actual_output,
+        int error_vector_size, double* error_vector, 
+        int debug
+) {
+    if (debug) {
+        printf("C++ compute_error_vector start\n");
+    }
+    Assert(error_vector_size == 8, "Expected error buffer of size 8");
+    compute_error_vector_impl(expected_output_size, expected_output, actual_output_size, actual_output,
+        error_vector_size, error_vector, debug);
+    if (debug) {
+        printf("    output ");
+        for (int i = 0; i < error_vector_size; ++i) {
+            printf(" %.1f", error_vector[i]);
+        }
+        printf("\nC++ compute_error_vector ends\n");
     }
     return 0;
 }

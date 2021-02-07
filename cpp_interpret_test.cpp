@@ -32,7 +32,7 @@ void test1() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     }
 
@@ -41,7 +41,7 @@ void test1() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     }
 
@@ -50,7 +50,7 @@ void test1() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     }
     
@@ -59,7 +59,7 @@ void test1() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     }
           
@@ -68,7 +68,7 @@ void test1() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     }
 
@@ -77,7 +77,7 @@ void test1() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     }
     
@@ -86,7 +86,7 @@ void test1() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     }
 
@@ -95,7 +95,7 @@ void test1() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     }
     
@@ -104,7 +104,7 @@ void test1() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     }
 
@@ -113,7 +113,7 @@ void test1() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     }
     
@@ -122,7 +122,7 @@ void test1() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     }
 
@@ -131,7 +131,7 @@ void test1() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     }
 
@@ -141,7 +141,7 @@ void test1() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     }
     a = 3; b = 17; c = 4; expected = a * b + c;
@@ -149,7 +149,7 @@ void test1() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     }
 
@@ -159,7 +159,7 @@ void test1() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     }
 
@@ -187,7 +187,7 @@ void test2() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
 			printf("%d: expected %d instead of ", __LINE__, expected);
-			print_code(result);
+			print_vcode(result);
         err_count += 1;
     }
     
@@ -196,7 +196,7 @@ void test2() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
 		printf("%d: expected %d instead of ", __LINE__, expected);
-		print_code(result);
+		print_vcode(result);
         err_count += 1;
     }
 
@@ -205,7 +205,7 @@ void test2() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
 		printf("%d: expected %d instead of ", __LINE__, expected);
-		print_code(result);
+		print_vcode(result);
         err_count += 1;
     }
     
@@ -214,7 +214,7 @@ void test2() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
 		printf("%d: expected %d instead of ", __LINE__, expected);
-		print_code(result);
+		print_vcode(result);
         err_count += 1;
     }
 
@@ -223,7 +223,7 @@ void test2() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
 		printf("%d: expected %d instead of ", __LINE__, expected);
-		print_code(result);
+		print_vcode(result);
         err_count += 1;
     }
 
@@ -232,7 +232,7 @@ void test2() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
 		printf("%d: expected %d instead of ", __LINE__, expected);
-		print_code(result);
+		print_vcode(result);
         err_count += 1;
     }
 
@@ -242,7 +242,7 @@ void test2() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
 		printf("%d: expected %d instead of ", __LINE__, expected);
-		print_code(result);
+		print_vcode(result);
         err_count += 1;
     }
 
@@ -251,7 +251,7 @@ void test2() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
 		printf("%d: expected %d instead of ", __LINE__, expected);
-		print_code(result);
+		print_vcode(result);
         err_count += 1;
     }
 
@@ -260,7 +260,7 @@ void test2() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
 		printf("%d: expected %d instead of ", __LINE__, expected);
-		print_code(result);
+		print_vcode(result);
         err_count += 1;
     }
 
@@ -269,7 +269,7 @@ void test2() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
 		printf("%d: expected %d instead of ", __LINE__, expected);
-		print_code(result);
+		print_vcode(result);
         err_count += 1;
     }
 
@@ -296,7 +296,7 @@ void test3a() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
 		printf("%d: expected %d instead of ", __LINE__, expected);
-		print_code(result);
+		print_vcode(result);
         err_count += 1;
     }
 
@@ -307,7 +307,7 @@ void test3a() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
 		printf("%d: expected %d instead of ", __LINE__, expected);
-		print_code(result);
+		print_vcode(result);
         err_count += 1;
     }
     
@@ -319,7 +319,7 @@ void test3a() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
 		printf("%d: expected %d instead of ", __LINE__, expected);
-		print_code(result);
+		print_vcode(result);
         err_count += 1;
     }
     
@@ -331,7 +331,7 @@ void test3a() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
 		printf("%d: expected %d instead of ", __LINE__, expected);
-		print_code(result);
+		print_vcode(result);
         err_count += 1;
     }
     
@@ -343,8 +343,8 @@ void test3a() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
 		printf("%d: expected %d instead of ", __LINE__, expected);
-		print_code(result);
-        print_code(result);
+		print_vcode(result);
+        print_vcode(result);
         err_count += 1;
     }
     
@@ -373,7 +373,7 @@ void test3b() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() == 0 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     }
 
@@ -385,7 +385,7 @@ void test3b() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     }
 
@@ -399,7 +399,7 @@ void test3b() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     }
     
@@ -414,7 +414,7 @@ void test3b() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     }
 
@@ -425,7 +425,7 @@ void test3b() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     }
 
@@ -441,7 +441,7 @@ void test3b() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     }
 
@@ -473,7 +473,7 @@ void test4a() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     } else if (debug) {
         printf("%d ok\n", __LINE__);
@@ -493,7 +493,7 @@ void test4a() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     } else if (debug) {
         printf("%d ok\n", __LINE__);
@@ -528,7 +528,7 @@ void test4b() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     } else if (debug) {
         printf("%d ok\n", __LINE__);
@@ -555,7 +555,7 @@ void test4b() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     } else if (debug) {
         printf("%d ok\n", __LINE__);
@@ -588,7 +588,7 @@ void test5() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     } else if (debug) {
         printf("%d ok\n", __LINE__);
@@ -605,7 +605,7 @@ void test5() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     } else if (debug) {
         printf("%d ok\n", __LINE__);
@@ -621,7 +621,7 @@ void test5() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     } else if (debug) {
         printf("%d ok\n", __LINE__);
@@ -640,7 +640,7 @@ void test5() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     } else if (debug) {
         printf("%d ok\n", __LINE__);
@@ -659,7 +659,7 @@ void test5() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     } else if (debug) {
         printf("%d ok\n", __LINE__);
@@ -677,7 +677,7 @@ void test5() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
         printf("%d: expected %d instead of ", __LINE__, expected);
-        print_code(result);
+        print_vcode(result);
         err_count += 1;
     } else if (debug) {
         printf("%d ok\n", __LINE__);
@@ -706,7 +706,7 @@ void test6() {
         result = run(&program[0], int(program.size()), variables, functions, debug);        
         if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
 			printf("%d: expected %d instead of ", __LINE__, expected);
-			print_code(result);
+			print_vcode(result);
             err_count += 1;
         }
     }
@@ -717,7 +717,7 @@ void test6() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
 		printf("%d: expected %d instead of ", __LINE__, expected);
-		print_code(result);
+		print_vcode(result);
         err_count += 1;
     }
     
@@ -729,7 +729,7 @@ void test6() {
         result = run(&program[0], int(program.size()), variables, functions, debug);        
         if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
 			printf("%d: expected %d instead of ", __LINE__, expected);
-			print_code(result);
+			print_vcode(result);
             err_count += 1;
         }
     }
@@ -760,7 +760,7 @@ void test7() {
     result = run(&program[0], int(program.size()), variables, functions, debug);        
     if (result.size() != 1 || result[0]._type != ITEM_INT || result[0]._value != expected) {
 		printf("%d: expected %d instead of ", __LINE__, expected);
-		print_code(result);
+		print_vcode(result);
         err_count += 1;
     }
     
@@ -768,17 +768,74 @@ void test7() {
 }
 
 
+void check_error(const vector<double>& error, const vector<double>& expected_error, int line, int& err_count) {
+    Assert(error.size() == expected_error.size(), "error.size() == expected_error.size()");
+    for (int i = 0; i < int(expected_error.size()); ++i) {
+        if (fabs(error[i] - expected_error[i]) > 0.001) {
+    		printf("test line %d, error component %d : expected %f instead of %f\n", line, i, expected_error[i], error[i]);
+            err_count += 1;
+        }
+    }
+}
+
+
+// error1
+void test_e1() {
+    int err_count = 0;    
+    vector<int> expect = {84, 85};
+    vector<Item> actual;
+    vector<double> error; error.resize(8);
+    vector<double> expected_error; error.resize(8);
+
+    //printf("test e1 line %d\n", __LINE__);
+    actual = {{ITEM_LIST, 0, 2}, {ITEM_INT, 84, 0}, {ITEM_INT, 85, 0}};
+    expected_error = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    compute_error_vector(int(expect.size()), &expect[0], int(actual.size()), &actual[0], int(error.size()), &error[0], 0);
+    check_error(error, expected_error, __LINE__, err_count);
+    
+    //printf("test e1 line %d\n", __LINE__);
+    actual = {{ITEM_LIST, 0, 1}, {ITEM_INT, 84, 0}, };
+    expected_error = {1.0, 1.0, 1.0, 0.0, 0.0, 1.0, pow(2.0,0.1), 0.0};
+    compute_error_vector(int(expect.size()), &expect[0], int(actual.size()), &actual[0], int(error.size()), &error[0], 0);
+    check_error(error, expected_error, __LINE__, err_count);
+    
+    //printf("test e1 line %d\n", __LINE__);
+    actual = {{ITEM_INT, 84, 0}, {ITEM_INT, 85, 0}};
+    expected_error = {pow(3.0,0.3), 1.0, 1.0, 0.0, 0.0, 1.0, pow(2.0,0.1), 0.0};
+    compute_error_vector(int(expect.size()), &expect[0], int(actual.size()), &actual[0], int(error.size()), &error[0], 0);
+    check_error(error, expected_error, __LINE__, err_count);
+    
+    //printf("test e1 line %d\n", __LINE__);
+    actual = {{ITEM_LIST, 0, 4}, {ITEM_INT, 84, 0}, {ITEM_INT, 85, 0}, {ITEM_INT, 86, 0}, {ITEM_INT, 87, 0}};
+    expected_error = {0.0, pow(2.0, 1.1), 0.0, pow(1.0,1.5)+pow(2.0,1.5), 0.0, 0.0, 0.0, 0.0};
+    compute_error_vector(int(expect.size()), &expect[0], int(actual.size()), &actual[0], int(error.size()), &error[0], 0);
+    check_error(error, expected_error, __LINE__, err_count);
+    
+    //printf("test e1 line %d\n", __LINE__);
+    actual = {{ITEM_LIST, 0, 2}, {ITEM_LIST, 0, 0}, {ITEM_LIST, 0, 0}};
+    expected_error = {pow(2.0,0.3), pow(2.0, 1.5), pow(84.0,1.6)+pow(85.0,1.6), pow(84.0,1.5), pow(84.0,1.5)+pow(85.0,1.5),
+        pow(2.0,0.1), pow(2.0,0.1), pow(2.0,0.4)};
+    compute_error_vector(int(expect.size()), &expect[0], int(actual.size()), &actual[0], int(error.size()), &error[0], 0);
+    check_error(error, expected_error, __LINE__, err_count);
+    
+    printf("%d errors encountered in test_e1\n", err_count);
+}
+
+
 int main(int argc, char* argv[]) {
     try {
-        test1();
-        test2();
-        test3a();
-        test3b();
-        test4a();
-        test4b();
-        test5();
-        test6();
-        test7();
+        if (true) {
+            test1();
+            test2();
+            test3a();
+            test3b();
+            test4a();
+            test4b();
+            test5();
+            test6();
+            test7();
+        }
+        test_e1();
     }
     catch (const exception& e) {
         printf("exception %s\n", e.what());

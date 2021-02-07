@@ -72,9 +72,11 @@ class Toolbox(object):
 
     def reset(self):
         self.prev_best_raw_error_matrix = None
-        self.pp_str_to_family_index_dict = dict()
+        self.pp_str_to_family_index_dict = dict() # toolbox.pp_str_to_family_index_dict[pp_str] = family_index
         self.families_list = []
-        self.families_dict = dict()
+        self.families_dict = dict() # toolbox.families_dict[raw_error_matrix_tuple] = family_index
+        self.cx_count_dict = dict() # toolbox.cx_count_dict[(a_index, b_index)] = number of times a&b have cx'ed
+        self.cx_child_dict = dict() # toolbox.cx_child_dict[(a_index, b_index)][c_index] += 1 each time a&b have got a c
         random.seed(self.seed)
 
     def sort_ind_key(self, ind):
@@ -128,22 +130,21 @@ def basinhopper(toolbox):
             best, gen = ga_search1.ga_search_impl(toolbox)
         toolbox.t_total = time.time() - toolbox.t0
         ga_search_tools.write_timings(toolbox, "end of hop")
-        if best and toolbox.best_ind_file:
-            ga_search_tools.write_population(toolbox.best_ind_file, [best], toolbox.functions)
-        if best and toolbox.is_solution(best):
-            code = interpret.compile_deap(str(best), toolbox.functions)
-            result = ["function", toolbox.problem_name, toolbox.problem_params, code]
-            toolbox.f.write(f"solved\t{gen}\tgen\t{toolbox.eval_count}\tevals\t{toolbox.max_observed_stuck_count}\tmax_sc\n")
-            if toolbox.verbose >= 1:
-                error = ga_search_tools.forced_reevaluation_of_individual_for_debugging(toolbox, best, 4)
-                assert error == 0
+        outcome = "solved" if best and toolbox.is_solution(best) else "stopped"
+        toolbox.f.write(f"{outcome}\t{gen}\tgen\t{toolbox.eval_count}\tevals\t{toolbox.max_observed_stuck_count}\tmax_sc\n")
+        ga_search_tools.write_cx_info(toolbox)
+        if best:
             ga_search_tools.write_path(toolbox, best)
-            return result
-        else:
-            toolbox.f.write(f"stopped\t{gen}\tgen\t{toolbox.eval_count}\tevals\t{toolbox.max_observed_stuck_count}\tmax_sc\n")
+            if toolbox.best_ind_file:
+                ga_search_tools.write_population(toolbox.best_ind_file, [best], toolbox.functions)
+            if toolbox.is_solution(best):
+                code = interpret.compile_deap(str(best), toolbox.functions)
+                result = ["function", toolbox.problem_name, toolbox.problem_params, code]
+                if toolbox.verbose >= 1:
+                    error = ga_search_tools.forced_reevaluation_of_individual_for_debugging(toolbox, best, 4)
+                    assert error == 0
+                return result
         toolbox.f.flush()
-        
-    toolbox.f.write(f"failed\t{toolbox.problem_name}\n")
     return None
 
     
@@ -176,7 +177,6 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.best_of_n_mut = params["best_of_n_mut"]
     toolbox.best_of_n_cx = params["best_of_n_cx"]
     toolbox.parent_selection_strategy = params["parent_selection_strategy"]
-    toolbox.beta = params["weight_complementairity"]
     toolbox.penalise_non_reacting_models = params["penalise_non_reacting_models"]
     toolbox.hops = params["hops"]
     toolbox.output_folder = params["output_folder"]
@@ -208,7 +208,11 @@ def solve_by_new_function(problem, functions, f, params):
     evaluate.g_w8 = params["w8"]
     toolbox.max_reenter_parachuting_phase = params["max_reenter_parachuting_phase"]
     toolbox.stuck_count_for_opschudding = params["stuck_count_for_opschudding"]
-    
+    toolbox.family_key_is_error_matrix = params["family_key_is_error_matrix"]
+    toolbox.parent_selection_weight_complementairity = params["parent_selection_weight_complementairity"]
+    toolbox.parent_selection_weight_cx_count = params["parent_selection_weight_cx_count"]
+    toolbox.parent_selection_weight_p_out_of_pop = params["parent_selection_weight_p_out_of_pop"]
+
     # search
     toolbox.all_generations_ind = []
     if toolbox.all_ind_file:

@@ -77,8 +77,7 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
         test_against_python_interpreter(toolbox, model_outputs, ind)
 
     t0 = time.time()
-    family_key_is_error_matrix = True
-    if family_key_is_error_matrix:
+    if toolbox.family_key_is_error_matrix:
         raw_error_matrix = evaluate.compute_raw_error_matrix(toolbox.example_inputs, model_outputs, toolbox.error_function, \
             toolbox.f, debug, toolbox.penalise_non_reacting_models)
         raw_error_matrix_tuple = tuple(raw_error_matrix.flatten())
@@ -159,18 +158,123 @@ def write_final_population(toolbox, population):
         f.write(")\n")
 
 
-def write_path(toolbox, ind, indent=0):
-    #indent_str = "\t" * indent
-    # operator_str = ["", "mutatie", "crossover"]
+def write_path(toolbox, ind):
+    index = ind.fam.family_index
+    toolbox.f.write(f"family_index {index}\n")
+    results = []
+    for key, value in toolbox.cx_count_dict.items():
+        index_a, index_b = key
+        assert index_a <= index_b
+        if index == index_a or index == index_b:
+            results.append([index_a , index_b, value])
+    results.sort(key=lambda item : -item[2])
+    for index_a, index_b, count in results:
+        assert index_a <= index_b
+        key = (index_a, index_b)
+        if key in toolbox.cx_child_dict:
+            count = len(toolbox.cx_child_dict[key])
+            toolbox.f.write(f"toolbox.cx_child_dict[({index_a},{index_b})] = {count}\n")
+            for key, value in toolbox.cx_child_dict[key].items():
+                toolbox.f.write(f"    child_fam[{key}] = {value}\n")
     code = interpret.compile_deap(str(ind), toolbox.functions)
     code_str = interpret.convert_code_to_str(code)
-    if False:
-        if indent:
-            toolbox.f.write(f"parent\t{ind.fam.raw_error:.3f}\tcode\t{code_str}\n")
-        else:
-            toolbox.f.write(f"child\t{ind.fam.raw_error:.3f}\tcode\t{code_str}\n")
+    toolbox.f.write(f"{code_str} # {ind.fam.raw_error:.3f} len {len(ind)}\n")
+
+
+def compute_complementairity(fam1, fam2):
+    raw_error_matrix1 = fam1.raw_error_matrix
+    raw_error_matrix2 = fam2.raw_error_matrix
+    raw_improvement = raw_error_matrix1 - raw_error_matrix2
+    complementairity = np.sum(raw_improvement[raw_improvement > 0])
+    complementairity /= fam1.raw_error
+    assert complementairity >= 0
+    if complementairity > 1: # fix any rounding issues: the
+        complementairity = 1 # max complementairity is that the whole parent1.fam.raw_error is removed
+    return complementairity
+
+
+def pz(toolbox, index_a, index_b):
+    count_in_pop, count_out_pop = 0, 0
+    if (index_a, index_b) in toolbox.cx_child_dict:
+        for key, value in toolbox.cx_child_dict[(index_a, index_b)].items():
+            if key in toolbox.current_families_dict:
+                count_in_pop += value
+            else:
+                count_out_pop += value
+    if (index_b, index_a) in toolbox.cx_child_dict:
+        for key, value in toolbox.cx_child_dict[(index_b, index_a)].items():
+            if key in toolbox.current_families_dict:
+                count_in_pop += value
+            else:
+                count_out_pop += value
+    n_missing = max(0, 10 - count_in_pop - count_out_pop)
+    result = (count_out_pop + n_missing + 1) / (count_in_pop + count_out_pop + n_missing + 1)
+    assert result > 0
+    return result
+
+
+def compute_fam_cx_fitness(toolbox, fam1, fam2):
+    # compute p        
+    p_fitness1 = max(0, min((1 - fam1.raw_error/(toolbox.max_raw_error*1.1)), 1))
+    p_fitness2 = max(0, min((1 - fam2.raw_error/(toolbox.max_raw_error*1.1)), 1))
+    # assert 0 <= p_fitness1 and p_fitness1 <= 1
+    # assert 0 <= p_fitness2 and p_fitness2 <= 1
+    p_complementair = compute_complementairity(fam1, fam2)
+
+    assert 0 <= p_complementair and p_complementair <= 1
+    p1 = ((p_fitness1 * p_fitness2)) + (p_complementair * toolbox.parent_selection_weight_complementairity)
+
+    index_a, index_b = fam1.family_index, fam2.family_index
+    if index_a > index_b:
+        index_a, index_b = index_b, index_a
+    key = (index_a, index_b)
+    assert index_a <= index_b
+    if key in toolbox.cx_count_dict:
+        count_cx = toolbox.cx_count_dict[key]
     else:
-        toolbox.f.write(f"{code_str} # {ind.fam.raw_error:.3f} len {len(ind)}\n")
+        count_cx = 0
+    if count_cx > 0:
+        x2 = count_cx + 1
+        y2 = toolbox.parent_selection_weight_cx_count
+        x3 = pz(toolbox, fam1.family_index, fam2.family_index) 
+        y3 = toolbox.parent_selection_weight_p_out_of_pop
+        return p1, x2, x3, p1/(x2**y2)*(x3**y3)
+    else:
+        return p1, 0, 0, 0
+
+
+def write_cx_info(toolbox):
+    results = []
+    sum_cx_count = 0
+    for key, cx_count in toolbox.cx_count_dict.items():
+        index_a, index_b = key
+        assert index_a <= index_b
+        results.append([index_a , index_b, cx_count])
+        assert key in toolbox.cx_child_dict
+        cx_child_count = 0
+        for _, child_count in toolbox.cx_child_dict[key].items():
+            cx_child_count += child_count
+        assert cx_count == cx_child_count
+        sum_cx_count += cx_count
+    sum_cx_childs_count = 0
+    for key, cx_childs in toolbox.cx_child_dict.items():
+        for _, child_count in cx_childs.items():
+            sum_cx_childs_count += child_count
+    toolbox.f.write(f"cx_info, sum_cx_count {sum_cx_count}\n")
+    assert sum_cx_count == sum_cx_childs_count
+    results.sort(key=lambda item : -item[2])
+    for i, (index_a, index_b, cx_count) in enumerate(results):
+        key = (index_a, index_b)
+        if i < 10:
+            p1, p2, p3, p4 = compute_fam_cx_fitness(toolbox, toolbox.families_list[index_a], toolbox.families_list[index_b])
+            toolbox.f.write(f"toolbox.cx_child_dict[({index_a},{index_b})] = {cx_count}, fitness {p1},{p2},{p3},{p4}\n")
+            childs = []
+            for child_index, child_count in toolbox.cx_child_dict[key].items():
+                childs.append([child_index, child_count])
+            childs.sort(key=lambda item: -item[1])
+            for child_index, child_count in childs:
+                if child_count > 0:
+                    toolbox.f.write(f"    child_family = {child_index}; count = {child_count}\n")
 
 
 def generate_initial_population_impl(toolbox):
@@ -358,15 +462,19 @@ def crossover_with_local_search(toolbox, parent1, parent2):
     if len(parent1) < 2 or len(parent2) < 2:
         # No crossover on single node tree
         return None, None
-    t0 = time.time()
+
+    # sorting
     t_evaluate = toolbox.t_eval
     if parent1.fam.raw_error > parent2.fam.raw_error or (parent1.fam.raw_error == parent2.fam.raw_error and len(parent1) > len(parent2)):
         parent1, parent2 = parent2, parent1
+
+    # local sesarch
+    t0 = time.time()
     indexes1 = [i for i in range(len(parent1))]
     indexes2 = [i for i in range(len(parent2))]
     random.shuffle(indexes1)
     random.shuffle(indexes2)
-    best = None
+    best, best_pp_str = None, None
     for index2 in indexes2:
         slice2 = parent2.searchSubtree(index2)
         expr2 = parent2[slice2]
@@ -379,11 +487,30 @@ def crossover_with_local_search(toolbox, parent1, parent2):
                 if pp_str not in toolbox.ind_str_set:
                     evaluate_individual(toolbox, child, pp_str, 0)
                     if is_improvement(toolbox, child, best):
-                        best = child
+                        best, best_pp_str = child, pp_str
     t_evaluate = toolbox.t_eval - t_evaluate
     toolbox.t_cx_local_search += time.time() - t0 - t_evaluate
-    pp_str = None if best is None else make_pp_str(best) 
-    return best, pp_str
+
+    # cx_count administration
+    index_a, index_b = parent1.fam.family_index, parent2.fam.family_index
+    if index_a > index_b:
+        index_a, index_b = index_b, index_a
+    key = (index_a, index_b)
+    assert index_a <= index_b
+    if key not in toolbox.cx_count_dict:
+        toolbox.cx_count_dict[key] = 0
+    toolbox.cx_count_dict[key] += 1
+    if key not in toolbox.cx_child_dict:
+        toolbox.cx_child_dict[key] = {-1:0} # -1 is failed cx's
+    child_dict = toolbox.cx_child_dict[key]
+    if best:
+        if best.fam.family_index not in child_dict:
+            child_dict[best.fam.family_index] = 0
+        child_dict[best.fam.family_index] += 1
+    else:
+        child_dict[-1] += 1
+
+    return best, best_pp_str
 
 
 def mutUniform(toolbox, parent, expr, pset):
