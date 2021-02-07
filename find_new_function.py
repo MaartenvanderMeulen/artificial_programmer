@@ -17,7 +17,7 @@ import evaluate
 from evaluate import recursive_tuple
 import ga_search1
 import ga_search_tools
-from cpp_coupling import get_cpp_handle, run_on_all_inputs
+import cpp_coupling
 
 
 def f():
@@ -66,7 +66,8 @@ class Toolbox(object):
             print("deap_str1", deap_str)
             print("deap_str2", str(self.solution_deap_ind))
             raise RuntimeError(f"Check if function hints '{str(func_hints)}' contain all functions of solution hint '{str(solution_hints)}'")
-        self.cpp_handle = get_cpp_handle(example_inputs, formal_params, var_hints)
+        expected_outputs = evaluate.get_expected_outputs(error_function, example_inputs)
+        self.cpp_handle = cpp_coupling.get_cpp_handle(example_inputs, formal_params, var_hints, expected_outputs)
         self.seed = seed
         self.reset()
 

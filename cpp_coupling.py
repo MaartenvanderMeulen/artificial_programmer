@@ -1,5 +1,6 @@
 import ctypes
 import platform
+import numpy as np
 
 from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull, gp.from_string
 
@@ -104,6 +105,15 @@ def compile_inputs(inputs):
     return result
 
 
+def compile_expected_outputs(expected_outputs):
+    result = []
+    for data in expected_outputs:
+        data_in_prefix_notation = convert_data_to_prefix_notation(data)
+        c_data = convert_data_in_prefix_notation_to_c(data_in_prefix_notation)
+        result.append(c_data)
+    return result
+
+
 def load_cpp_lib():
     lib_name = "cpp_interpret"
     if platform.system().lower().startswith('lin'):
@@ -174,6 +184,15 @@ def call_cpp_interpreter(lib, c_n_params, c_param_sizes, c_params, n_local_varia
         ctypes.c_int(output_bufsize), ctypes.byref(output_buf), ctypes.byref(n_output), ctypes.c_int(debug))
 
 
+def call_cpp_evaluator(lib, expected_output_size, c_expected_output, c_actual_output_size, c_actual_output, error_vector_size, c_error_vector, debug):
+    '''In a separate python function to get exact timings on the C++ part via cProfile'''
+    lib.compute_error_vector( \
+        ctypes.c_int(expected_output_size), ctypes.byref(c_expected_output), \
+        c_actual_output_size, ctypes.byref(c_actual_output), \
+        ctypes.c_int(error_vector_size), ctypes.byref(c_error_vector), \
+        ctypes.c_int(debug))
+
+
 def run_once(lib, c_param_sizes, c_params, n_local_variables, c_code, output_bufsize, output_buf, debug):
     c_n_params = ctypes.c_int(len(c_param_sizes))
     n_output = ctypes.c_int()
@@ -185,24 +204,46 @@ def run_once(lib, c_param_sizes, c_params, n_local_variables, c_code, output_buf
 # ======================================== interface ================================================
 
 
-def get_cpp_handle(inputs, param_names, local_variable_names):
+def get_cpp_handle(inputs, param_names, local_variable_names, expected_outputs):
     lib = load_cpp_lib()
     c_inputs = compile_inputs(inputs)
     symbol_table = create_symbol_table(param_names, local_variable_names)
     n_local_variables = len(local_variable_names)
     output_buf, output_bufsize = create_ouput_buf()
-    cpp_handle = lib, c_inputs, symbol_table, n_local_variables, output_bufsize, output_buf
+    c_expected_outputs = compile_expected_outputs(expected_outputs)
+    c_error_vector = (ctypes.c_double * 8)()
+    cpp_handle = lib, c_inputs, symbol_table, n_local_variables, output_bufsize, output_buf, c_expected_outputs, c_error_vector
     return cpp_handle
 
 
 def run_on_all_inputs(cpp_handle, deap_code, get_item_value=None, debug=0):
     result = []
-    lib, c_inputs, symbol_table, n_local_variables, output_bufsize, output_buf = cpp_handle
+    lib, c_inputs, symbol_table, n_local_variables, output_bufsize, output_buf, _, _ = cpp_handle
     if get_item_value is None:
         get_item_value = lambda x : x.name if isinstance(x, gp.Primitive) else x.value
     c_code = compile_deap(deap_code, symbol_table, get_item_value)
     for c_param_sizes, c_params in c_inputs:
         result.append(run_once(lib, c_param_sizes, c_params, n_local_variables, c_code, output_bufsize, output_buf, debug))
+    return result
+
+
+def compute_error_matrix(cpp_handle, deap_code, get_item_value=None, debug=0):
+    lib, c_inputs, symbol_table, n_local_variables, output_bufsize, output_buf, c_expected_outputs, c_error_vector = cpp_handle
+    result = np.empty((len(c_inputs), 8))
+    if get_item_value is None:
+        get_item_value = lambda x : x.name if isinstance(x, gp.Primitive) else x.value
+    c_code = compile_deap(deap_code, symbol_table, get_item_value)
+    for row, (c_param_sizes, c_params) in enumerate(c_inputs):
+        c_n_params = ctypes.c_int(len(c_param_sizes))
+        n_output = ctypes.c_int()
+        n_output.value = 0
+        call_cpp_interpreter(lib, c_n_params, c_param_sizes, c_params, n_local_variables, c_code, output_bufsize, output_buf, n_output, debug)
+        if n_output.value <= 1:
+            n_output.value = 2 # quick fix for iets dat anders gepruts kost in C++
+            assert output_bufsize >= n_output.value
+        call_cpp_evaluator(lib, len(c_expected_outputs[row]), c_expected_outputs[row], n_output, output_buf, 8, c_error_vector, debug)
+        for i in range(8):
+            result[row, i] = c_error_vector[i]
     return result
 
 

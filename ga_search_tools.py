@@ -12,7 +12,7 @@ import interpret
 import evaluate
 import dynamic_weights
 from evaluate import recursive_tuple
-from cpp_coupling import get_cpp_handle, run_on_all_inputs
+import cpp_coupling
 
 from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull, gp.from_string
 
@@ -35,7 +35,7 @@ def test_against_python_interpreter(toolbox, cpp_model_outputs, ind):
         py_model_outputs.append(model_output)        
     toolbox.t_py_interpret += time.time() - t0
     if py_model_outputs != cpp_model_outputs:
-        run_on_all_inputs(toolbox.cpp_handle, ind, debug=2)
+        cpp_coupling.run_on_all_inputs(toolbox.cpp_handle, ind, debug=2)
         print("py_model_outputs", py_model_outputs)
         print("cpp_model_outputs", cpp_model_outputs)
         print("toolbox.eval_count OK", toolbox.eval_count - 1)
@@ -57,11 +57,21 @@ class Family:
 
 def forced_reevaluation_of_individual_for_debugging(toolbox, ind, debug_level):
     '''Assigns family index to the individual'''
-    model_outputs = run_on_all_inputs(toolbox.cpp_handle, ind)
+    model_outputs = cpp_coupling.run_on_all_inputs(toolbox.cpp_handle, ind)
     raw_error_matrix = evaluate.compute_raw_error_matrix(toolbox.example_inputs, model_outputs, toolbox.error_function, \
         toolbox.f, toolbox.verbose)
     raw_error = evaluate.compute_raw_error(raw_error_matrix)
     return raw_error
+
+
+def check_error_matrices(raw_error_matrix, raw_error_matrix2):
+    print("debug line 68", raw_error_matrix)
+    assert raw_error_matrix.shape == raw_error_matrix2.shape
+    for i in range(raw_error_matrix.shape[0]):
+        for j in range(raw_error_matrix.shape[1]):
+            if not math.isclose(raw_error_matrix[i, j], raw_error_matrix2[i, j]):
+                print("debug line 72:", "i", i, "j", j, "m1", raw_error_matrix[i, j], "m2", raw_error_matrix2[i, j])
+            assert math.isclose(raw_error_matrix[i, j], raw_error_matrix2[i, j])
 
 
 def evaluate_individual_impl(toolbox, ind, debug=0):
@@ -71,7 +81,7 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
     toolbox.eval_count += 1
 
     t0 = time.time()
-    model_outputs = run_on_all_inputs(toolbox.cpp_handle, ind)
+    model_outputs = cpp_coupling.run_on_all_inputs(toolbox.cpp_handle, ind)
     toolbox.t_cpp_interpret += time.time() - t0
     if False:
         test_against_python_interpreter(toolbox, model_outputs, ind)
@@ -80,6 +90,10 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
     if toolbox.family_key_is_error_matrix:
         raw_error_matrix = evaluate.compute_raw_error_matrix(toolbox.example_inputs, model_outputs, toolbox.error_function, \
             toolbox.f, debug, toolbox.penalise_non_reacting_models)
+        raw_error_matrix2 = cpp_coupling.compute_error_matrix(toolbox.cpp_handle, ind)
+        print("debug line 94", "str(ind)", str(ind))
+        print("debug line 95", "model_outputs[0]", model_outputs[0])
+        check_error_matrices(raw_error_matrix, raw_error_matrix2)
         raw_error_matrix_tuple = tuple(raw_error_matrix.flatten())
         if raw_error_matrix_tuple in toolbox.families_dict:
             family_index = toolbox.families_dict[raw_error_matrix_tuple]
