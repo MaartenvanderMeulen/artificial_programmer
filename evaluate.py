@@ -8,9 +8,9 @@ import interpret
 
 
 # used in error normalisation
-global avg_raw_error_vector, inv_avg_raw_error_vector
-avg_raw_error_vector = np.ones((8))
-inv_avg_raw_error_vector = np.ones((8))
+#global avg_raw_error_vector, inv_avg_raw_error_vector
+#avg_raw_error_vector = np.ones((8))
+#inv_avg_raw_error_vector = np.ones((8))
 
 global g_recursive_tuple_max_depth
 g_recursive_tuple_max_depth = 0
@@ -131,12 +131,12 @@ def compute_error_list_of_ints(actual, expect, debug=False):
                 error = 1.0
     else:
         if type(actual) != type([]):
-            print("debug line 135", "actual", actual)
+            #print("debug line 135", "actual", actual)
             error = 1.0 + len(expect)
             assert type(actual) == type(1)
             actual = [actual]
         else:
-            print("debug line 139")
+            #print("debug line 139")
             for i in range(len(expect)):
                 if i < len(actual):
                     if type(actual[i]) != type(1):
@@ -144,9 +144,9 @@ def compute_error_list_of_ints(actual, expect, debug=False):
                 else:
                     error += 1
     if error > 0:
-        print("debug line 145", error, "actual", actual, "expect", expect)
+        #print("debug line 145", error, "actual", actual, "expect", expect)
         error = error ** g_w1
-        print("debug line 147", error)
+        #print("debug line 147", error)
     errors.append(error)
     k = len(expect)
     if k == 0:
@@ -155,6 +155,8 @@ def compute_error_list_of_ints(actual, expect, debug=False):
     actual_list = extract_numbers_list(actual)
     n = g_w2a if len(actual_list) < len(expect) else g_w2b
     errors.append(abs(len(actual_list) - len(expect)) ** n)
+    #print("debug python line 158", "len(actual_list)", len(actual_list), "len(expect)", len(expect), "actual_list", actual_list, "expect", expect)
+    #print("    ", abs(len(actual_list) - len(expect)) ** n)
     # error3 : hoever zitten de expect getallen van de model getallen af
     actual_set = set(actual_list)
     if len(actual_set) == 0:
@@ -544,7 +546,7 @@ def compute_raw_error_matrix(example_inputs, actual_outputs, raw_error_function,
         if i == 0:
             raw_error_matrix = np.empty((len(example_inputs), raw_error_vector.shape[0]))
         raw_error_matrix[i, :] = raw_error_vector
-    if penalise_non_reacting_models:
+    if False: # penalise_non_reacting_models:
         if len(domain_output_set) == 1:
             worst_raw_error_vector = find_worst_raw_error_vector(raw_error_matrix)
             raw_error_matrix[:] = worst_raw_error_vector
@@ -560,7 +562,6 @@ def compute_raw_error(raw_error_matrix):
 
 def get_expected_outputs(raw_error_function, example_inputs):
     # works only for compute_error_merge_elem.  TODO : make more generic 
-    print("debug 559", raw_error_function, str(raw_error_function))
     assert raw_error_function[0] == "compute_error_merge_elem"
     expected_outputs = []
     for elem, data in example_inputs:

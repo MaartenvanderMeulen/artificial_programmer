@@ -184,31 +184,34 @@ void print_indent(int depth) {
     
     
 void print_vcode_impl(const List& code, int& i, int len) {
-    Assert(i < len, "print_code index out of range");
-    if (code[i]._type == ITEM_LIST || code[i]._type == ITEM_FCALL || code[i]._type == ITEM_FUSERCALL) {
-        printf("(");
-        if (code[i]._type == ITEM_FCALL) {
-            printf("%s", g_fname[code[i]._value]);
-        } else if (code[i]._type == ITEM_FUSERCALL) {
-            printf("f%d", code[i]._value);
-        }           
-        int n = code[i]._arity;
-        i++;
-        while (n > 0) {
-            printf(" ");
-            print_vcode_impl(code, i, len);
-            n--;
-        }
-        printf(")");
-    } else if (code[i]._type == ITEM_INT) {
-        printf("%d", code[i]._value);
-        i++;
-    } else if (code[i]._type == ITEM_VAR) {
-        printf("v%d", code[i]._value);
-        i++;
+    if (i >= len) {
+        printf("{error:i>=n}");
     } else {
-        printf("?%d", code[i]._type);
-        i++;
+        if (code[i]._type == ITEM_LIST || code[i]._type == ITEM_FCALL || code[i]._type == ITEM_FUSERCALL) {
+            printf("(");
+            if (code[i]._type == ITEM_FCALL) {
+                printf("%s", g_fname[code[i]._value]);
+            } else if (code[i]._type == ITEM_FUSERCALL) {
+                printf("f%d", code[i]._value);
+            }           
+            int n = code[i]._arity;
+            i++;
+            while (n > 0) {
+                printf(" ");
+                print_vcode_impl(code, i, len);
+                n--;
+            }
+            printf(")");
+        } else if (code[i]._type == ITEM_INT) {
+            printf("%d", code[i]._value);
+            i++;
+        } else if (code[i]._type == ITEM_VAR) {
+            printf("v%d", code[i]._value);
+            i++;
+        } else {
+            printf("?%d", code[i]._type);
+            i++;
+        }
     }
 }
 
@@ -225,17 +228,20 @@ void print_vcode(const List& program) {
 
 
 void print_code_impl2(const Item* code, int& i, int len) {
-    Assert(i < len, "print_code index out of range");
-    while (i < len) {
-        switch (code[i]._type) {
-            case ITEM_INT : printf(" i%d", code[i]._value); break;
-            case ITEM_FCALL : printf(" %s", g_fname[code[i]._value]); break;
-            case ITEM_VAR : printf(" v%d", code[i]._value); break;
-            case ITEM_LIST : printf(" L%d", code[i]._arity); break;
-            case ITEM_FUSERCALL : printf(" f%d", code[i]._value); break;
-            default : printf(" ?%d", code[i]._type); break;
+    if (i >= len) {
+        printf("{error:i>=len}");
+    } else {
+        while (i < len) {
+            switch (code[i]._type) {
+                case ITEM_INT : printf(" i%d", code[i]._value); break;
+                case ITEM_FCALL : printf(" %s", g_fname[code[i]._value]); break;
+                case ITEM_VAR : printf(" v%d", code[i]._value); break;
+                case ITEM_LIST : printf(" L%d", code[i]._arity); break;
+                case ITEM_FUSERCALL : printf(" f%d", code[i]._value); break;
+                default : printf(" ?%d", code[i]._type); break;
+            }
+            i++;
         }
-        i++;
     }
 }
 
@@ -863,6 +869,9 @@ int run_non_recursive_level1_function(
     }
     vector<Function> functions;
     List result = run(function_body, function_body_size, variables, functions, debug > 1);
+    if (result.size() == 0) {
+        result = {{ITEM_INT, 0, 0}};
+    }
     if (debug) {
         printf("    output ");        
         print_vcode(result);
@@ -889,8 +898,12 @@ void extract_numbers_list(int actual_output_size, Item* actual_output, int& sp, 
         Assert(actual_output[sp]._type == ITEM_LIST, "expected a tree of integers");
         int n = actual_output[sp]._arity;
         sp++;
-        for (int i = 0; i < n; ++i) {
-            extract_numbers_list(actual_output_size, actual_output, sp, result);
+        if (n == 0) {
+            result.push_back(0); // [] is extracted as '0' 
+        } else {
+            for (int i = 0; i < n; ++i) {
+                extract_numbers_list(actual_output_size, actual_output, sp, result);
+            }
         }
     }
 }
@@ -958,9 +971,14 @@ void compute_error_vector_impl(
     int debug
 ) {
     if (debug) {
-        printf("actual output:");
+        printf("    C++, actual output:");
         int sp = 0;
         print_code(actual_output, sp, actual_output_size);
+        printf("    C++, expected output: [");
+        for (int i = 0; i < expected_output_size; ++i) {
+            printf("%d, ", expected_output[i]);
+        }
+        printf("]\n");
     }
 
 
@@ -973,13 +991,14 @@ void compute_error_vector_impl(
         actual_output[0]._type = ITEM_LIST;
         actual_output[0]._value = 0;
         actual_output[0]._arity = 1;
-        Assert(actual_output_size >= 2, "actual_output_size must be at least 2, fix this");
+        Assert(actual_output_size == 1, "actual_output_size must be 1, otherwise its a syntax error");
+        actual_output_size = 2; // IMPORTANT. Caller has to make sure there is room to do this
         actual_output[1]._type = ITEM_INT;
         actual_output[1]._value = value;
         actual_output[1]._arity = 0;
     } else {
+        int sp = 1;
         for (int i = 0; i < expected_output_size; ++i) {
-            int sp = 1;
             if (i < actual_output[0]._arity) {
                 if (actual_output[sp]._type != ITEM_INT) {
                     error += 1;
@@ -991,9 +1010,6 @@ void compute_error_vector_impl(
         }
     }
     if (error > 0) {
-        if (debug) {
-            printf("interpreter, line %d: error %f\n", __LINE__, error);
-        }
         error = pow(error, g_w1);
     }
     error_vector[0] = error;
@@ -1001,11 +1017,16 @@ void compute_error_vector_impl(
     // error2 : length difference
     vector<int> actual_list;
     int sp = 0;
-    extract_numbers_list(actual_output_size, actual_output, sp, actual_list);
+    if (actual_output_size > 0) {
+        extract_numbers_list(actual_output_size, actual_output, sp, actual_list);
+    }
     Assert(sp == actual_output_size, "model output syntax error");
+    if (debug) {
+        printf("    C++, expected_output_size %d, actual output size %d\n", expected_output_size, int(actual_list.size()));
+    }
     if (int(actual_list.size()) < expected_output_size) {
         error_vector[1] = pow(double(expected_output_size - int(actual_list.size())), g_w2a);
-    } else if (actual_output[0]._arity > expected_output_size) {
+    } else if (int(actual_list.size()) > expected_output_size) {
         error_vector[1] = pow(double(int(actual_list.size()) - expected_output_size), g_w2b);
     } else {
         error_vector[1] = 0.0;

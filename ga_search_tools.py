@@ -65,7 +65,7 @@ def forced_reevaluation_of_individual_for_debugging(toolbox, ind, debug_level):
 
 
 def check_error_matrices(raw_error_matrix, raw_error_matrix2):
-    print("debug line 68", raw_error_matrix)
+    #print("debug line 68, python, check_error_matrices")
     assert raw_error_matrix.shape == raw_error_matrix2.shape
     for i in range(raw_error_matrix.shape[0]):
         for j in range(raw_error_matrix.shape[1]):
@@ -90,10 +90,13 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
     if toolbox.family_key_is_error_matrix:
         raw_error_matrix = evaluate.compute_raw_error_matrix(toolbox.example_inputs, model_outputs, toolbox.error_function, \
             toolbox.f, debug, toolbox.penalise_non_reacting_models)
+        #print("debug line 94", "python error matrix", raw_error_matrix)
+        #print("debug line 94", "model_outputs", model_outputs)
         raw_error_matrix2 = cpp_coupling.compute_error_matrix(toolbox.cpp_handle, ind)
-        print("debug line 94", "str(ind)", str(ind))
-        print("debug line 95", "model_outputs[0]", model_outputs[0])
+        #print("debug line 94", "C++ error matrix", raw_error_matrix2)
+        #print("debug line 97", "str(ind)", str(ind))
         check_error_matrices(raw_error_matrix, raw_error_matrix2)
+        #print("debug line 99 : check_error_matrices OK")
         raw_error_matrix_tuple = tuple(raw_error_matrix.flatten())
         if raw_error_matrix_tuple in toolbox.families_dict:
             family_index = toolbox.families_dict[raw_error_matrix_tuple]

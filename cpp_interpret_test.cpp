@@ -819,8 +819,9 @@ void test_e1() {
     check_error(error, expected_error, __LINE__, err_count);
     
     //printf("test e1 line %d\n", __LINE__);
+    expect = {84};
     actual = {{ITEM_INT, 0, 0}, {ITEM_INT, 0, 0},};
-    expected_error = {pow(3.0,0.3), 1.0, pow(84.0,1.6)+pow(85.0,1.6), pow(84.0,1.5), pow(84.0,1.5), pow(2.0,0.1), pow(2.0,0.1), 0.0};
+    expected_error = {pow(2.0,0.3), 0.0, pow(84.0,1.6), pow(84.0,1.5), pow(84.0,1.5), pow(1.0,0.1), pow(1.0,0.1), 0.0};
     printf("test e1 line %d, error[0] %f\n", __LINE__, expected_error[0]);
     compute_error_vector(int(expect.size()), &expect[0], int(actual.size()), &actual[0], int(error.size()), &error[0], 0);
     check_error(error, expected_error, __LINE__, err_count);

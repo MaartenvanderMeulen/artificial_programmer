@@ -106,12 +106,19 @@ def compile_inputs(inputs):
 
 
 def compile_expected_outputs(expected_outputs):
-    result = []
-    for data in expected_outputs:
-        data_in_prefix_notation = convert_data_to_prefix_notation(data)
-        c_data = convert_data_in_prefix_notation_to_c(data_in_prefix_notation)
-        result.append(c_data)
-    return result
+    # ASSUMES output is a list of int's!!!
+    sizes, c_outputs = [], []
+    for data in expected_outputs:        
+        assert type(data) == type([])
+        for x in data:
+            assert type(x) == type(1)
+        n = len(data)
+        c_data = (ctypes.c_int * n)()
+        for i in range(n):
+            c_data[i] = data[i]
+        sizes.append(n)
+        c_outputs.append(c_data)
+    return sizes, c_outputs
 
 
 def load_cpp_lib():
@@ -233,15 +240,17 @@ def compute_error_matrix(cpp_handle, deap_code, get_item_value=None, debug=0):
     if get_item_value is None:
         get_item_value = lambda x : x.name if isinstance(x, gp.Primitive) else x.value
     c_code = compile_deap(deap_code, symbol_table, get_item_value)
+    expected_output_sizes, c_expected_outputs = c_expected_outputs
     for row, (c_param_sizes, c_params) in enumerate(c_inputs):
         c_n_params = ctypes.c_int(len(c_param_sizes))
         n_output = ctypes.c_int()
         n_output.value = 0
         call_cpp_interpreter(lib, c_n_params, c_param_sizes, c_params, n_local_variables, c_code, output_bufsize, output_buf, n_output, debug)
+        if n_output.value == 0:
+            assert output_bufsize > 1 # C++ needs some room in this case
         if n_output.value <= 1:
-            n_output.value = 2 # quick fix for iets dat anders gepruts kost in C++
-            assert output_bufsize >= n_output.value
-        call_cpp_evaluator(lib, len(c_expected_outputs[row]), c_expected_outputs[row], n_output, output_buf, 8, c_error_vector, debug)
+            assert output_bufsize > 1 # C++ needs some room in this case
+        call_cpp_evaluator(lib, expected_output_sizes[row], c_expected_outputs[row], n_output, output_buf, 8, c_error_vector, debug)
         for i in range(8):
             result[row, i] = c_error_vector[i]
     return result
