@@ -13,7 +13,7 @@ from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.
 import interpret
 import evaluate
 from evaluate import recursive_tuple
-from ga_search_tools import write_population, consistency_check, log_population, make_pp_str
+from ga_search_tools import write_population, consistency_check, log_population
 from ga_search_tools import best_of_n, generate_initial_population, generate_initial_population_impl
 from ga_search_tools import refresh_toolbox_from_population, write_cx_info
 from ga_search_tools import load_initial_population_impl, evaluate_individual, consistency_check_ind
@@ -175,7 +175,6 @@ def generate_offspring(toolbox, population, nchildren):
                 break
         retry_count = 0
         assert child.fam is not None
-        assert pp_str == make_pp_str(child)
         toolbox.ind_str_set.add(pp_str)
         offspring.append(child)
         if False:

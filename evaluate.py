@@ -519,11 +519,7 @@ def compute_error_get_diag2_cell(input, actual, extra_function_params, log_file,
 
 
 def find_worst_raw_error_vector(raw_error_matrix):
-    worst_raw_error_vector = raw_error_matrix[0]
-    for raw_error_vector in raw_error_matrix[1:]:
-        if np.sum(worst_raw_error_vector) < np.sum(raw_error_vector):
-            worst_raw_error_vector = raw_error_vector
-    return worst_raw_error_vector
+    return raw_error_matrix[np.argmax(np.sum(raw_error_matrix, axis=1))]
 
 
 def compute_raw_error_matrix(example_inputs, actual_outputs, raw_error_function, log_file, verbose, penalise_non_reacting_models):

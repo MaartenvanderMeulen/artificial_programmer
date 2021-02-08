@@ -37,7 +37,7 @@
     "hops": 1,
     "dynamic_weights": false,
     "dynamic_weights_adaptation_speed": 1.01,
-    "use_cprofile": false,
+    "use_cprofile": true,
     "w1": 0.3,
     "w2a": 1.5,
     "w2b": 1.1,
@@ -49,7 +49,7 @@
     "w8": 0.4,
     "stuck_count_for_opschudding": 9,
     "max_reenter_parachuting_phase": 0,
-    "family_key_is_error_matrix": true,
+    "family_key_is_error_matrix": false,
     "parent_selection_weight_complementairity": 0.3,
     "parent_selection_weight_cx_count": 0.0,
     "parent_selection_weight_p_out_of_pop": 0.0

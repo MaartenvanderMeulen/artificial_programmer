@@ -15,6 +15,7 @@ g++ -shared -fPIC -O2 -o cpp_interpret.so cpp_interpret.cpp
 #include <string.h> // strncmp
 #include <cassert>
 #include <cmath> // pow
+#include <algorithm> // sort
 
 using namespace std;
 
@@ -954,6 +955,27 @@ int _distance_with_closest_numbers(int x, const set<int>& values) {
 }
 
 
+int _distance_with_closest_sorted_numbers(int x, const vector<int>& values) {
+    int result;
+    if (values.size() > 0) {
+        result = abs(x - values[0]);
+        for (int i = 1; i < int(values.size()); ++i) {
+            const int value = values[i];
+            const int distance = abs(x - value);
+            if (result > distance) {
+               result = distance;
+            }
+            if (value >= x) {
+                break;
+            }
+        }
+    } else {
+        result = abs(x - 0);
+    }
+    return result;
+}
+
+
 const double g_w1 = 0.3;
 const double g_w2a = 1.5;
 const double g_w2b = 1.1;
@@ -1040,20 +1062,26 @@ void compute_error_vector_impl(
     if (actual_set.size() == 0) {
         actual_set.insert(0);
     }
+    std::vector<int> actual_sorted;
+    for (int actual_unique : actual_set) {
+        actual_sorted.push_back(actual_unique);
+    }
+    sort(actual_sorted.begin(), actual_sorted.end());
     error = 0.0;
     for (int i = 0; i < expected_output_size; ++i) {
-        error += pow(double(_distance_with_closest_numbers(expected_output[i], actual_set)), g_w3);
+        error += pow(double(_distance_with_closest_sorted_numbers(expected_output[i], actual_sorted)), g_w3);
     }
     error_vector[2] = error;
      
     // error4 : set getallen vergelijken
-    set<int> expect_set;
+    std::vector<int> expect_sorted;
     for ( int i = 0; i < expected_output_size; ++i) {        
-        expect_set.insert(expected_output[i]);
+        expect_sorted.push_back(expected_output[i]);
     }
+    sort(expect_sorted.begin(), expect_sorted.end());
     error = 0.0;
     for (int actual : actual_set) {
-        error += pow(double(_distance_with_closest_numbers(actual, expect_set)), g_w4);
+        error += pow(double(_distance_with_closest_sorted_numbers(actual, expect_sorted)), g_w4);
     }
     error_vector[3] = error;
      

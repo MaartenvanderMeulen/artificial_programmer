@@ -184,29 +184,17 @@ def convert_c_output_to_python(output_buf, n_output):
     return result 
 
 
-def convert_c_output_to_pp_str_impl(output_buf, n_output):
-    result = ""
-    ITEM_INT = 1
-    ITEM_LIST = 4
-    for i in range(n_output):
-        if output_buf[i]._type == ITEM_INT:
-            result += f" i{output_buf[i]._value}"
-        else:
-            assert output_buf[i]._type == ITEM_LIST
-            result += f" L{output_buf[i]._arity}"
-    return result
-
-
 def convert_c_output_to_pp_str(output_buf, n_output):
     result = ""
-    ITEM_INT = 1
-    ITEM_LIST = 4
-    for i in range(n_output):
-        if output_buf[i]._type == ITEM_INT:
-            result += f" i{output_buf[i]._value}"
+    # ITEM_INT = 1
+    # ITEM_LIST = 4
+    #for i in range(n_output):
+    #    item = output_buf[i]
+    for item in output_buf[:n_output]:
+        if item._type == 1:
+            result += f" {item._value}"
         else:
-            assert output_buf[i]._type == ITEM_LIST
-            result += f" L{output_buf[i]._arity}"
+            result += f" L{item._arity}"
     return result
 
 
@@ -283,8 +271,7 @@ def compute_error_matrix(cpp_handle, deap_code, penalise_non_reacting_models):
         domain_output_set.add(model_output_str)
         model_output_cpp.append(model_output_str)
         call_cpp_evaluator(lib, expected_output_sizes[row], c_expected_outputs[row], n_output, output_buf, 8, c_error_vector, debug)
-        for i in range(8):
-            raw_error_matrix[row, i] = c_error_vector[i]
+        raw_error_matrix[row, ...] = c_error_vector
     if penalise_non_reacting_models:
         if len(domain_output_set) == 1:
             worst_raw_error_vector = evaluate.find_worst_raw_error_vector(raw_error_matrix)

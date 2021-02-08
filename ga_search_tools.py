@@ -18,11 +18,7 @@ from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.
 
 
 def make_pp_str(ind):
-    if True:
-        result = " ".join([x.name if isinstance(x, gp.Primitive) else str(x.value) for x in ind])
-    else:
-        result = str(ind)
-    return result
+    return " ".join([x.name for x in ind])
 
 
 def test_against_python_interpreter(toolbox, cpp_model_outputs, ind):
