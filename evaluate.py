@@ -546,11 +546,8 @@ def compute_raw_error_matrix(example_inputs, actual_outputs, raw_error_function,
         if i == 0:
             raw_error_matrix = np.empty((len(example_inputs), raw_error_vector.shape[0]))
         raw_error_matrix[i, :] = raw_error_vector
-    print("evaluate.py, line 549")
     if penalise_non_reacting_models:
-        print("evaluate.py, line 551", domain_output_set)
         if len(domain_output_set) == 1:
-            print("evaluate.py, line 553")
             worst_raw_error_vector = find_worst_raw_error_vector(raw_error_matrix)
             raw_error_matrix[:] = worst_raw_error_vector
     simplify = False

@@ -49,7 +49,7 @@
     "w8": 0.4,
     "stuck_count_for_opschudding": 9,
     "max_reenter_parachuting_phase": 0,
-    "family_key_is_error_matrix": false,
+    "family_key_is_error_matrix": true,
     "parent_selection_weight_complementairity": 0.3,
     "parent_selection_weight_cx_count": 0.0,
     "parent_selection_weight_p_out_of_pop": 0.0

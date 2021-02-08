@@ -207,7 +207,6 @@ def convert_c_output_to_pp_str(output_buf, n_output):
         else:
             assert output_buf[i]._type == ITEM_LIST
             result += f" L{output_buf[i]._arity}"
-    print("cpp_coupling, line 210", convert_c_output_to_python(output_buf, n_output))
     return result
 
 
@@ -286,15 +285,10 @@ def compute_error_matrix(cpp_handle, deap_code, penalise_non_reacting_models):
         call_cpp_evaluator(lib, expected_output_sizes[row], c_expected_outputs[row], n_output, output_buf, 8, c_error_vector, debug)
         for i in range(8):
             raw_error_matrix[row, i] = c_error_vector[i]
-    print("cpp_coupling.py, line 275")
     if penalise_non_reacting_models:
-        print("cpp_coupling.py, line 277", domain_output_set)
         if len(domain_output_set) == 1:
-            print("cpp_coupling.py, line 279")
             worst_raw_error_vector = evaluate.find_worst_raw_error_vector(raw_error_matrix)
-            print("cpp_coupling.py, line 281", raw_error_matrix)
             raw_error_matrix[:] = worst_raw_error_vector
-            print("cpp_coupling.py, line 283", raw_error_matrix)
     return raw_error_matrix, tuple(model_output_cpp)
 
 

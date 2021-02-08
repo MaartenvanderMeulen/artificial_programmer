@@ -59,7 +59,7 @@ def forced_reevaluation_of_individual_for_debugging(toolbox, ind, debug_level):
     '''Assigns family index to the individual'''
     model_outputs = cpp_coupling.run_on_all_inputs(toolbox.cpp_handle, ind)
     raw_error_matrix = evaluate.compute_raw_error_matrix(toolbox.example_inputs, model_outputs, toolbox.error_function, \
-        toolbox.f, toolbox.verbose)
+        toolbox.f, toolbox.verbose, False)
     raw_error = evaluate.compute_raw_error(raw_error_matrix)
     return raw_error
 
@@ -81,7 +81,7 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
     raw_error_matrix_cpp, model_outputs_cpp = cpp_coupling.compute_error_matrix(toolbox.cpp_handle, ind, toolbox.penalise_non_reacting_models)
 
     # piggyback test : vergelijk uitkomst cpp met python implementatie
-    if True:
+    if False:
         model_outputs_py = cpp_coupling.run_on_all_inputs(toolbox.cpp_handle, ind)
         raw_error_matrix_py = evaluate.compute_raw_error_matrix(toolbox.example_inputs, model_outputs_py, toolbox.error_function, \
             toolbox.f, debug, toolbox.penalise_non_reacting_models)
