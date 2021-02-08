@@ -131,10 +131,12 @@ def load_cpp_lib():
     return lib
 
 
-def create_ouput_buf():
+def create_ouput_bufs(n):
     output_bufsize = 1000
-    output_buf = (CodeItem * output_bufsize)()
-    return output_buf, output_bufsize
+    output_bufs = []
+    for i in range(n):
+        output_bufs.append((CodeItem * output_bufsize)())
+    return output_bufs, output_bufsize
 
 
 global g_max_depth
@@ -232,51 +234,59 @@ def get_cpp_handle(inputs, param_names, local_variable_names, expected_outputs):
     c_inputs = compile_inputs(inputs)
     symbol_table = create_symbol_table(param_names, local_variable_names)
     n_local_variables = len(local_variable_names)
-    output_buf, output_bufsize = create_ouput_buf()
+    output_bufs, output_bufsize = create_ouput_bufs(len(inputs))
     c_expected_outputs = compile_expected_outputs(expected_outputs)
     c_error_vector = (ctypes.c_double * 8)()
-    cpp_handle = lib, c_inputs, symbol_table, n_local_variables, output_bufsize, output_buf, c_expected_outputs, c_error_vector
+    cpp_handle = lib, c_inputs, symbol_table, n_local_variables, output_bufsize, output_bufs, c_expected_outputs, c_error_vector
     return cpp_handle
 
 
 def run_on_all_inputs(cpp_handle, deap_code, get_item_value=None, debug=0):
     result = []
-    lib, c_inputs, symbol_table, n_local_variables, output_bufsize, output_buf, _, _ = cpp_handle
+    lib, c_inputs, symbol_table, n_local_variables, output_bufsize, output_bufs, _, _ = cpp_handle
     if get_item_value is None:
         get_item_value = lambda x : x.name if isinstance(x, gp.Primitive) else x.value
     c_code = compile_deap(deap_code, symbol_table, get_item_value)
     for c_param_sizes, c_params in c_inputs:
-        result.append(run_once(lib, c_param_sizes, c_params, n_local_variables, c_code, output_bufsize, output_buf, debug))
+        result.append(run_once(lib, c_param_sizes, c_params, n_local_variables, c_code, output_bufsize, output_bufs[0], debug))
     return result
 
 
-def compute_error_matrix(cpp_handle, deap_code, penalise_non_reacting_models):
+def compute_error_matrix(cpp_handle, deap_code, penalise_non_reacting_models, families_dict):
     assert type(penalise_non_reacting_models) == type(True)
     get_item_value = None
     debug = 0
-    lib, c_inputs, symbol_table, n_local_variables, output_bufsize, output_buf, c_expected_outputs, c_error_vector = cpp_handle
+    lib, c_inputs, symbol_table, n_local_variables, output_bufsize, output_bufs, c_expected_outputs, c_error_vector = cpp_handle
     raw_error_matrix = np.empty((len(c_inputs), 8))
     model_output_cpp = []
     if get_item_value is None:
         get_item_value = lambda x : x.name if isinstance(x, gp.Primitive) else x.value
     c_code = compile_deap(deap_code, symbol_table, get_item_value)
-    expected_output_sizes, c_expected_outputs = c_expected_outputs
     domain_output_set = set()
+    act_output_sizes = []
     for row, (c_param_sizes, c_params) in enumerate(c_inputs):
         c_n_params = ctypes.c_int(len(c_param_sizes))
         n_output = ctypes.c_int()
         n_output.value = 0
-        call_cpp_interpreter(lib, c_n_params, c_param_sizes, c_params, n_local_variables, c_code, output_bufsize, output_buf, n_output, debug)
-        model_output_str = convert_c_output_to_pp_str(output_buf, n_output.value)
+        call_cpp_interpreter(lib, c_n_params, c_param_sizes, c_params, n_local_variables, c_code, output_bufsize, output_bufs[row], n_output, debug)
+        model_output_str = convert_c_output_to_pp_str(output_bufs[row], n_output.value)
+        act_output_sizes.append(n_output)
         domain_output_set.add(model_output_str)
         model_output_cpp.append(model_output_str)
-        call_cpp_evaluator(lib, expected_output_sizes[row], c_expected_outputs[row], n_output, output_buf, 8, c_error_vector, debug)
+    family_key = tuple(model_output_cpp)
+    if family_key in families_dict:
+        return None, family_key
+    
+    # A new family, evaluate the output
+    expected_output_sizes, expected_outputs = c_expected_outputs
+    for row, (exp_output_size, c_exp_output, c_act_output_size, c_act_output) in enumerate(zip(expected_output_sizes, expected_outputs, act_output_sizes, output_bufs)):
+        call_cpp_evaluator(lib, exp_output_size, c_exp_output, c_act_output_size, c_act_output, 8, c_error_vector, debug)
         raw_error_matrix[row, ...] = c_error_vector
     if penalise_non_reacting_models:
         if len(domain_output_set) == 1:
             worst_raw_error_vector = evaluate.find_worst_raw_error_vector(raw_error_matrix)
             raw_error_matrix[:] = worst_raw_error_vector
-    return raw_error_matrix, tuple(model_output_cpp)
+    return raw_error_matrix, family_key
 
 
 # ======================================== test ================================================

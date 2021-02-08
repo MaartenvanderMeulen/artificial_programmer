@@ -37,7 +37,7 @@
     "hops": 1,
     "dynamic_weights": false,
     "dynamic_weights_adaptation_speed": 1.01,
-    "use_cprofile": true,
+    "use_cprofile": false,
     "w1": 0.3,
     "w2a": 1.5,
     "w2b": 1.1,

@@ -74,23 +74,11 @@ def check_error_matrices(raw_error_matrix_py, raw_error_matrix_cpp):
 
 def evaluate_individual_impl(toolbox, ind, debug=0):
     # cpp implementatie
-    raw_error_matrix_cpp, model_outputs_cpp = cpp_coupling.compute_error_matrix(toolbox.cpp_handle, ind, toolbox.penalise_non_reacting_models)
-
-    # piggyback test : vergelijk uitkomst cpp met python implementatie
-    if False:
-        model_outputs_py = cpp_coupling.run_on_all_inputs(toolbox.cpp_handle, ind)
-        raw_error_matrix_py = evaluate.compute_raw_error_matrix(toolbox.example_inputs, model_outputs_py, toolbox.error_function, \
-            toolbox.f, debug, toolbox.penalise_non_reacting_models)
-        check_error_matrices(raw_error_matrix_py, raw_error_matrix_cpp)
-
-    # bepaling family key
-    if toolbox.family_key_is_error_matrix:
-        family_key = tuple(raw_error_matrix_cpp.flatten())
-    else:
-        family_key = model_outputs_cpp
+    raw_error_matrix_cpp, family_key = cpp_coupling.compute_error_matrix(toolbox.cpp_handle, ind, toolbox.penalise_non_reacting_models, toolbox.families_dict)
 
     # bepaling family
     if family_key in toolbox.families_dict:
+        toolbox.called_error_function_for_nothing += 1
         family_index = toolbox.families_dict[family_key]
         ind.fam = toolbox.families_list[family_index]
     else:
@@ -98,6 +86,13 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
         toolbox.families_dict[family_key] = family_index
         ind.fam = Family(family_index, raw_error_matrix_cpp)
         toolbox.families_list.append(ind.fam)
+        # piggyback test : vergelijk uitkomst cpp met python implementatie
+        if False:
+            model_outputs_py = cpp_coupling.run_on_all_inputs(toolbox.cpp_handle, ind)
+            raw_error_matrix_py = evaluate.compute_raw_error_matrix(toolbox.example_inputs, model_outputs_py, toolbox.error_function, \
+                toolbox.f, debug, toolbox.penalise_non_reacting_models)
+            check_error_matrices(raw_error_matrix_py, raw_error_matrix_cpp)
+
 
 
 def evaluate_individual(toolbox, individual, pp_str, debug):
