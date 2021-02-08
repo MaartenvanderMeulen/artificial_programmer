@@ -137,14 +137,12 @@ def generate_offspring(toolbox, population, nchildren):
     expr_mut = lambda pset, type_: gp.genFull(pset=pset, min_=0, max_=2, type_=type_)
     retry_count = 0  
     all_escapes_count = 0   
-    toolbox.keep_path = False
     only_cx = False
     if False:
         do_special_experiment = False # math.isclose(population[0].fam.raw_error, 77.61253, abs_tol=0.00001)
         if do_special_experiment:
             only_cx = True
             all_escapes_count = analyse_parents(toolbox, population)
-            toolbox.keep_path = True
             offspring_escapes_count = 0
     toolbox.max_raw_error = max([ind.fam.raw_error for ind in population])
     prepare_combinations_families_with_cx_count_zero(toolbox, population)

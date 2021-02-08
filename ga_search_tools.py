@@ -64,73 +64,43 @@ def forced_reevaluation_of_individual_for_debugging(toolbox, ind, debug_level):
     return raw_error
 
 
-def check_error_matrices(raw_error_matrix, raw_error_matrix2):
+def check_error_matrices(raw_error_matrix_py, raw_error_matrix_cpp):
     #print("debug line 68, python, check_error_matrices")
-    assert raw_error_matrix.shape == raw_error_matrix2.shape
-    for i in range(raw_error_matrix.shape[0]):
-        for j in range(raw_error_matrix.shape[1]):
-            if not math.isclose(raw_error_matrix[i, j], raw_error_matrix2[i, j]):
-                print("debug line 72:", "i", i, "j", j, "m1", raw_error_matrix[i, j], "m2", raw_error_matrix2[i, j])
-            assert math.isclose(raw_error_matrix[i, j], raw_error_matrix2[i, j])
-
-
-def evaluate_individual_impl_old(toolbox, ind, debug=0):
-    '''Assigns family index to the individual'''
-    if toolbox.eval_count >= toolbox.max_evaluations:
-        raise RuntimeWarning("max evaluations reached")
-    toolbox.eval_count += 1
-
-    t0 = time.time()
-    model_outputs = cpp_coupling.run_on_all_inputs(toolbox.cpp_handle, ind)
-    toolbox.t_cpp_interpret += time.time() - t0
-    if False:
-        test_against_python_interpreter(toolbox, model_outputs, ind)
-
-    t0 = time.time()
-    if toolbox.family_key_is_error_matrix:
-        raw_error_matrix = evaluate.compute_raw_error_matrix(toolbox.example_inputs, model_outputs, toolbox.error_function, \
-            toolbox.f, debug, toolbox.penalise_non_reacting_models)
-        #print("debug line 94", "python error matrix", raw_error_matrix)
-        #print("debug line 94", "model_outputs", model_outputs)
-        raw_error_matrix2 = cpp_coupling.compute_error_matrix(toolbox.cpp_handle, ind)
-        #print("debug line 94", "C++ error matrix", raw_error_matrix2)
-        #print("debug line 97", "str(ind)", str(ind))
-        check_error_matrices(raw_error_matrix, raw_error_matrix2)
-        #print("debug line 99 : check_error_matrices OK")
-        raw_error_matrix_tuple = tuple(raw_error_matrix.flatten())
-        if raw_error_matrix_tuple in toolbox.families_dict:
-            family_index = toolbox.families_dict[raw_error_matrix_tuple]
-            ind.fam = toolbox.families_list[family_index]
-        else:
-            family_index = len(toolbox.families_list)
-            toolbox.families_dict[raw_error_matrix_tuple] = family_index
-            ind.fam = Family(family_index, raw_error_matrix)
-            toolbox.families_list.append(ind.fam)
-    else:
-        model_outputs_tuple = recursive_tuple(model_outputs)
-        if model_outputs_tuple in toolbox.families_dict:
-            family_index = toolbox.families_dict[model_outputs_tuple]
-            ind.fam = toolbox.families_list[family_index]
-        else:
-            raw_error_matrix = evaluate.compute_raw_error_matrix(toolbox.example_inputs, model_outputs, toolbox.error_function, \
-                toolbox.f, debug, toolbox.penalise_non_reacting_models)
-            family_index = len(toolbox.families_list)
-            toolbox.families_dict[model_outputs_tuple] = family_index
-            ind.fam = Family(family_index, raw_error_matrix)
-            toolbox.families_list.append(ind.fam)
-    toolbox.t_error += time.time() - t0
+    assert raw_error_matrix_py.shape == raw_error_matrix_cpp.shape
+    for i in range(raw_error_matrix_py.shape[0]):
+        for j in range(raw_error_matrix_py.shape[1]):
+            if not math.isclose(raw_error_matrix_py[i, j], raw_error_matrix_cpp[i, j]):
+                print("raw_error_matrix_py", raw_error_matrix_py)
+                print("raw_error_matrix_cpp", raw_error_matrix_cpp)
+                print("debug line 72:", "i", i, "j", j, "py", raw_error_matrix_py[i, j], "cpp", raw_error_matrix_cpp[i, j])
+            assert math.isclose(raw_error_matrix_py[i, j], raw_error_matrix_cpp[i, j])
 
 
 def evaluate_individual_impl(toolbox, ind, debug=0):
-    raw_error_matrix = cpp_coupling.compute_error_matrix(toolbox.cpp_handle, ind)
-    raw_error_matrix_tuple = tuple(raw_error_matrix.flatten())
-    if raw_error_matrix_tuple in toolbox.families_dict:
-        family_index = toolbox.families_dict[raw_error_matrix_tuple]
+    # cpp implementatie
+    raw_error_matrix_cpp, model_outputs_cpp = cpp_coupling.compute_error_matrix(toolbox.cpp_handle, ind, toolbox.penalise_non_reacting_models)
+
+    # piggyback test : vergelijk uitkomst cpp met python implementatie
+    if True:
+        model_outputs_py = cpp_coupling.run_on_all_inputs(toolbox.cpp_handle, ind)
+        raw_error_matrix_py = evaluate.compute_raw_error_matrix(toolbox.example_inputs, model_outputs_py, toolbox.error_function, \
+            toolbox.f, debug, toolbox.penalise_non_reacting_models)
+        check_error_matrices(raw_error_matrix_py, raw_error_matrix_cpp)
+
+    # bepaling family key
+    if toolbox.family_key_is_error_matrix:
+        family_key = tuple(raw_error_matrix_cpp.flatten())
+    else:
+        family_key = model_outputs_cpp
+
+    # bepaling family
+    if family_key in toolbox.families_dict:
+        family_index = toolbox.families_dict[family_key]
         ind.fam = toolbox.families_list[family_index]
     else:
         family_index = len(toolbox.families_list)
-        toolbox.families_dict[raw_error_matrix_tuple] = family_index
-        ind.fam = Family(family_index, raw_error_matrix)
+        toolbox.families_dict[family_key] = family_index
+        ind.fam = Family(family_index, raw_error_matrix_cpp)
         toolbox.families_list.append(ind.fam)
 
 

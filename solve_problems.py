@@ -27,7 +27,7 @@ def is_solved_by_function(example_inputs, error_function, fname, functions, log_
             actual_outputs.append(actual_output)
     if len(used_example_inputs) == 0:
         return False
-    raw_error_matrix = evaluate.compute_raw_error_matrix(used_example_inputs, actual_outputs, error_function, log_file, verbose)
+    raw_error_matrix = evaluate.compute_raw_error_matrix(used_example_inputs, actual_outputs, error_function, log_file, verbose, False)
     return np.sum(raw_error_matrix) <= 0.0
 
 

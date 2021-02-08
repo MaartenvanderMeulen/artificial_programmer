@@ -4,6 +4,8 @@ import numpy as np
 
 from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.genFull, gp.from_string
 
+import evaluate # find_worst_raw_error_vector
+
 
 class CodeItem (ctypes.Structure):
     _fields_ = [("_type", ctypes.c_int), ("_value", ctypes.c_int), ("_arity", ctypes.c_int)]
@@ -182,6 +184,33 @@ def convert_c_output_to_python(output_buf, n_output):
     return result 
 
 
+def convert_c_output_to_pp_str_impl(output_buf, n_output):
+    result = ""
+    ITEM_INT = 1
+    ITEM_LIST = 4
+    for i in range(n_output):
+        if output_buf[i]._type == ITEM_INT:
+            result += f" i{output_buf[i]._value}"
+        else:
+            assert output_buf[i]._type == ITEM_LIST
+            result += f" L{output_buf[i]._arity}"
+    return result
+
+
+def convert_c_output_to_pp_str(output_buf, n_output):
+    result = ""
+    ITEM_INT = 1
+    ITEM_LIST = 4
+    for i in range(n_output):
+        if output_buf[i]._type == ITEM_INT:
+            result += f" i{output_buf[i]._value}"
+        else:
+            assert output_buf[i]._type == ITEM_LIST
+            result += f" L{output_buf[i]._arity}"
+    print("cpp_coupling, line 210", convert_c_output_to_python(output_buf, n_output))
+    return result
+
+
 def call_cpp_interpreter(lib, c_n_params, c_param_sizes, c_params, n_local_variables, c_code, output_bufsize, output_buf, n_output, debug):
     '''In a separate python function to get exact timings on the C++ part via cProfile'''
     lib.run_non_recursive_level1_function( \
@@ -234,26 +263,39 @@ def run_on_all_inputs(cpp_handle, deap_code, get_item_value=None, debug=0):
     return result
 
 
-def compute_error_matrix(cpp_handle, deap_code, get_item_value=None, debug=0):
+def compute_error_matrix(cpp_handle, deap_code, penalise_non_reacting_models):
+    assert type(penalise_non_reacting_models) == type(True)
+    get_item_value = None
+    debug = 0
     lib, c_inputs, symbol_table, n_local_variables, output_bufsize, output_buf, c_expected_outputs, c_error_vector = cpp_handle
-    result = np.empty((len(c_inputs), 8))
+    raw_error_matrix = np.empty((len(c_inputs), 8))
+    model_output_cpp = []
     if get_item_value is None:
         get_item_value = lambda x : x.name if isinstance(x, gp.Primitive) else x.value
     c_code = compile_deap(deap_code, symbol_table, get_item_value)
     expected_output_sizes, c_expected_outputs = c_expected_outputs
+    domain_output_set = set()
     for row, (c_param_sizes, c_params) in enumerate(c_inputs):
         c_n_params = ctypes.c_int(len(c_param_sizes))
         n_output = ctypes.c_int()
         n_output.value = 0
         call_cpp_interpreter(lib, c_n_params, c_param_sizes, c_params, n_local_variables, c_code, output_bufsize, output_buf, n_output, debug)
-        if n_output.value == 0:
-            assert output_bufsize > 1 # C++ needs some room in this case
-        if n_output.value <= 1:
-            assert output_bufsize > 1 # C++ needs some room in this case
+        model_output_str = convert_c_output_to_pp_str(output_buf, n_output.value)
+        domain_output_set.add(model_output_str)
+        model_output_cpp.append(model_output_str)
         call_cpp_evaluator(lib, expected_output_sizes[row], c_expected_outputs[row], n_output, output_buf, 8, c_error_vector, debug)
         for i in range(8):
-            result[row, i] = c_error_vector[i]
-    return result
+            raw_error_matrix[row, i] = c_error_vector[i]
+    print("cpp_coupling.py, line 275")
+    if penalise_non_reacting_models:
+        print("cpp_coupling.py, line 277", domain_output_set)
+        if len(domain_output_set) == 1:
+            print("cpp_coupling.py, line 279")
+            worst_raw_error_vector = evaluate.find_worst_raw_error_vector(raw_error_matrix)
+            print("cpp_coupling.py, line 281", raw_error_matrix)
+            raw_error_matrix[:] = worst_raw_error_vector
+            print("cpp_coupling.py, line 283", raw_error_matrix)
+    return raw_error_matrix, tuple(model_output_cpp)
 
 
 # ======================================== test ================================================

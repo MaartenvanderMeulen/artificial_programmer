@@ -190,9 +190,6 @@ def solve_by_new_function(problem, functions, f, params):
     else:
         toolbox.analyse_best = False
     toolbox.optimise_solution_length = params["optimise_solution_length"]
-    toolbox.extensive_statistics = params["extensive_statistics"]
-    toolbox.keep_path = params["keep_path"]
-    toolbox.idea_victor = params["idea_victor"]
     toolbox.dynamic_weights = params["dynamic_weights"]
     toolbox.dynamic_weights_adaptation_speed = params["dynamic_weights_adaptation_speed"]
     toolbox.use_cprofile = params["use_cprofile"]
@@ -205,8 +202,8 @@ def solve_by_new_function(problem, functions, f, params):
     evaluate.g_w6 = params["w6"]
     evaluate.g_w7 = params["w7"]
     evaluate.g_w8 = params["w8"]
-    toolbox.max_reenter_parachuting_phase = params["max_reenter_parachuting_phase"]
     toolbox.stuck_count_for_opschudding = params["stuck_count_for_opschudding"]
+    toolbox.max_reenter_parachuting_phase = params["max_reenter_parachuting_phase"]
     toolbox.family_key_is_error_matrix = params["family_key_is_error_matrix"]
     toolbox.parent_selection_weight_complementairity = params["parent_selection_weight_complementairity"]
     toolbox.parent_selection_weight_cx_count = params["parent_selection_weight_cx_count"]
