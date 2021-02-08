@@ -102,8 +102,6 @@ def my_profile(toolbox):
     cProfile.runctx("call_ga_search(toolbox)", globals(), locals(), filename="tmp/stats.txt")
     p = pstats.Stats("tmp/stats.txt")
     p.strip_dirs().sort_stats(pstats.SortKey.CUMULATIVE).print_stats(30)
-    # toolbox.t_total = time.time() - toolbox.t0
-    # ga_search_tools.write_timings(toolbox, "end of hop")
     return toolbox.ga_search_impl_return_vallue
 
 
@@ -111,6 +109,7 @@ def basinhopper(toolbox):
     for _ in range(toolbox.hops):
         toolbox.eval_count = 0
         toolbox.eval_lookup_count = 0
+
         toolbox.t_cpp_interpret = 0
         toolbox.t_py_interpret = 0
         toolbox.t_error = 0
@@ -129,10 +128,9 @@ def basinhopper(toolbox):
             best, gen = my_profile(toolbox)
         else:
             best, gen = ga_search1.ga_search_impl(toolbox)
-        toolbox.t_total = time.time() - toolbox.t0
-        ga_search_tools.write_timings(toolbox, "end of hop")
+        toolbox.t_total = round(time.time() - toolbox.t0)
         outcome = "solved" if best and toolbox.is_solution(best) else "stopped"
-        toolbox.f.write(f"{outcome}\t{gen}\tgen\t{toolbox.eval_count}\tevals\t{toolbox.max_observed_stuck_count}\tmax_sc\n")
+        toolbox.f.write(f"{outcome}\t{gen}\tgen\t{toolbox.eval_count}\tevals\t{toolbox.max_observed_stuck_count}\tmax_sc\t{toolbox.t_total}\tsec\n")
         ga_search_tools.write_cx_info(toolbox)
         if best:
             ga_search_tools.write_path(toolbox, best)

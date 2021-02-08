@@ -15,7 +15,7 @@ import evaluate
 from evaluate import recursive_tuple
 from ga_search_tools import write_population, consistency_check, log_population, make_pp_str
 from ga_search_tools import best_of_n, generate_initial_population, generate_initial_population_impl
-from ga_search_tools import refresh_toolbox_from_population, write_timings, write_cx_info
+from ga_search_tools import refresh_toolbox_from_population, write_cx_info
 from ga_search_tools import load_initial_population_impl, evaluate_individual, consistency_check_ind
 from ga_search_tools import crossover_with_local_search, cxOnePoint, mutUniform, replace_subtree_at_best_location
 from ga_search_tools import compute_complementairity, pz
@@ -266,7 +266,6 @@ def ga_search_impl(toolbox):
         toolbox.t_error = 0
         toolbox.t_cpp_interpret = 0
         toolbox.t_py_interpret = 0
-        write_timings(toolbox, "end of init")
         toolbox.prev_family_index = set()
         toolbox.stuck_count, toolbox.count_opschudding = 0, 0
         toolbox.parachute_level = 0

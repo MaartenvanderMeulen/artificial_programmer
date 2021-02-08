@@ -74,7 +74,7 @@ def check_error_matrices(raw_error_matrix, raw_error_matrix2):
             assert math.isclose(raw_error_matrix[i, j], raw_error_matrix2[i, j])
 
 
-def evaluate_individual_impl(toolbox, ind, debug=0):
+def evaluate_individual_impl_old(toolbox, ind, debug=0):
     '''Assigns family index to the individual'''
     if toolbox.eval_count >= toolbox.max_evaluations:
         raise RuntimeWarning("max evaluations reached")
@@ -121,30 +121,39 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
     toolbox.t_error += time.time() - t0
 
 
+def evaluate_individual_impl(toolbox, ind, debug=0):
+    raw_error_matrix = cpp_coupling.compute_error_matrix(toolbox.cpp_handle, ind)
+    raw_error_matrix_tuple = tuple(raw_error_matrix.flatten())
+    if raw_error_matrix_tuple in toolbox.families_dict:
+        family_index = toolbox.families_dict[raw_error_matrix_tuple]
+        ind.fam = toolbox.families_list[family_index]
+    else:
+        family_index = len(toolbox.families_list)
+        toolbox.families_dict[raw_error_matrix_tuple] = family_index
+        ind.fam = Family(family_index, raw_error_matrix)
+        toolbox.families_list.append(ind.fam)
+
+
 def evaluate_individual(toolbox, individual, pp_str, debug):
     assert type(pp_str) == type("") and type(debug) == type(1)
-    if time.time() >= toolbox.t0 + toolbox.max_seconds:
-        raise RuntimeWarning("out of time")
-    t0 = time.time()
-    assert pp_str == make_pp_str(individual)
     toolbox.eval_lookup_count += 1
     if pp_str in toolbox.pp_str_to_family_index_dict:
         family_index = toolbox.pp_str_to_family_index_dict[pp_str]
         individual.fam = toolbox.families_list[family_index]
     else:
+        if time.time() >= toolbox.t0 + toolbox.max_seconds:
+            raise RuntimeWarning("out of time")
+        if toolbox.eval_count >= toolbox.max_evaluations:
+            raise RuntimeWarning("max evaluations reached")
+        toolbox.eval_count += 1
         evaluate_individual_impl(toolbox, individual, debug)
         toolbox.pp_str_to_family_index_dict[pp_str] = individual.fam.family_index
-    family = individual.fam
-    assert type(family.raw_error) == type(0.0)
-    assert type(family.normalised_error) == np.float64
-    toolbox.t_eval += time.time() - t0
 
 
 def best_of_n(population, n):
     inds = random.sample(population, n) # sample always returns a list
     ind = min(inds, key=lambda ind: ind.fam.normalised_error)
     return ind
-
 
 
 def log_population(toolbox, population, label):
