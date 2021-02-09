@@ -162,7 +162,7 @@ if __name__ == "__main__":
         params = context.read_params(context.best_params_file)
         param = "parent_selection_weight_cx_count"
         # param = "parent_selection_weight_p_out_of_pop"
-        for value in [0.01, 0.2]:
+        for value in [0.0, 0.1, 0.01, 0.001, 0.0001, 0.00001,]:
             context.compute_score(param, value)
         
 

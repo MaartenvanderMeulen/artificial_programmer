@@ -275,3 +275,49 @@ Verminderen van __str__ calls (in consistency checks en zxo) hielp ook al:
 - a_a32_experiment_doorloop4h/time_1396.txt : total 390 (32 threads)
 - a/time_1396.txt : total 160 (maar dit is singlecore).  Beter dit eens te doen met een opgewarmde CPU.
 - en na vervangen gp.__str__ door pp_str: totaal 126 (ook singlecore), 126/160=0.79
+
+===================================== 8 Feb, cProfile on run 1900
+
+   Ordered by: cumulative time
+   List reduced from 128 to 30 due to restriction <30>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000   76.287   76.287 {built-in method builtins.exec}
+        1    0.000    0.000   76.287   76.287 <string>:1(<module>)
+        1    0.000    0.000   76.287   76.287 find_new_function.py:96(call_ga_search)
+        1    0.003    0.003   76.287   76.287 ga_search1.py:250(ga_search_impl)
+       42    0.098    0.002   73.762    1.756 ga_search1.py:134(generate_offspring)
+   394794    0.789    0.000   67.515    0.000 ga_search_tools.py:98(evaluate_individual)
+   172837    0.677    0.000   66.689    0.000 ga_search_tools.py:75(evaluate_individual_impl)
+   172837    5.689    0.000   65.878    0.000 cpp_coupling.py:255(compute_error_matrix)
+     1554    1.080    0.001   52.290    0.034 ga_search_tools.py:448(crossover_with_local_search)
+     2377    0.140    0.000   13.078    0.006 ga_search_tools.py:516(replace_subtree_at_best_location)
+
+  2419718   37.349    0.000   39.375    0.000 cpp_coupling.py:203(call_cpp_interpreter)
+                                              hier valt dus niks meer aan te doen
+
+  2419718   12.159    0.000   12.159    0.000 cpp_coupling.py:189(convert_c_output_to_pp_str)
+                                              dit kan veel sneller, maar vereist toevoeging aan de C++ code
+                                              De C++ moet dan een int-vector vullen, die aan de python kant
+                                              dan via "
+                                                      model_outputs.append(tuple(model_output[:model_output_len]))
+                                                 family_key = tuple(model_outputs)" omgezet wordt naar een family_key
+
+   496027    0.413    0.000    1.200    0.000 ga_search_tools.py:20(make_pp_str)
+   172837    5.176    0.000    6.790    0.000 cpp_coupling.py:14(compile_deap)
+  4013309    1.100    0.000    1.596    0.000 cpp_coupling.py:263(<lambda>)
+   492208    0.954    0.000    1.192    0.000 gp.py:61(__setitem__)
+    15962    0.398    0.000    0.983    0.000 gp.py:587(generate)
+   520693    0.751    0.000    0.894    0.000 gp.py:172(searchSubtree)
+    13441    0.012    0.000    0.717    0.000 gp.py:517(genFull)
+     5025    0.007    0.000    0.706    0.000 gp.py:560(genHalfAndHalf)
+  4741848    0.641    0.000    0.700    0.000 {built-in method builtins.isinstance}
+                                              dit kan sneller na overnemen dp?
+ 12252100    1.811    0.000    1.811    0.000 {built-in method _ctypes.byref}
+                                              dit kan sneller door cpp_interpret & cpp_evaluate te combineren,
+                                              en meteen voor alle inputs te doen 9dus 14x)
+   492208    0.660    0.000    0.866    0.000 ga_search_tools.py:416(copy_individual)
+                                              dit kan sneller door individuals in cx te hergebruiken
+    29268    0.212    0.000    0.946    0.000 ga_search1.py:25(sample_fam_cx_fitness)
+                                              dat is nog best veel
+

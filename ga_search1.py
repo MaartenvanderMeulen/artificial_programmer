@@ -217,34 +217,32 @@ def track_stuck(toolbox, population):
 
 
 def log_info(toolbox, population):
+    ootb = (toolbox.count_cx - toolbox.count_cx_into_current_pop) / toolbox.count_cx
+    fams = len(toolbox.current_families_dict)
+    if toolbox.min_fams > fams:
+        toolbox.min_fams = fams
+    if population[0].fam.raw_error < 100:
+        if toolbox.min_ootb > ootb:
+            toolbox.min_ootb = ootb
 
-    toolbox.f.write(f"gen {toolbox.real_gen}")
-    done = set()
-    msg = ""
-    for ind in population:
-        i = ind.fam.family_index
-        fam = ind.fam
-        if i not in done:
-            done.add(i)
-            size = len(toolbox.current_families_dict[i])
-            msg += f" ({i},{fam.normalised_error:.0f},{fam.raw_error:.0f},{size})"
-    if len(msg) > 150:
-        msg = msg[:(150-3)] + "..."
-    # toolbox.f.write(f" (idx,dw,raw,#)")
+    msg = f"gen {toolbox.real_gen} best {population[0].fam.raw_error:.0f}"
     toolbox.f.write(msg)
-    toolbox.f.write(f"\n")
+    msg = f" {100*ootb:.1f} ootb {fams} fams"
+    toolbox.f.write(msg)
     if False:
-        toolbox.f.write(f"best_ind.raw_error_matrix\n")
-        i = population[0].fam.family_index
-        dynamic_weights.dump_matrix(toolbox.f, toolbox.families_list[i].raw_error_matrix)
-        dynamic_weights.dump_dw_matrix(toolbox.f)
-        for i in [38, 671]:
-            if i in done:
-                toolbox.f.write(f"family[{i}].raw_error_matrix\n")
-                dynamic_weights.dump_matrix(toolbox.f, toolbox.families_list[i].raw_error_matrix)
-                toolbox.f.write(f"family[{i}].dw_error_matrix\n")
-                dw_error_matrix = dynamic_weights.compute_normalised_error_matrix(toolbox.families_list[i].raw_error_matrix)
-                dynamic_weights.dump_matrix(toolbox.f, dw_error_matrix)
+        done = set()
+        msg = ""
+        for ind in population:
+            i = ind.fam.family_index
+            fam = ind.fam
+            if i not in done:
+                done.add(i)
+                size = len(toolbox.current_families_dict[i])
+                msg += f" ({i},{fam.normalised_error:.0f},{fam.raw_error:.0f},{size})"
+        if len(msg) > 150:
+            msg = msg[:(150-3)] + "..."
+        toolbox.f.write(msg)    
+    toolbox.f.write(f"\n")
 
 
 def ga_search_impl(toolbox):
@@ -281,7 +279,7 @@ def ga_search_impl(toolbox):
                 population[:] = population[:toolbox.pop_size[toolbox.parachute_level]]
                 consistency_check(toolbox, population)
                 refresh_toolbox_from_population(toolbox, population, True)
-                write_cx_info(toolbox)
+                # write_cx_info(toolbox)
                 if toolbox.is_solution(population[0]): # do this after refresh, for debugging refresh
                     return population[0], toolbox.real_gen + 1
                 toolbox.gen += 1

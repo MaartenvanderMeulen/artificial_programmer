@@ -124,18 +124,22 @@ def basinhopper(toolbox):
         toolbox.t_mut = 0
         toolbox.t_cx_local_search = 0
 
+        toolbox.count_cx_into_current_pop = 1
+        toolbox.count_cx = 1 # start with one so that we can divide by it always
+        toolbox.min_ootb = 1.0
+        toolbox.min_fams = toolbox.max_evaluations
+
         toolbox.t0 = time.time()
         if toolbox.use_cprofile:
             best, gen = my_profile(toolbox)
         else:
             best, gen = ga_search1.ga_search_impl(toolbox)
         toolbox.t_total = round(time.time() - toolbox.t0)
-        #print("toolbox.called_error_function_for_nothing", toolbox.called_error_function_for_nothing)
         outcome = "solved" if best and toolbox.is_solution(best) else "stopped"
-        toolbox.f.write(f"{outcome}\t{gen}\tgen\t{toolbox.eval_count}\tevals\t{toolbox.max_observed_stuck_count}\tmax_sc\t{toolbox.t_total}\tsec\n")
-        ga_search_tools.write_cx_info(toolbox)
+        toolbox.f.write(f"{outcome}\t{gen}\tgen\t{toolbox.eval_count}\tevals\t{toolbox.max_observed_stuck_count}\tmax_sc")
+        toolbox.f.write(f"\t{toolbox.t_total}\tsec\t{100*toolbox.min_ootb:.1f}\tmin_ootb\t{toolbox.min_fams:.0f}\tmin_fams\n")
+        # ga_search_tools.write_cx_info(toolbox)
         if best:
-            ga_search_tools.write_path(toolbox, best)
             if toolbox.best_ind_file:
                 ga_search_tools.write_population(toolbox.best_ind_file, [best], toolbox.functions)
             if toolbox.is_solution(best):
@@ -144,15 +148,14 @@ def basinhopper(toolbox):
                 if toolbox.verbose >= 1:
                     error = ga_search_tools.forced_reevaluation_of_individual_for_debugging(toolbox, best, 4)
                     assert error == 0
+                ga_search_tools.write_path(toolbox, best)
                 return result
         toolbox.f.flush()
     return None
 
     
 def solve_by_new_function(problem, functions, f, params):
-    f.write(f"sys.getrecursionlimit() {sys.getrecursionlimit()}\n")
     sys.setrecursionlimit(sys.getrecursionlimit() + 500)
-    f.write(f"sys.getrecursionlimit() {sys.getrecursionlimit()}\n")
 
     toolbox = Toolbox(problem, functions, params["seed"])
     toolbox.problem_name, toolbox.problem_params, _, _, _, _ = problem

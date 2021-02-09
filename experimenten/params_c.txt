@@ -14,7 +14,7 @@
     "max_evaluations": 91000000,
     "max_individual_size": 40,
     "max_reenter_parachuting_phase": 0,
-    "max_seconds": 540,
+    "max_seconds": 900,
     "max_stuck_count": 99170,
     "nchildren": [
         4000,
@@ -29,7 +29,7 @@
     "optimise_solution_length": false,
     "parent_selection_strategy": 2,
     "parent_selection_weight_complementairity": 0.3,
-    "parent_selection_weight_cx_count": 2.0,
+    "parent_selection_weight_cx_count": 1e-05,
     "parent_selection_weight_p_out_of_pop": 0.0,
     "parents_keep_fraction": [
         0.5,

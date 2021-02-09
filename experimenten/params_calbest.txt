@@ -10,10 +10,10 @@
     "hops": 1,
     "idea_victor": false,
     "keep_path": false,
-    "max_evaluations": 91000000,
+    "max_evaluations": 1424628,
     "max_individual_size": 40,
     "max_reenter_parachuting_phase": 0,
-    "max_seconds": 540,
+    "max_seconds": 1260,
     "max_stuck_count": 99170,
     "nchildren": [
         4000,

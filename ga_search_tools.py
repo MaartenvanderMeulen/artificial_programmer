@@ -146,23 +146,24 @@ def write_final_population(toolbox, population):
 
 
 def write_path(toolbox, ind):
-    index = ind.fam.family_index
-    toolbox.f.write(f"family_index {index}\n")
-    results = []
-    for key, value in toolbox.cx_count_dict.items():
-        index_a, index_b = key
-        assert index_a <= index_b
-        if index == index_a or index == index_b:
-            results.append([index_a , index_b, value])
-    results.sort(key=lambda item : -item[2])
-    for index_a, index_b, count in results:
-        assert index_a <= index_b
-        key = (index_a, index_b)
-        if key in toolbox.cx_child_dict:
-            count = len(toolbox.cx_child_dict[key])
-            toolbox.f.write(f"toolbox.cx_child_dict[({index_a},{index_b})] = {count}\n")
-            for key, value in toolbox.cx_child_dict[key].items():
-                toolbox.f.write(f"    child_fam[{key}] = {value}\n")
+    if False:
+        index = ind.fam.family_index
+        toolbox.f.write(f"family_index {index}\n")
+        results = []
+        for key, value in toolbox.cx_count_dict.items():
+            index_a, index_b = key
+            assert index_a <= index_b
+            if index == index_a or index == index_b:
+                results.append([index_a , index_b, value])
+        results.sort(key=lambda item : -item[2])
+        for index_a, index_b, count in results:
+            assert index_a <= index_b
+            key = (index_a, index_b)
+            if key in toolbox.cx_child_dict:
+                count = len(toolbox.cx_child_dict[key])
+                toolbox.f.write(f"toolbox.cx_child_dict[({index_a},{index_b})] = {count}\n")
+                for key, value in toolbox.cx_child_dict[key].items():
+                    toolbox.f.write(f"    child_fam[{key}] = {value}\n")
     code = interpret.compile_deap(str(ind), toolbox.functions)
     code_str = interpret.convert_code_to_str(code)
     toolbox.f.write(f"{code_str} # {ind.fam.raw_error:.3f} len {len(ind)}\n")
@@ -231,6 +232,8 @@ def compute_fam_cx_fitness(toolbox, fam1, fam2):
 
 
 def write_cx_info(toolbox):
+    if toolbox.count_cx > 0:
+        toolbox.f.write(f"fraction cx into current pop {toolbox.count_cx_into_current_pop / toolbox.count_cx:.3f}\n")
     results = []
     sum_cx_count = 0
     for key, cx_count in toolbox.cx_count_dict.items():
@@ -494,6 +497,9 @@ def crossover_with_local_search(toolbox, parent1, parent2):
         if best.fam.family_index not in child_dict:
             child_dict[best.fam.family_index] = 0
         child_dict[best.fam.family_index] += 1
+        if best.fam.family_index in toolbox.current_families_dict:
+            toolbox.count_cx_into_current_pop += 1
+        toolbox.count_cx += 1
     else:
         child_dict[-1] += 1
 
