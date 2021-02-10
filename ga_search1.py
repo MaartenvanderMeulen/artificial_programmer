@@ -26,9 +26,6 @@ def sample_fam_cx_fitness(toolbox, family1_members, family2_members):
     index1, index2 = random.randrange(0, len(family1_members)), random.randrange(0, len(family2_members))
     parent1, parent2 = family1_members[index1], family2_members[index2]
 
-    # sort
-    if parent1.fam.raw_error > parent2.fam.raw_error or (parent1.fam.raw_error == parent2.fam.raw_error and len(parent1) > len(parent2)):
-        parent1, parent2 = parent2, parent1
     # compute p        
     p_fitness1 = (1 - parent1.fam.raw_error/(toolbox.max_raw_error*1.1))
     p_fitness2 = (1 - parent2.fam.raw_error/(toolbox.max_raw_error*1.1))

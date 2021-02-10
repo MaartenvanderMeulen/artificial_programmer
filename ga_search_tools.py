@@ -453,11 +453,6 @@ def crossover_with_local_search(toolbox, parent1, parent2):
         # No crossover on single node tree
         return None, None
 
-    # sorting
-    t_evaluate = toolbox.t_eval
-    if parent1.fam.raw_error > parent2.fam.raw_error or (parent1.fam.raw_error == parent2.fam.raw_error and len(parent1) > len(parent2)):
-        parent1, parent2 = parent2, parent1
-
     # local sesarch
     t0 = time.time()
     indexes1 = [i for i in range(len(parent1))]
