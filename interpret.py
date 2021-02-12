@@ -129,7 +129,7 @@ class Parser:
 # TODO: put this in a Run object
 global count_runs_calls
 count_runs_calls = 0
-longest_run = 0
+
 
 def check_depth_impl(data):
     count_items = 1
@@ -444,18 +444,12 @@ def compile(program_str):
 def run(program, variables, functions, debug=False):
     '''Runs compiled program'''
     #print("run start")
-    global count_runs_calls, longest_run
+    global count_runs_calls
     count_runs_calls = 0
     try:
-        t0 = time.time()
         result = _run(program, variables, functions, debug, 0)
         #if len(program) < 40:
         #    print("DEBUG interpret.py, 448", program, functions, result)
-        t1 = time.time()
-        if longest_run < t1 - t0:
-            longest_run = t1 - t0
-            #print(convert_code_to_str(program))
-            #print(longest_run, "seconds")
     except RuntimeError as e:
         if str(e) not in ["code run calls exceeded", "code depth exceeded", "for loop max iterations exceeded",
                 "data depth exceeded", "data list length exceeded", "data size exceeded"]:

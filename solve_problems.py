@@ -120,7 +120,8 @@ def main(seed, id):
         problems = interpret.compile(interpret.load(problems_file_name))        
         solved_all = solve_problems(problems, functions, log_file, params, append_functions_to_file=None)
         log_file.write("done\n")
-        os.system(f"touch {output_folder}/end_{seed}.txt")
+        if params["touch_at_end"]:
+            os.system(f"touch {output_folder}/end_{seed}.txt")
         return 0 if solved_all else 1
 
 

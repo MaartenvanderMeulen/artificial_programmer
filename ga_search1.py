@@ -13,12 +13,12 @@ from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.
 import interpret
 import evaluate
 from evaluate import recursive_tuple
-from ga_search_tools import write_population, consistency_check, log_population
+from ga_search_tools import write_population, consistency_check
 from ga_search_tools import best_of_n, generate_initial_population, generate_initial_population_impl
-from ga_search_tools import refresh_toolbox_from_population, write_cx_info
+from ga_search_tools import refresh_toolbox_from_population, write_cx_graph
 from ga_search_tools import load_initial_population_impl, evaluate_individual, consistency_check_ind
 from ga_search_tools import crossover_with_local_search, cxOnePoint, mutUniform, replace_subtree_at_best_location
-from ga_search_tools import compute_complementairity, pz
+from ga_search_tools import compute_complementairity, pz, remove_file
 import dynamic_weights
 
 
@@ -49,11 +49,9 @@ def sample_fam_cx_fitness(toolbox, family1_members, family2_members):
         x = count_cx + 1
         y = toolbox.parent_selection_weight_cx_count
         p /= x ** y
-        #toolbox.f.write(f"count_cx({parent1.fam.family_index},{parent2.fam.family_index}) = {x} ** {y} = {x ** y}\n")
         x = pz(toolbox, parent1.fam.family_index, parent2.fam.family_index) 
         y = toolbox.parent_selection_weight_p_out_of_pop
         p *= x ** y
-        #toolbox.f.write(f"pz({parent1.fam.family_index},{parent2.fam.family_index}) = {x} ** {y} = {x ** y}\n")
     assert p >= 0
     return p, parent1, parent2
 
@@ -129,7 +127,6 @@ def analyse_parents(toolbox, population):
 
 
 def generate_offspring(toolbox, population, nchildren):
-    t0_offspring = time.time()
     offspring = []
     expr_mut = lambda pset, type_: gp.genFull(pset=pset, min_=0, max_=2, type_=type_)
     retry_count = 0  
@@ -146,24 +143,18 @@ def generate_offspring(toolbox, population, nchildren):
     while len(offspring) < nchildren:
         op_choice = random.random()
         if op_choice < toolbox.pcrossover or only_cx: # Apply crossover
-            t0_select_parents = time.time()
             parent1, parent2 = select_parents(toolbox, population)
-            toolbox.t_select_parents += time.time() - t0_select_parents
-            t0_cx = time.time()
             if toolbox.parachute_level == 0:
                 child, pp_str = cxOnePoint(toolbox, parent1, parent2)
             else:
                 child, pp_str = crossover_with_local_search(toolbox, parent1, parent2)
-            toolbox.t_cx += time.time() - t0_cx
         else: # Apply mutation
-            t0_mut = time.time()
             parent = best_of_n(population, toolbox.best_of_n_mut)
             if toolbox.parachute_level == 0:
                 child, pp_str = mutUniform(toolbox, parent, expr=expr_mut, pset=toolbox.pset)
             else:
                 expr = gp.genFull(pset=toolbox.pset, min_=0, max_=2)
                 child, pp_str = replace_subtree_at_best_location(toolbox, parent, expr)
-            toolbox.t_mut += time.time() - t0_mut
         if child is None:
             if retry_count < toolbox.child_creation_retries:
                 retry_count += 1
@@ -181,8 +172,6 @@ def generate_offspring(toolbox, population, nchildren):
         if do_special_experiment:
             expected_offspring_escapes_count = nchildren * all_escapes_count / (len(population) ** 2)
             toolbox.f.write(f"{all_escapes_count}\t{offspring_escapes_count}\t{expected_offspring_escapes_count}\n")
-    toolbox.t_offspring += time.time() - t0_offspring
-    #consistency_check(toolbox, offspring)
     return offspring
 
 
@@ -192,6 +181,9 @@ def track_stuck(toolbox, population):
         toolbox.stuck_count += 1
         if toolbox.max_observed_stuck_count < toolbox.stuck_count:
             toolbox.max_observed_stuck_count = toolbox.stuck_count
+            toolbox.ootb_at_msc = (toolbox.count_cx - toolbox.count_cx_into_current_pop) / toolbox.count_cx
+            toolbox.fams_at_msc = len(toolbox.current_families_dict)
+            toolbox.error_at_msc = toolbox.population[0].fam.raw_error
         if toolbox.stuck_count > toolbox.max_stuck_count:            
             raise RuntimeWarning("max stuck count exceeded")
         if toolbox.stuck_count >= toolbox.stuck_count_for_opschudding:            
@@ -214,17 +206,7 @@ def track_stuck(toolbox, population):
 
 
 def log_info(toolbox, population):
-    ootb = (toolbox.count_cx - toolbox.count_cx_into_current_pop) / toolbox.count_cx
-    fams = len(toolbox.current_families_dict)
-    if toolbox.min_fams > fams:
-        toolbox.min_fams = fams
-    if population[0].fam.raw_error < 100:
-        if toolbox.min_ootb > ootb:
-            toolbox.min_ootb = ootb
-
     msg = f"gen {toolbox.real_gen} best {population[0].fam.raw_error:.0f}"
-    toolbox.f.write(msg)
-    msg = f" {100*ootb:.1f} ootb {fams} fams"
     toolbox.f.write(msg)
     if False:
         done = set()
@@ -242,50 +224,57 @@ def log_info(toolbox, population):
     toolbox.f.write(f"\n")
 
 
+
+def ga_search_impl_core(toolbox):
+    toolbox.gen = 0
+    toolbox.real_gen = 0
+    toolbox.prev_family_index = set()
+    toolbox.stuck_count, toolbox.count_opschudding = 0, 0
+    toolbox.parachute_level = 0
+    toolbox.max_observed_stuck_count = 0
+    toolbox.count_cx_into_current_pop, toolbox.count_cx = 0, 1 # starting at 1 is easier lateron
+    toolbox.population = generate_initial_population(toolbox)
+    consistency_check(toolbox, toolbox.population)
+    refresh_toolbox_from_population(toolbox, toolbox.population, False)
+    while toolbox.parachute_level < len(toolbox.ngen):
+        while toolbox.gen < toolbox.ngen[toolbox.parachute_level]:
+            track_stuck(toolbox, toolbox.population)
+            if toolbox.f and toolbox.verbose >= 1:
+                log_info(toolbox, toolbox.population)
+            offspring = generate_offspring(toolbox, toolbox.population, toolbox.nchildren[toolbox.parachute_level])
+            fraction = toolbox.parents_keep_fraction[toolbox.parachute_level]
+            if fraction < 1:
+                toolbox.population = random.sample(toolbox.population, k=int(len(toolbox.population)*fraction))
+            toolbox.population += offspring
+            toolbox.population.sort(key=toolbox.sort_ind_key)
+            toolbox.population[:] = toolbox.population[:toolbox.pop_size[toolbox.parachute_level]]
+            consistency_check(toolbox, toolbox.population)
+            refresh_toolbox_from_population(toolbox, toolbox.population, True)
+            if toolbox.is_solution(toolbox.population[0]): # do this after refresh, for debugging refresh
+                return
+            toolbox.gen += 1
+            toolbox.real_gen += 1
+        toolbox.parachute_level += 1
+
+
 def ga_search_impl(toolbox):
     if toolbox.final_pop_file: # clear the file to avoid confusion with older output
-        write_population(toolbox.final_pop_file, [], toolbox.functions)
+        remove_file(toolbox.final_pop_file)
+    if toolbox.new_fam_file: # clear the file to avoid confusion with older output
+        remove_file(toolbox.new_fam_file)
+    toolbox.population = []
     try:
-        t0 = time.time()
-        toolbox.gen = 0
-        toolbox.real_gen = 0
-        population = [] # generate_initial_population may throw exception
-        population = generate_initial_population(toolbox)
-        consistency_check(toolbox, population)
-        refresh_toolbox_from_population(toolbox, population, False)
-        toolbox.t_init = time.time() - t0
-        toolbox.t_eval = 0
-        toolbox.t_error = 0
-        toolbox.t_cpp_interpret = 0
-        toolbox.t_py_interpret = 0
-        toolbox.prev_family_index = set()
-        toolbox.stuck_count, toolbox.count_opschudding = 0, 0
-        toolbox.parachute_level = 0
-        toolbox.max_observed_stuck_count = 0
-        while toolbox.parachute_level < len(toolbox.ngen):
-            while toolbox.gen < toolbox.ngen[toolbox.parachute_level]:
-                track_stuck(toolbox, population)
-                if toolbox.f and toolbox.verbose >= 1:
-                    log_info(toolbox, population)
-                offspring = generate_offspring(toolbox, population, toolbox.nchildren[toolbox.parachute_level])
-                fraction = toolbox.parents_keep_fraction[toolbox.parachute_level]
-                if fraction < 1:
-                    population = random.sample(population, k=int(len(population)*fraction))
-                population += offspring
-                population.sort(key=toolbox.sort_ind_key)
-                population[:] = population[:toolbox.pop_size[toolbox.parachute_level]]
-                consistency_check(toolbox, population)
-                refresh_toolbox_from_population(toolbox, population, True)
-                # write_cx_info(toolbox)
-                if toolbox.is_solution(population[0]): # do this after refresh, for debugging refresh
-                    return population[0], toolbox.real_gen + 1
-                toolbox.gen += 1
-                toolbox.real_gen += 1
-            toolbox.parachute_level += 1
+
+        ga_search_impl_core(toolbox)
+
     except RuntimeWarning as e:
         toolbox.f.write("RuntimeWarning: " + str(e) + "\n")
-    if toolbox.final_pop_file: # write the set covering input files
-        write_population(toolbox.final_pop_file, population, toolbox.functions)
-    return (population[0] if len(population) > 0 else None), toolbox.real_gen + 1
-
-
+    if toolbox.final_pop_file: # write the input files for "samenvoegen"
+        write_population(toolbox.final_pop_file, toolbox.population, toolbox.functions)
+    new_families = [family.representative for family in toolbox.new_families_list]
+    if toolbox.new_fam_file and len(new_families) > 0: # write the new families
+        write_population(toolbox.new_fam_file, new_families, toolbox.functions)
+    if toolbox.write_cx_graph:
+        write_cx_graph(toolbox)
+    toolbox.ga_search_impl_return_value = (toolbox.population[0] if len(toolbox.population) > 0 else None), toolbox.real_gen + 1
+    return toolbox.ga_search_impl_return_value

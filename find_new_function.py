@@ -75,6 +75,7 @@ class Toolbox(object):
         self.prev_best_raw_error_matrix = None
         self.pp_str_to_family_index_dict = dict() # toolbox.pp_str_to_family_index_dict[pp_str] = family_index
         self.families_list = []
+        self.new_families_list = []
         self.families_dict = dict() # toolbox.families_dict[raw_error_matrix_tuple] = family_index
         self.cx_count_dict = dict() # toolbox.cx_count_dict[(a_index, b_index)] = number of times a&b have cx'ed
         self.cx_child_dict = dict() # toolbox.cx_child_dict[(a_index, b_index)][c_index] += 1 each time a&b have got a c
@@ -93,41 +94,34 @@ class Toolbox(object):
         return result == 0.0
 
 
-def call_ga_search(toolbox):
-    '''store return value of ga_search1.ga_search_impl, I don't know how to get them with cProfile runctx'''
-    toolbox.ga_search_impl_return_vallue = ga_search1.ga_search_impl(toolbox)
-
-
 def my_profile(toolbox):
-    cProfile.runctx("call_ga_search(toolbox)", globals(), locals(), filename="tmp/stats.txt")
+    cProfile.runctx("ga_search1.ga_search_impl(toolbox)", globals(), locals(), filename="tmp/stats.txt")
     p = pstats.Stats("tmp/stats.txt")
     p.strip_dirs().sort_stats(pstats.SortKey.CUMULATIVE).print_stats(30)
-    return toolbox.ga_search_impl_return_vallue
+    return toolbox.ga_search_impl_return_value
+
+
+def log_outcome(toolbox, best, gen):
+    outcome = "solved" if best and toolbox.is_solution(best) else "stopped"
+    toolbox.f.write(f"{outcome}\t{gen}\tgen\t{toolbox.eval_count}\tevals\t{toolbox.max_observed_stuck_count}\tmax_sc")
+    toolbox.f.write(f"\t{toolbox.t_total}\tsec")
+    toolbox.f.write(f"\t{toolbox.error_at_msc:.1f}\terror_msc\t{toolbox.ootb_at_msc:.3f}\tootb_msc\t{toolbox.fams_at_msc:.0f}\tfams_msc")
+    toolbox.f.write("\n")
+    if best:
+        if toolbox.best_ind_file:
+            ga_search_tools.write_population(toolbox.best_ind_file, [best], toolbox.functions)
+        if toolbox.is_solution(best):
+            if toolbox.verbose >= 1:
+                error = ga_search_tools.forced_reevaluation_of_individual_for_debugging(toolbox, best, 4)
+                assert error == 0
+            code = interpret.compile_deap(str(best), toolbox.functions)
+            toolbox.f.write(f"{interpret.convert_code_to_str(code)} # {best.fam.raw_error:.3f}\n")
+    toolbox.f.flush()
 
 
 def basinhopper(toolbox):    
     for _ in range(toolbox.hops):
         toolbox.eval_count = 0
-        toolbox.eval_lookup_count = 0
-        toolbox.called_error_function_for_nothing = 0
-
-        toolbox.t_cpp_interpret = 0
-        toolbox.t_py_interpret = 0
-        toolbox.t_error = 0
-        toolbox.t_eval = 0 # is t_interpret + t_error
-        toolbox.t_init = 0
-        toolbox.t_refresh = 0
-        toolbox.t_offspring = 0
-        toolbox.t_consistency_check = 0
-        toolbox.t_select_parents = 0
-        toolbox.t_cx = 0
-        toolbox.t_mut = 0
-        toolbox.t_cx_local_search = 0
-
-        toolbox.count_cx_into_current_pop = 1
-        toolbox.count_cx = 1 # start with one so that we can divide by it always
-        toolbox.min_ootb = 1.0
-        toolbox.min_fams = toolbox.max_evaluations
 
         toolbox.t0 = time.time()
         if toolbox.use_cprofile:
@@ -135,22 +129,12 @@ def basinhopper(toolbox):
         else:
             best, gen = ga_search1.ga_search_impl(toolbox)
         toolbox.t_total = round(time.time() - toolbox.t0)
-        outcome = "solved" if best and toolbox.is_solution(best) else "stopped"
-        toolbox.f.write(f"{outcome}\t{gen}\tgen\t{toolbox.eval_count}\tevals\t{toolbox.max_observed_stuck_count}\tmax_sc")
-        toolbox.f.write(f"\t{toolbox.t_total}\tsec\t{100*toolbox.min_ootb:.1f}\tmin_ootb\t{toolbox.min_fams:.0f}\tmin_fams\n")
-        # ga_search_tools.write_cx_info(toolbox)
-        if best:
-            if toolbox.best_ind_file:
-                ga_search_tools.write_population(toolbox.best_ind_file, [best], toolbox.functions)
-            if toolbox.is_solution(best):
-                code = interpret.compile_deap(str(best), toolbox.functions)
-                result = ["function", toolbox.problem_name, toolbox.problem_params, code]
-                if toolbox.verbose >= 1:
-                    error = ga_search_tools.forced_reevaluation_of_individual_for_debugging(toolbox, best, 4)
-                    assert error == 0
-                ga_search_tools.write_path(toolbox, best)
-                return result
-        toolbox.f.flush()
+
+        log_outcome(toolbox, best, gen)
+        if best and toolbox.is_solution(best):
+            code = interpret.compile_deap(str(best), toolbox.functions)
+            result = ["function", toolbox.problem_name, toolbox.problem_params, code]
+            return result
     return None
 
     
@@ -184,16 +168,17 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.penalise_non_reacting_models = params["penalise_non_reacting_models"]
     toolbox.hops = params["hops"]
     toolbox.output_folder = params["output_folder"]
-    toolbox.final_pop_file = params["output_folder"] + "/pop_" + str(params["seed"]) + ".txt"
-    toolbox.all_ind_file = None # params["output_folder"] + "/ind_" + str(params["seed"]) + ".txt"
-    toolbox.best_ind_file = None # params["output_folder"] + "/best_" + str(params["seed"]) + ".txt"
+    toolbox.final_pop_file = None # params["output_folder"] + "/pop_" + str(params["seed"]) + ".txt" # for "samenvoegen" runs & 'analyse_best'
+    toolbox.best_ind_file = None # params["output_folder"] + "/best_" + str(params["seed"]) + ".txt" # for 'analyse_best'
+    toolbox.fam_db_file = params["family_db_file"]
+    toolbox.new_fam_file = params["output_folder"] + "/newfam_" + str(params["seed"]) + ".txt" # is added later to family DB
+    toolbox.update_fam_db = params["update_family_db"]
+    toolbox.max_raw_error_for_family_db = params["max_raw_error_for_family_db"]
+    toolbox.write_cx_graph = params["write_cx_graph"]
     toolbox.new_initial_population = params["new_initial_population"]
-    if not toolbox.new_initial_population:
-        toolbox.old_populations_folder = params["old_populations_folder"]
-        toolbox.analyse_best = params["analyse_best"]
-        toolbox.old_populations_samplesize = params["old_populations_samplesize"]
-    else:
-        toolbox.analyse_best = False
+    toolbox.old_populations_folder = params["old_populations_folder"]
+    toolbox.analyse_best = params["analyse_best"]
+    toolbox.old_populations_samplesize = params["old_populations_samplesize"]
     toolbox.optimise_solution_length = params["optimise_solution_length"]
     toolbox.dynamic_weights = params["dynamic_weights"]
     toolbox.dynamic_weights_adaptation_speed = params["dynamic_weights_adaptation_speed"]
@@ -215,11 +200,6 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.parent_selection_weight_p_out_of_pop = params["parent_selection_weight_p_out_of_pop"]
 
     # search
-    toolbox.all_generations_ind = []
-    if toolbox.all_ind_file:
-        ga_search_tools.write_population(toolbox.all_ind_file, toolbox.all_generations_ind, toolbox.functions)
     result = basinhopper(toolbox)
-    if toolbox.all_ind_file:
-        ga_search_tools.write_population(toolbox.all_ind_file, toolbox.all_generations_ind, toolbox.functions)
 
     return result

@@ -22,14 +22,12 @@ def make_pp_str(ind):
 
 
 def test_against_python_interpreter(toolbox, cpp_model_outputs, ind):
-    t0 = time.time()
     code = interpret.compile_deap(str(ind), toolbox.functions)
     toolbox.functions[toolbox.problem_name] = [toolbox.formal_params, code]
     py_model_outputs = []
     for input in toolbox.example_inputs:
         model_output = interpret.run([toolbox.problem_name] + input, dict(), toolbox.functions, debug=toolbox.verbose >= 5)
         py_model_outputs.append(model_output)        
-    toolbox.t_py_interpret += time.time() - t0
     if py_model_outputs != cpp_model_outputs:
         cpp_coupling.run_on_all_inputs(toolbox.cpp_handle, ind, debug=2)
         print("py_model_outputs", py_model_outputs)
@@ -41,10 +39,11 @@ def test_against_python_interpreter(toolbox, cpp_model_outputs, ind):
 
 
 class Family:
-    def __init__(self, family_index, raw_error_matrix):
+    def __init__(self, family_index, raw_error_matrix, representative):
         self.family_index = family_index
         self.raw_error_matrix = raw_error_matrix
         self.raw_error = evaluate.compute_raw_error(self.raw_error_matrix)
+        self.representative = representative
         self.update_normalised_error()
 
     def update_normalised_error(self):
@@ -78,14 +77,17 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
 
     # bepaling family
     if family_key in toolbox.families_dict:
-        toolbox.called_error_function_for_nothing += 1
         family_index = toolbox.families_dict[family_key]
         ind.fam = toolbox.families_list[family_index]
+        if len(ind.fam.representative) > len(ind):
+            ind.fam.representative = ind # keep shortest representative
     else:
         family_index = len(toolbox.families_list)
         toolbox.families_dict[family_key] = family_index
-        ind.fam = Family(family_index, raw_error_matrix_cpp)
+        ind.fam = Family(family_index, raw_error_matrix_cpp, ind)
         toolbox.families_list.append(ind.fam)
+        if ind.fam.raw_error <= toolbox.max_raw_error_for_family_db:
+            toolbox.new_families_list.append(ind.fam)
         # piggyback test : vergelijk uitkomst cpp met python implementatie
         if False:
             model_outputs_py = cpp_coupling.run_on_all_inputs(toolbox.cpp_handle, ind)
@@ -97,7 +99,6 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
 
 def evaluate_individual(toolbox, individual, pp_str, debug):
     assert type(pp_str) == type("") and type(debug) == type(1)
-    toolbox.eval_lookup_count += 1
     if pp_str in toolbox.pp_str_to_family_index_dict:
         family_index = toolbox.pp_str_to_family_index_dict[pp_str]
         individual.fam = toolbox.families_list[family_index]
@@ -117,14 +118,6 @@ def best_of_n(population, n):
     return ind
 
 
-def log_population(toolbox, population, label):
-    toolbox.f.write(f"write_population {label}\n")
-    for i, ind in enumerate(population):
-        toolbox.f.write(f"    ind {i} {ind.fam.raw_error:.3f} {len(ind)} {ind(ind)}\n")
-    toolbox.f.write("\n")
-    toolbox.f.flush()
-
-
 def write_population(file_name, population, functions):
     with open(file_name, "w") as f:
         f.write("(\n")
@@ -133,40 +126,6 @@ def write_population(file_name, population, functions):
             code_str = interpret.convert_code_to_str(code)
             f.write(f"    {code_str} # {ind.fam.raw_error:.3f}\n")
         f.write(")\n")
-
-
-def write_final_population(toolbox, population):
-    with open(toolbox.pop_file, "w") as f:
-        f.write("(\n")
-        for ind in population:
-            code = interpret.compile_deap(str(ind), toolbox.functions)
-            code_str = interpret.convert_code_to_str(code)
-            f.write(f"    {code_str} # {ind.fam.raw_error:.3f}\n")
-        f.write(")\n")
-
-
-def write_path(toolbox, ind):
-    if False:
-        index = ind.fam.family_index
-        toolbox.f.write(f"family_index {index}\n")
-        results = []
-        for key, value in toolbox.cx_count_dict.items():
-            index_a, index_b = key
-            assert index_a <= index_b
-            if index == index_a or index == index_b:
-                results.append([index_a , index_b, value])
-        results.sort(key=lambda item : -item[2])
-        for index_a, index_b, count in results:
-            assert index_a <= index_b
-            key = (index_a, index_b)
-            if key in toolbox.cx_child_dict:
-                count = len(toolbox.cx_child_dict[key])
-                toolbox.f.write(f"toolbox.cx_child_dict[({index_a},{index_b})] = {count}\n")
-                for key, value in toolbox.cx_child_dict[key].items():
-                    toolbox.f.write(f"    child_fam[{key}] = {value}\n")
-    code = interpret.compile_deap(str(ind), toolbox.functions)
-    code_str = interpret.convert_code_to_str(code)
-    toolbox.f.write(f"{code_str} # {ind.fam.raw_error:.3f} len {len(ind)}\n")
 
 
 def compute_complementairity(fam1, fam2):
@@ -267,6 +226,23 @@ def write_cx_info(toolbox):
                     toolbox.f.write(f"    child_family = {child_index}; count = {child_count}\n")
 
 
+def write_cx_graph(toolbox):
+    edge = dict()    
+    for (a, b), childs in toolbox.cx_child_dict.items():
+        for c, n in childs.items():
+            if c >= 0: # -1 are the failed axb cx's
+                if (a, c) not in edge:
+                    edge[(a, c)] = 0
+                edge[(a, c)] += n
+                if (b, c) not in edge:
+                    edge[(b, c)] = 0
+                edge[(b, c)] += n
+    filename = f"{toolbox.output_folder}/cx_{toolbox.seed}.txt"
+    with open(filename, "w") as f:
+        for (ab, c), n in edge.items():
+            f.write(f"{ab} {c} {n}\n")
+
+
 def generate_initial_population_impl(toolbox):
     toolbox.ind_str_set = set()
     population = []
@@ -287,7 +263,14 @@ def generate_initial_population_impl(toolbox):
     return population
 
 
+def remove_file(filename):
+    if os.path.exists(filename):
+        os.remove(filename)
+
+
 def read_old_populations(toolbox, old_populations_folder, prefix):
+    if toolbox.update_fam_db or toolbox.analyse_best:
+        print(f"reading files in {old_populations_folder} ...")
     old_pops = []
     filenames = []
     for filename in os.listdir(old_populations_folder):
@@ -304,13 +287,25 @@ def read_old_populations(toolbox, old_populations_folder, prefix):
             elif toolbox.old_populations_samplesize == 1:
                 toolbox.f.write("RuntimeWarning: stopped because no set covering needed, 0 evals\n")
                 exit()
-    if len(old_pops) == 0:
-        toolbox.f.write(f"RuntimeError: no {prefix}* files in folder {old_populations_folder}\n")
-        exit(1)
     if toolbox.old_populations_samplesize != 1:
         if toolbox.old_populations_samplesize < len(old_pops):
             old_pops = random.sample(old_pops, k=toolbox.old_populations_samplesize)
+    if toolbox.update_fam_db or toolbox.analyse_best:
+        print(f"    {len(old_pops)} files with content")
     return old_pops
+
+
+def extract_best_fam_from_cx_file(cx_file):
+    best_fam = None
+    with open(cx_file, "r") as f:
+        for line in f:
+            parts = line.strip().lower().split(" ")
+            ab, c, n = int(parts[0]), int(parts[1]), int(parts[2])
+            if best_fam is None or best_fam > ab:
+                best_fam = ab
+            if best_fam is None or best_fam > c:
+                best_fam = c
+    return best_fam
 
 
 def deap_len_of_code(code):
@@ -346,57 +341,122 @@ def load_initial_population_impl(toolbox, old_pops):
     return population
 
 
-def analyse_population_impl(toolbox, old_pops):
+def analyse_vastlopers(toolbox):
+    print(f"analysis starts, reading files ...")
     families = dict()
     count = 0
-    for old_pop in old_pops:
-        for code in old_pop:
-            count += 1
-            deap_str = interpret.convert_code_to_deap_str(code, toolbox)
-            ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)
-            assert deap_str == str(ind)
-            pp_str = make_pp_str(ind)
-            assert len(ind) == deap_len_of_code(code)
-            evaluate_individual(toolbox, ind, pp_str, 0) # required to set ind.fam
-            family_index = ind.fam.family_index
-            if family_index not in families:
-                families[family_index] = [family_index, pp_str, 0]
-            families[family_index][2] += 1
-            if len(families[family_index][1]) > len(pp_str):
-                families[family_index][1] = pp_str
-    del ind, deap_str
+    for filename in os.listdir(toolbox.old_populations_folder):
+        if filename.startswith("cx"):
+            family_index = extract_best_fam_from_cx_file(toolbox.old_populations_folder + "/" + filename)
+            if family_index < len(toolbox.families_list):
+                count += 1
+                if family_index not in families:
+                    families[family_index] = 0
+                families[family_index] += 1
+            else:
+                print(filename, "skipped")
+    families = [(index, aantal) for index, aantal in families.items()]
+    families.sort(key=lambda item: -toolbox.families_list[item[0]].raw_error)
     filename = f"{toolbox.output_folder}/analysis.txt"
-    print(f"anaysis of {count} individuals in {len(old_pops)} pops : result in {filename}")
+    print(f"writing anaysis result of {count} files in {filename} ...")
     with open(filename, "w") as f:
-        f.write(f"{'rawerr':8} {'norerr':8} findex fsize {'last_output':48} {'last_raw_error':48} {'last_nor_error':48}\n")
-        data = [value for key, value in families.items()]
-        data.sort(key=lambda item: -toolbox.families_list[item[0]].weighted_error)
+        f.write(f"{'rawerr':8} findex fsize {'last_raw_error':48}\n")
         sum_count = 0
         sum_raw_error_vector = np.zeros_like(toolbox.families_list[0].raw_error_matrix[-1])
-        for family_index, _, count in data:
+        for family_index, count in families:
             raw_error = toolbox.families_list[family_index].raw_error
             raw_error_vector = toolbox.families_list[family_index].raw_error_matrix[-1]
             sum_raw_error_vector += np.array(raw_error_vector)
             raw_error_vector = " ".join([f"{v:5.3f}" for v in raw_error_vector])
             sum_count += count
-            nor_error = toolbox.families_list[family_index].normalised_error
-            f.write(f"{raw_error:8.3f} {nor_error:8.3f} {family_index:6d} {count:5d} ")
-            f.write(f" {raw_error_vector[:48]:48}")
-            f.write(f"\n")
-        sum_raw_error_vector = " ".join([f"{v/len(data):5.3f}" for v in sum_raw_error_vector])
-        f.write(f"{' ':8} {' ':8} {len(toolbox.families_list):6} {sum_count:5} {'last_output':48} ")
-        f.write(f"{sum_raw_error_vector:48}\n")
+            f.write(f"{raw_error:8.3f} {family_index:6d} {count:5d} {raw_error_vector[:48]:48}\n")
+        sum_raw_error_vector = " ".join([f"{v/len(families):5.3f}" for v in sum_raw_error_vector])
+        f.write(f"{' ':8} {len(toolbox.families_list):6} {sum_count:5} {sum_raw_error_vector:48}\n")
+    print(f"anaysis done")
+
+
+def analyse_vastlopers_snel(toolbox):
+    print(f"analysis starts, reading files ...")
+    families = dict()
+    count = 0
+    for filename in os.listdir(toolbox.old_populations_folder):
+        if filename.startswith("cx"):
+            family_index = extract_best_fam_from_cx_file(toolbox.old_populations_folder + "/" + filename)
+            if family_index < len(toolbox.families_list):
+                count += 1
+                if family_index not in families:
+                    families[family_index] = 0
+                families[family_index] += 1
+            else:
+                print(filename, "skipped")
+    families = [(index, aantal) for index, aantal in families.items()]
+    families.sort(key=lambda item: -toolbox.families_list[item[0]].raw_error)
+    filename = f"{toolbox.output_folder}/analysis.txt"
+    print(f"writing anaysis result of {count} files in {filename} ...")
+    with open(filename, "w") as f:
+        f.write(f"{'rawerr':8} findex fsize {'last_raw_error':48}\n")
+        sum_count = 0
+        sum_raw_error_vector = np.zeros_like(toolbox.families_list[0].raw_error_matrix[-1])
+        for family_index, count in families:
+            raw_error = toolbox.families_list[family_index].raw_error
+            raw_error_vector = toolbox.families_list[family_index].raw_error_matrix[-1]
+            sum_raw_error_vector += np.array(raw_error_vector)
+            raw_error_vector = " ".join([f"{v:5.3f}" for v in raw_error_vector])
+            sum_count += count
+            f.write(f"{raw_error:8.3f} {family_index:6d} {count:5d} {raw_error_vector[:48]:48}\n")
+        sum_raw_error_vector = " ".join([f"{v/len(families):5.3f}" for v in sum_raw_error_vector])
+        f.write(f"{' ':8} {len(toolbox.families_list):6} {sum_count:5} {sum_raw_error_vector:48}\n")
+    print(f"anaysis done")
+
+
+def read_family_db(toolbox):
+    if toolbox.update_fam_db or toolbox.analyse_best:
+        print("reading families db ...")
+        t0 = time.time()
+    families = interpret.compile(interpret.load(toolbox.fam_db_file))
+    if toolbox.update_fam_db or toolbox.analyse_best:
+        print(f"    {round(time.time() - t0)} seconds for reading {len(families)} families")
+        t0 = time.time()
+    for code in families:
+        deap_str = interpret.convert_code_to_deap_str(code, toolbox)
+        ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)                    
+        pp_str = make_pp_str(ind)
+        evaluate_individual(toolbox, ind, pp_str, 0)
+    toolbox.new_families_list = []
+    if toolbox.update_fam_db or toolbox.analyse_best:
+        elapsed = round(time.time() - t0)
+        print(f"    {elapsed} seconds for processing, {round(len(toolbox.families_list)/elapsed)} families/sec")
+    toolbox.t0 = time.time() # discard time lost by reading in the family db
+
+
+def update_fams(toolbox, newfams_list):
+    print("merging new families ...")
+    len_at_start = len(toolbox.families_list)
+    t0 = time.time()
+    for i, newfams in enumerate(newfams_list):
+        if time.time() >= t0 + 10:
+            t0 = time.time()
+            print("    progress", i, "/", len(newfams_list))
+        for representative in newfams:
+            deap_str = interpret.convert_code_to_deap_str(representative, toolbox)
+            representative = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)
+            pp_str = make_pp_str(representative)
+            evaluate_individual(toolbox, representative, pp_str, 0)
+    all_families = [family.representative for family in toolbox.families_list if family.raw_error <= toolbox.max_raw_error_for_family_db]
+    all_families.sort(key=lambda item: item.fam.raw_error)
+    write_population(toolbox.fam_db_file + ".update", all_families, toolbox.functions)
+    len_at_end = len(toolbox.families_list)
+    print(f"    {len_at_end - len_at_start} new families added to the db.  Total now {len_at_end}.")
 
 
 def generate_initial_population(toolbox, old_pops=None):
+    read_family_db(toolbox)
+    if toolbox.update_fam_db:
+        newfams = read_old_populations(toolbox, toolbox.old_populations_folder, "newfam")
+        update_fams(toolbox, newfams)
+        exit()
     if toolbox.analyse_best:
-        # best pop uit pop maken kan met :
-        # for s in `seq 1000 1 1999` ; do echo '(' > best_$s.txt ; if grep '\#' pop_$s.txt | head -1 >> best_$s.txt ; then echo $s ; fi ; echo ')' >> best_$s.txt ; done
-        # daarna de lege best files weghalen
-        # for s in `seq 1000 1 1999` ; do grep -L '\#' best_$s.txt ; done > x
-        # rm `cat x`
-        bests = read_old_populations(toolbox, toolbox.old_populations_folder, "best")
-        analyse_population_impl(toolbox, bests)    
+        analyse_vastlopers(toolbox)
         exit()
     if toolbox.new_initial_population:
         population = generate_initial_population_impl(toolbox)
@@ -454,7 +514,6 @@ def crossover_with_local_search(toolbox, parent1, parent2):
         return None, None
 
     # local sesarch
-    t0 = time.time()
     indexes1 = [i for i in range(len(parent1))]
     indexes2 = [i for i in range(len(parent2))]
     random.shuffle(indexes1)
@@ -473,8 +532,6 @@ def crossover_with_local_search(toolbox, parent1, parent2):
                     evaluate_individual(toolbox, child, pp_str, 0)
                     if is_improvement(toolbox, child, best):
                         best, best_pp_str = child, pp_str
-    t_evaluate = toolbox.t_eval - t_evaluate
-    toolbox.t_cx_local_search += time.time() - t0 - t_evaluate
 
     # cx_count administration
     index_a, index_b = parent1.fam.family_index, parent2.fam.family_index
@@ -533,7 +590,6 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
 
 
 def refresh_toolbox_from_population(toolbox, population, population_is_sorted):
-    t0 = time.time()
     if not population_is_sorted:
         # population.sort(key=toolbox.sort_ind_key) # influences reproducability with older runs
         pass
@@ -562,7 +618,6 @@ def refresh_toolbox_from_population(toolbox, population, population_is_sorted):
             family.update_normalised_error()
     # always sort!
     population.sort(key=toolbox.sort_ind_key)
-    toolbox.t_refresh += time.time() - t0
 
 
 def consistency_check_ind(toolbox, ind):
@@ -580,65 +635,5 @@ def consistency_check_ind(toolbox, ind):
 
 
 def consistency_check(toolbox, inds):
-    t0 = time.time()
     for ind in inds:
         consistency_check_ind(toolbox, ind)
-    toolbox.t_consistency_check += time.time() - t0
-
-
-def write_seconds(toolbox, timings, header):
-    file_name = toolbox.params["output_folder"] + "/time_" + str(toolbox.params["seed"]) + ".txt"
-    with open(file_name, "a") as f:
-        total = 0
-        for t, label in timings:
-            total += t
-        if total > 0:
-            f.write(f"\n{header}\n")
-            totalp = 0
-            for t, label in timings:
-                if t > 0:
-                    f.write(f"{t:.0f}\tsec\t{round(100*t/total)}\t%\t{label}\n")
-                totalp += round(100*t/total)
-            f.write(f"{total:.0f}\tsec\t{totalp}\t%\ttotal\n")
-
-
-def write_timings(toolbox, header):
-    if hasattr(toolbox, "t_total"):
-        timings = [
-            (toolbox.t_total, "t_total"),
-            ]
-        write_seconds(toolbox, timings, header)
-
-    timings = [
-        (toolbox.t_init, "init(total)"),
-        (toolbox.t_offspring, "offspring"),
-        (toolbox.t_refresh, "refresh"),
-        (toolbox.t_consistency_check, "consistency_check"),
-        ]
-    timings.sort(key=lambda item: -item[0])
-    write_seconds(toolbox, timings, header + " breakdown of total")
-
-    timings = [
-        (toolbox.t_select_parents, "t_select_parents"),
-        (toolbox.t_cx, "t_cx"),
-        (toolbox.t_mut, "t_mut"),
-        ]
-    timings.sort(key=lambda item: -item[0])
-    write_seconds(toolbox, timings, header + " breakdown of offspring")
-
-    timings = [
-        (toolbox.t_eval, "t_eval"),
-        ]
-    timings.sort(key=lambda item: -item[0])
-    write_seconds(toolbox, timings, header + " t_eval")
-
-    timings = [
-        (toolbox.t_cpp_interpret, "cpp_interpret"),
-        (toolbox.t_py_interpret, "py_interpret"),
-        (toolbox.t_error, "error"),
-        ]
-    timings.sort(key=lambda item: -item[0])
-    write_seconds(toolbox, timings, header + " breakdown of t_eval")
-
-
-
