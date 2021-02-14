@@ -103,10 +103,6 @@ def evaluate_individual(toolbox, individual, pp_str, debug):
         family_index = toolbox.pp_str_to_family_index_dict[pp_str]
         individual.fam = toolbox.families_list[family_index]
     else:
-        if time.time() >= toolbox.t0 + toolbox.max_seconds:
-            raise RuntimeWarning("out of time")
-        if toolbox.eval_count >= toolbox.max_evaluations:
-            raise RuntimeWarning("max evaluations reached")
         toolbox.eval_count += 1
         evaluate_individual_impl(toolbox, individual, debug)
         toolbox.pp_str_to_family_index_dict[pp_str] = individual.fam.family_index
@@ -172,10 +168,7 @@ def compute_fam_cx_fitness(toolbox, fam1, fam2):
     p1 = ((p_fitness1 * p_fitness2)) + (p_complementair * toolbox.parent_selection_weight_complementairity)
 
     index_a, index_b = fam1.family_index, fam2.family_index
-    if index_a > index_b:
-        index_a, index_b = index_b, index_a
     key = (index_a, index_b)
-    assert index_a <= index_b
     if key in toolbox.cx_count_dict:
         count_cx = toolbox.cx_count_dict[key]
     else:
@@ -197,7 +190,6 @@ def write_cx_info(toolbox):
     sum_cx_count = 0
     for key, cx_count in toolbox.cx_count_dict.items():
         index_a, index_b = key
-        assert index_a <= index_b
         results.append([index_a , index_b, cx_count])
         assert key in toolbox.cx_child_dict
         cx_child_count = 0
@@ -227,20 +219,12 @@ def write_cx_info(toolbox):
 
 
 def write_cx_graph(toolbox):
-    edge = dict()    
-    for (a, b), childs in toolbox.cx_child_dict.items():
-        for c, n in childs.items():
-            if c >= 0: # -1 are the failed axb cx's
-                if (a, c) not in edge:
-                    edge[(a, c)] = 0
-                edge[(a, c)] += n
-                if (b, c) not in edge:
-                    edge[(b, c)] = 0
-                edge[(b, c)] += n
     filename = f"{toolbox.output_folder}/cx_{toolbox.seed}.txt"
     with open(filename, "w") as f:
-        for (ab, c), n in edge.items():
-            f.write(f"{ab} {c} {n}\n")
+        for (a, b), childs in toolbox.cx_child_dict.items():
+            for c, n in childs.items():
+                if c >= 0: # -1 are the failed axb cx's
+                    f.write(f"p{a}  p{b} c{c} {n}\n")
 
 
 def generate_initial_population_impl(toolbox):
@@ -345,71 +329,45 @@ def analyse_vastlopers(toolbox):
     print(f"analysis starts, reading files ...")
     families = dict()
     count = 0
-    for filename in os.listdir(toolbox.old_populations_folder):
-        if filename.startswith("cx"):
-            family_index = extract_best_fam_from_cx_file(toolbox.old_populations_folder + "/" + filename)
-            if family_index < len(toolbox.families_list):
-                count += 1
-                if family_index not in families:
-                    families[family_index] = 0
-                families[family_index] += 1
-            else:
-                print(filename, "skipped")
+    with open(f"{toolbox.output_folder}/f4.txt", "w") as g:
+        for filename in os.listdir(toolbox.old_populations_folder):
+            if filename.startswith("cx"):
+                family_index = extract_best_fam_from_cx_file(toolbox.old_populations_folder + "/" + filename)
+                if family_index > 0 and os.system(f"grep -q 'solved' {toolbox.old_populations_folder}/log_{filename[3:7]}.txt") == 0:
+                    print(f"run {filename[3:7]} is solved via mutations")
+                    family_index = 0
+                if family_index == 4:
+                    g.write(f"{filename[3:7]}\n")
+                if family_index < len(toolbox.families_list):
+                    count += 1
+                    if family_index not in families:
+                        families[family_index] = 0
+                    families[family_index] += 1
+                else:
+                    print(filename, "skipped")
     families = [(index, aantal) for index, aantal in families.items()]
     families.sort(key=lambda item: -toolbox.families_list[item[0]].raw_error)
     filename = f"{toolbox.output_folder}/analysis.txt"
     print(f"writing anaysis result of {count} files in {filename} ...")
     with open(filename, "w") as f:
-        f.write(f"{'rawerr':8} findex fsize {'last_raw_error':48}\n")
+        f.write(f"{'error':5} fam_id count  {'last_raw_error':16}\n")
         sum_count = 0
-        sum_raw_error_vector = np.zeros_like(toolbox.families_list[0].raw_error_matrix[-1])
         for family_index, count in families:
             raw_error = toolbox.families_list[family_index].raw_error
-            raw_error_vector = toolbox.families_list[family_index].raw_error_matrix[-1]
-            sum_raw_error_vector += np.array(raw_error_vector)
-            raw_error_vector = " ".join([f"{v:5.3f}" for v in raw_error_vector])
+            m = toolbox.families_list[family_index].raw_error_matrix
+            msg = ""
+            for i in range(m.shape[0]):
+                msg += "|"
+                for j in range(m.shape[1]):
+                    msg += "1" if m[i, j] > 0 else "."
+            f.write(f"{raw_error:5.1f} {family_index:6d} {count:5d}  {msg}\n")
             sum_count += count
-            f.write(f"{raw_error:8.3f} {family_index:6d} {count:5d} {raw_error_vector[:48]:48}\n")
-        sum_raw_error_vector = " ".join([f"{v/len(families):5.3f}" for v in sum_raw_error_vector])
-        f.write(f"{' ':8} {len(toolbox.families_list):6} {sum_count:5} {sum_raw_error_vector:48}\n")
-    print(f"anaysis done")
-
-
-def analyse_vastlopers_snel(toolbox):
-    print(f"analysis starts, reading files ...")
-    families = dict()
-    count = 0
-    for filename in os.listdir(toolbox.old_populations_folder):
-        if filename.startswith("cx"):
-            family_index = extract_best_fam_from_cx_file(toolbox.old_populations_folder + "/" + filename)
-            if family_index < len(toolbox.families_list):
-                count += 1
-                if family_index not in families:
-                    families[family_index] = 0
-                families[family_index] += 1
-            else:
-                print(filename, "skipped")
-    families = [(index, aantal) for index, aantal in families.items()]
-    families.sort(key=lambda item: -toolbox.families_list[item[0]].raw_error)
-    filename = f"{toolbox.output_folder}/analysis.txt"
-    print(f"writing anaysis result of {count} files in {filename} ...")
-    with open(filename, "w") as f:
-        f.write(f"{'rawerr':8} findex fsize {'last_raw_error':48}\n")
-        sum_count = 0
-        sum_raw_error_vector = np.zeros_like(toolbox.families_list[0].raw_error_matrix[-1])
-        for family_index, count in families:
-            raw_error = toolbox.families_list[family_index].raw_error
-            raw_error_vector = toolbox.families_list[family_index].raw_error_matrix[-1]
-            sum_raw_error_vector += np.array(raw_error_vector)
-            raw_error_vector = " ".join([f"{v:5.3f}" for v in raw_error_vector])
-            sum_count += count
-            f.write(f"{raw_error:8.3f} {family_index:6d} {count:5d} {raw_error_vector[:48]:48}\n")
-        sum_raw_error_vector = " ".join([f"{v/len(families):5.3f}" for v in sum_raw_error_vector])
-        f.write(f"{' ':8} {len(toolbox.families_list):6} {sum_count:5} {sum_raw_error_vector:48}\n")
+        f.write(f"{' ':5} {len(toolbox.families_list):6} {sum_count:5}\n")
     print(f"anaysis done")
 
 
 def read_family_db(toolbox):
+    toolbox.f.write("reading families db, please have some patience\n")
     if toolbox.update_fam_db or toolbox.analyse_best:
         print("reading families db ...")
         t0 = time.time()
@@ -535,10 +493,7 @@ def crossover_with_local_search(toolbox, parent1, parent2):
 
     # cx_count administration
     index_a, index_b = parent1.fam.family_index, parent2.fam.family_index
-    if index_a > index_b:
-        index_a, index_b = index_b, index_a
     key = (index_a, index_b)
-    assert index_a <= index_b
     if key not in toolbox.cx_count_dict:
         toolbox.cx_count_dict[key] = 0
     toolbox.cx_count_dict[key] += 1
@@ -586,6 +541,16 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
                 if is_improvement(toolbox, child, best):
                     best = child
     pp_str = None if best is None else make_pp_str(best) 
+    if toolbox.population[0].fam.family_index == 4:
+        child = copy_individual(toolbox, parent)
+        slice1 = child.searchSubtree(0)
+        child[slice1] = expr
+        pp_str = make_pp_str(child)
+        evaluate_individual(toolbox, child, pp_str, 0)
+        if best and best.fam.raw_error < toolbox.population[0].fam.raw_error:
+            toolbox.good_muts.append(child)
+        else:
+            toolbox.bad_muts.append(child)
     return best, pp_str
 
 

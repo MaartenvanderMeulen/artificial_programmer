@@ -149,8 +149,7 @@ def compute_error_list_of_ints(actual, expect, debug=False):
         #print("debug line 147", error)
     errors.append(error)
     k = len(expect)
-    if k == 0:
-        raise RuntimeError("TODO: handle case were expect output is empty")
+    assert k > 0 # TODO: check if code works ok for case were expect output is empty
     # error2 : aantal outputs
     actual_list = extract_numbers_list(actual)
     n = g_w2a if len(actual_list) < len(expect) else g_w2b

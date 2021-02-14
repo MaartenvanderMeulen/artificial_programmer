@@ -105,7 +105,6 @@ def log_outcome(toolbox, best, gen):
     outcome = "solved" if best and toolbox.is_solution(best) else "stopped"
     toolbox.f.write(f"{outcome}\t{gen}\tgen\t{toolbox.eval_count}\tevals\t{toolbox.max_observed_stuck_count}\tmax_sc")
     toolbox.f.write(f"\t{toolbox.t_total}\tsec")
-    toolbox.f.write(f"\t{toolbox.error_at_msc:.1f}\terror_msc\t{toolbox.ootb_at_msc:.3f}\tootb_msc\t{toolbox.fams_at_msc:.0f}\tfams_msc")
     toolbox.f.write("\n")
     if best:
         if toolbox.best_ind_file:
@@ -170,6 +169,8 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.output_folder = params["output_folder"]
     toolbox.final_pop_file = None # params["output_folder"] + "/pop_" + str(params["seed"]) + ".txt" # for "samenvoegen" runs & 'analyse_best'
     toolbox.best_ind_file = None # params["output_folder"] + "/best_" + str(params["seed"]) + ".txt" # for 'analyse_best'
+    toolbox.good_muts_file = params["output_folder"] + "/goodmuts_" + str(params["seed"]) + ".txt"
+    toolbox.bad_muts_file = params["output_folder"] + "/badmuts_" + str(params["seed"]) + ".txt"
     toolbox.fam_db_file = params["family_db_file"]
     toolbox.new_fam_file = params["output_folder"] + "/newfam_" + str(params["seed"]) + ".txt" # is added later to family DB
     toolbox.update_fam_db = params["update_family_db"]
@@ -198,6 +199,8 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.parent_selection_weight_complementairity = params["parent_selection_weight_complementairity"]
     toolbox.parent_selection_weight_cx_count = params["parent_selection_weight_cx_count"]
     toolbox.parent_selection_weight_p_out_of_pop = params["parent_selection_weight_p_out_of_pop"]
+    toolbox.mut_min_height = params["mut_min_height"]
+    toolbox.mut_max_height = params["mut_max_height"]
 
     # search
     result = basinhopper(toolbox)

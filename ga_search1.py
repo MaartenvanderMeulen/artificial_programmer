@@ -37,10 +37,7 @@ def sample_fam_cx_fitness(toolbox, family1_members, family2_members):
     p = ((p_fitness1 * p_fitness2)) + (p_complementair * toolbox.parent_selection_weight_complementairity)
 
     index_a, index_b = parent1.fam.family_index, parent2.fam.family_index
-    if index_a > index_b:
-        index_a, index_b = index_b, index_a
     key = (index_a, index_b)
-    assert index_a <= index_b
     if key in toolbox.cx_count_dict:
         count_cx = toolbox.cx_count_dict[key]
     else:
@@ -116,33 +113,39 @@ def select_parents(toolbox, population):
     return best_parent1, best_parent2
 
 
-def analyse_parents(toolbox, population):
-    escapes_count = 0
+def search_for_solution(toolbox, population):
+    threshold = population[0].fam.raw_error
+    offspring = []
+    count = 0
     for parent1 in population:
         for parent2 in population:
-            child = crossover_with_local_search(toolbox, parent1, parent2)
-            if child and child.fam.raw_error < 77.61253 - 0.00001:
-                escapes_count += 1
-    return escapes_count
+            key = (parent1.fam.family_index, parent2.fam.family_index)
+            if key not in toolbox.cx_count_dict:
+                count += 1
+                child, _child_pp_str = crossover_with_local_search(toolbox, parent1, parent2)
+                if child and child.fam.raw_error < threshold:
+                    offspring.append(child)
+    toolbox.f.write(f"    {count} combinations checked\n")
+    offspring.sort(key=lambda item: item.fam.raw_error)
+    return offspring
 
 
 def generate_offspring(toolbox, population, nchildren):
     offspring = []
-    expr_mut = lambda pset, type_: gp.genFull(pset=pset, min_=0, max_=2, type_=type_)
+    do_200x200 = population[0].fam.family_index <= 4
+    if do_200x200:
+        n = len(toolbox.current_families_dict)
+        toolbox.f.write(f"Start {n}x{n} search\n")
+        offspring = search_for_solution(toolbox, population)
+        toolbox.f.write(f"    {n}x{n} search found {len(offspring)} improvements\n")
+
+    expr_mut = lambda pset, type_: gp.genFull(pset=pset, min_=toolbox.mut_min_height, max_=toolbox.mut_max_height, type_=type_)
     retry_count = 0  
-    all_escapes_count = 0   
-    only_cx = False
-    if False:
-        do_special_experiment = False # math.isclose(population[0].fam.raw_error, 77.61253, abs_tol=0.00001)
-        if do_special_experiment:
-            only_cx = True
-            all_escapes_count = analyse_parents(toolbox, population)
-            offspring_escapes_count = 0
     toolbox.max_raw_error = max([ind.fam.raw_error for ind in population])
     prepare_combinations_families_with_cx_count_zero(toolbox, population)
     while len(offspring) < nchildren:
         op_choice = random.random()
-        if op_choice < toolbox.pcrossover or only_cx: # Apply crossover
+        if op_choice < toolbox.pcrossover: # Apply crossover
             parent1, parent2 = select_parents(toolbox, population)
             if toolbox.parachute_level == 0:
                 child, pp_str = cxOnePoint(toolbox, parent1, parent2)
@@ -153,7 +156,7 @@ def generate_offspring(toolbox, population, nchildren):
             if toolbox.parachute_level == 0:
                 child, pp_str = mutUniform(toolbox, parent, expr=expr_mut, pset=toolbox.pset)
             else:
-                expr = gp.genFull(pset=toolbox.pset, min_=0, max_=2)
+                expr = gp.genFull(pset=toolbox.pset, min_=toolbox.mut_min_height, max_=toolbox.mut_max_height)
                 child, pp_str = replace_subtree_at_best_location(toolbox, parent, expr)
         if child is None:
             if retry_count < toolbox.child_creation_retries:
@@ -165,13 +168,6 @@ def generate_offspring(toolbox, population, nchildren):
         assert child.fam is not None
         toolbox.ind_str_set.add(pp_str)
         offspring.append(child)
-        if False:
-            if do_special_experiment and child.fam.raw_error < 77.61253 - 0.00001:
-                offspring_escapes_count += 1
-    if False:
-        if do_special_experiment:
-            expected_offspring_escapes_count = nchildren * all_escapes_count / (len(population) ** 2)
-            toolbox.f.write(f"{all_escapes_count}\t{offspring_escapes_count}\t{expected_offspring_escapes_count}\n")
     return offspring
 
 
@@ -184,8 +180,6 @@ def track_stuck(toolbox, population):
             toolbox.ootb_at_msc = (toolbox.count_cx - toolbox.count_cx_into_current_pop) / toolbox.count_cx
             toolbox.fams_at_msc = len(toolbox.current_families_dict)
             toolbox.error_at_msc = toolbox.population[0].fam.raw_error
-        if toolbox.stuck_count > toolbox.max_stuck_count:            
-            raise RuntimeWarning("max stuck count exceeded")
         if toolbox.stuck_count >= toolbox.stuck_count_for_opschudding:            
             if toolbox.count_opschudding >= toolbox.max_reenter_parachuting_phase:
                 # toolbox.f.write("max reenter_parachuting_phase exceeded (skipped)\n")
@@ -206,23 +200,31 @@ def track_stuck(toolbox, population):
 
 
 def log_info(toolbox, population):
-    msg = f"gen {toolbox.real_gen} best {population[0].fam.raw_error:.0f}"
+    msg = f"gen {toolbox.real_gen} best {population[0].fam.raw_error:.1f}"
     toolbox.f.write(msg)
-    if False:
+    if True:
         done = set()
         msg = ""
         for ind in population:
             i = ind.fam.family_index
-            fam = ind.fam
-            if i not in done:
-                done.add(i)
-                size = len(toolbox.current_families_dict[i])
-                msg += f" ({i},{fam.normalised_error:.0f},{fam.raw_error:.0f},{size})"
+            if i <= 177166:
+                if i not in done:
+                    done.add(i)
+                    #size = len(toolbox.current_families_dict[i])
+                    msg += f" f{i}"
         if len(msg) > 150:
             msg = msg[:(150-3)] + "..."
         toolbox.f.write(msg)    
     toolbox.f.write(f"\n")
 
+
+def check_other_stop_criteria(toolbox):
+    if time.time() >= toolbox.t0 + toolbox.max_seconds:
+        raise RuntimeWarning("max time reached")
+    if toolbox.eval_count >= toolbox.max_evaluations:
+        raise RuntimeWarning("max evaluations reached")
+    if toolbox.stuck_count >= toolbox.max_stuck_count:            
+        raise RuntimeWarning("max stuck count reached")
 
 
 def ga_search_impl_core(toolbox):
@@ -238,6 +240,7 @@ def ga_search_impl_core(toolbox):
     refresh_toolbox_from_population(toolbox, toolbox.population, False)
     while toolbox.parachute_level < len(toolbox.ngen):
         while toolbox.gen < toolbox.ngen[toolbox.parachute_level]:
+            check_other_stop_criteria(toolbox)
             track_stuck(toolbox, toolbox.population)
             if toolbox.f and toolbox.verbose >= 1:
                 log_info(toolbox, toolbox.population)
@@ -262,7 +265,13 @@ def ga_search_impl(toolbox):
         remove_file(toolbox.final_pop_file)
     if toolbox.new_fam_file: # clear the file to avoid confusion with older output
         remove_file(toolbox.new_fam_file)
+    if toolbox.good_muts_file: # clear the file to avoid confusion with older output
+        remove_file(toolbox.good_muts_file)
+    if toolbox.bad_muts_file: # clear the file to avoid confusion with older output
+        remove_file(toolbox.bad_muts_file)
     toolbox.population = []
+    toolbox.good_muts = []
+    toolbox.bad_muts = []
     try:
 
         ga_search_impl_core(toolbox)
@@ -276,5 +285,9 @@ def ga_search_impl(toolbox):
         write_population(toolbox.new_fam_file, new_families, toolbox.functions)
     if toolbox.write_cx_graph:
         write_cx_graph(toolbox)
+    if toolbox.good_muts_file:
+        write_population(toolbox.good_muts_file, toolbox.good_muts, toolbox.functions)
+    if toolbox.bad_muts_file:
+        write_population(toolbox.bad_muts_file, toolbox.bad_muts, toolbox.functions)
     toolbox.ga_search_impl_return_value = (toolbox.population[0] if len(toolbox.population) > 0 else None), toolbox.real_gen + 1
     return toolbox.ga_search_impl_return_value

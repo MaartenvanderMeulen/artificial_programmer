@@ -2,7 +2,7 @@
     "do_not_overwrite_logfile": false,
     "problems_file": "experimenten/problems_merge_elem_hard.txt",
     "functions_file": "experimenten/functions_leeg.txt",
-    "family_db_file": "tmp/f4.txt",
+    "family_db_file": "tmp/fam_problems_merge_elem_hard.txt",
     "seed_prefix": 0,
     "skip_seeds": [],
     "verbose": 1,
@@ -14,7 +14,7 @@
     "new_initial_population": true,
     "old_populations_folder": "tmp/a_cx",
     "old_populations_samplesize": 9999,
-    "analyse_best": false,
+    "analyse_best": true,
     "update_family_db": false,
     "write_cx_graph": true,
     "max_raw_error_for_family_db": 110.671,
@@ -58,7 +58,5 @@
     "family_key_is_error_matrix": false,
     "parent_selection_weight_complementairity": 0.3,
     "parent_selection_weight_cx_count": 0.0,
-    "parent_selection_weight_p_out_of_pop": 0.0,
-    "mut_min_height": 0,
-    "mut_max_height": 2
+    "parent_selection_weight_p_out_of_pop": 0.0
 }

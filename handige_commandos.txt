@@ -3,3 +3,6 @@ echo overzicht ; grep solv lo* | wc -l ; grep stop lo* | wc -l ; grep evals lo* 
 echo timings ; for s in `grep -l solv lo* | sed 's/log_//' | sed 's/.txt//'` ; do grep t_total time_$s.txt | sed 's/.sec.*//' ; done > x
 for seed in `seq 1024 1 2047` ; do tsp -n python solve_problems.py $seed ac ; done
 for S in `seq 28 1 31` ; do sleep 60 ; echo $S ; tsp -S $S ; done
+stapelen van filters : grep stopped `grep -l -e 'best 5$' lo*`
+for s in `grep -l stop log* | sed s/log_// | sed s/.txt//` ; do grep -l ' 4 ' cx_$s.txt ; done > f4_repro1.txt
+for f in `grep -l solv lo*` ; do grep ' f4 ' $f | wc -l ; done | sort -n | uniq -c
