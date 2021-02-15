@@ -113,31 +113,43 @@ def select_parents(toolbox, population):
     return best_parent1, best_parent2
 
 
-def search_for_solution(toolbox, population):
-    threshold = population[0].fam.raw_error
+def search_for_solution(toolbox, population, cx_children):
+    n = len(population)
+    threshold = population[n//2].fam.raw_error
     offspring = []
     count = 0
-    for parent1 in population:
-        for parent2 in population:
-            key = (parent1.fam.family_index, parent2.fam.family_index)
+    cx_candidates = []
+    for _, parents1 in toolbox.current_families_dict.items():
+        for _, parents2 in toolbox.current_families_dict.items():
+            key = (parents1[0].fam.family_index, parents2[0].fam.family_index)
             if key not in toolbox.cx_count_dict:
-                count += 1
-                child, _child_pp_str = crossover_with_local_search(toolbox, parent1, parent2)
-                if child and child.fam.raw_error < threshold:
-                    offspring.append(child)
-    toolbox.f.write(f"    {count} combinations checked\n")
-    offspring.sort(key=lambda item: item.fam.raw_error)
+                parent1, parent2 = parents1[-1], parents2[-1]
+                p = sample_fam_cx_fitness(toolbox, [parent1], [parent2])
+                cx_candidates.append((parent1, parent2, p))
+    cx_candidates.sort(key=lambda item: -item[2])
+    for parent1, parent2, _ in cx_candidates:
+        count += 1
+        child, _child_pp_str = crossover_with_local_search(toolbox, parent1, parent2)
+        if child and child.fam.raw_error < threshold:
+            offspring.append(child)
+            if len(offspring) >= cx_children:
+                break
     return offspring
 
 
 def generate_offspring(toolbox, population, nchildren):
     offspring = []
+    do_default_cx = True
     do_200x200 = population[0].fam.family_index <= 4
     if do_200x200:
-        n = len(toolbox.current_families_dict)
-        toolbox.f.write(f"Start {n}x{n} search\n")
-        offspring = search_for_solution(toolbox, population)
-        toolbox.f.write(f"    {n}x{n} search found {len(offspring)} improvements\n")
+        toolbox.parents_keep_fraction[toolbox.parachute_level] = 1.0 # 3.0 / 4.0
+        toolbox.pop_size[toolbox.parachute_level] = 300
+        if True:
+            do_default_cx = False
+            n = len(toolbox.current_families_dict)
+            toolbox.f.write(f"Start {n}x{n} search\n")
+            offspring = search_for_solution(toolbox, population, round(nchildren*toolbox.pcrossover))
+            toolbox.f.write(f"    {n}x{n} search found {len(offspring)} improvements\n")
 
     expr_mut = lambda pset, type_: gp.genFull(pset=pset, min_=toolbox.mut_min_height, max_=toolbox.mut_max_height, type_=type_)
     retry_count = 0  
@@ -145,7 +157,7 @@ def generate_offspring(toolbox, population, nchildren):
     prepare_combinations_families_with_cx_count_zero(toolbox, population)
     while len(offspring) < nchildren:
         op_choice = random.random()
-        if op_choice < toolbox.pcrossover: # Apply crossover
+        if op_choice < toolbox.pcrossover and do_default_cx: # Apply crossover
             parent1, parent2 = select_parents(toolbox, population)
             if toolbox.parachute_level == 0:
                 child, pp_str = cxOnePoint(toolbox, parent1, parent2)
@@ -248,6 +260,11 @@ def ga_search_impl_core(toolbox):
             fraction = toolbox.parents_keep_fraction[toolbox.parachute_level]
             if fraction < 1:
                 toolbox.population = random.sample(toolbox.population, k=int(len(toolbox.population)*fraction))
+            trim_families = toolbox.population[0].fam.family_index <= 4
+            if trim_families:
+                toolbox.population = []
+                for _, inds in toolbox.current_families_dict.items():
+                    toolbox.population.append(inds[-1])
             toolbox.population += offspring
             toolbox.population.sort(key=toolbox.sort_ind_key)
             toolbox.population[:] = toolbox.population[:toolbox.pop_size[toolbox.parachute_level]]

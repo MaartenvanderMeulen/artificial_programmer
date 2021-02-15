@@ -120,7 +120,10 @@ def write_population(file_name, population, functions):
         for ind in population:
             code = interpret.compile_deap(str(ind), functions)
             code_str = interpret.convert_code_to_str(code)
-            f.write(f"    {code_str} # {ind.fam.raw_error:.3f}\n")
+            f.write(f"    {code_str}")
+            if ind.fam:
+                f.write(f"# {ind.fam.raw_error:.1f}")
+            f.write(f"\n")
         f.write(")\n")
 
 
@@ -545,8 +548,11 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
         child = copy_individual(toolbox, parent)
         slice1 = child.searchSubtree(0)
         child[slice1] = expr
-        pp_str = make_pp_str(child)
-        evaluate_individual(toolbox, child, pp_str, 0)
+        if False:
+            pp_str = make_pp_str(child)
+            evaluate_individual(toolbox, child, pp_str, 0)
+        else:
+            child.fam = None
         if best and best.fam.raw_error < toolbox.population[0].fam.raw_error:
             toolbox.good_muts.append(child)
         else:
