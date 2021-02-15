@@ -115,7 +115,8 @@ def select_parents(toolbox, population):
 
 def search_for_solution(toolbox, population, cx_children):
     n = len(population)
-    threshold = population[n//2].fam.raw_error
+    # threshold = population[-1].fam.raw_error
+    # threshold = population[n//2].fam.raw_error
     offspring = []
     count = 0
     cx_candidates = []
@@ -130,7 +131,7 @@ def search_for_solution(toolbox, population, cx_children):
     for parent1, parent2, _ in cx_candidates:
         count += 1
         child, _child_pp_str = crossover_with_local_search(toolbox, parent1, parent2)
-        if child and child.fam.raw_error < threshold:
+        if child: #  and child.fam.raw_error < threshold:
             offspring.append(child)
             if len(offspring) >= cx_children:
                 break
@@ -144,7 +145,8 @@ def generate_offspring(toolbox, population, nchildren):
     do_200x200 = population[0].fam.family_index <= 4
     if do_200x200:
         toolbox.parents_keep_fraction[toolbox.parachute_level] = 1.0 # 3.0 / 4.0
-        toolbox.pop_size[toolbox.parachute_level] = 200
+        toolbox.pop_size[toolbox.parachute_level] = 300
+        # toolbox.pcrossover = 0.3
         if True:
             do_default_cx = False
             n = len(toolbox.current_families_dict)

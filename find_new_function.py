@@ -168,7 +168,7 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.hops = params["hops"]
     toolbox.output_folder = params["output_folder"]
     toolbox.final_pop_file = None # params["output_folder"] + "/pop_" + str(params["seed"]) + ".txt" # for "samenvoegen" runs & 'analyse_best'
-    toolbox.best_ind_file = None # params["output_folder"] + "/best_" + str(params["seed"]) + ".txt" # for 'analyse_best'
+    toolbox.best_ind_file = params["output_folder"] + "/best_" + str(params["seed"]) + ".txt" # for 'analyse_best'
     toolbox.good_muts_file = params["output_folder"] + "/goodmuts_" + str(params["seed"]) + ".txt"
     toolbox.bad_muts_file = params["output_folder"] + "/badmuts_" + str(params["seed"]) + ".txt"
     toolbox.fam_db_file = params["family_db_file"]
