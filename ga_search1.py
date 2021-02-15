@@ -124,7 +124,7 @@ def search_for_solution(toolbox, population, cx_children):
             key = (parents1[0].fam.family_index, parents2[0].fam.family_index)
             if key not in toolbox.cx_count_dict:
                 parent1, parent2 = parents1[-1], parents2[-1]
-                p = sample_fam_cx_fitness(toolbox, [parent1], [parent2])
+                p = sample_fam_cx_fitness(toolbox, [parent1], [parent2])[0]
                 cx_candidates.append((parent1, parent2, p))
     cx_candidates.sort(key=lambda item: -item[2])
     for parent1, parent2, _ in cx_candidates:
@@ -139,11 +139,12 @@ def search_for_solution(toolbox, population, cx_children):
 
 def generate_offspring(toolbox, population, nchildren):
     offspring = []
+    toolbox.max_raw_error = max([ind.fam.raw_error for ind in population])
     do_default_cx = True
     do_200x200 = population[0].fam.family_index <= 4
     if do_200x200:
         toolbox.parents_keep_fraction[toolbox.parachute_level] = 1.0 # 3.0 / 4.0
-        toolbox.pop_size[toolbox.parachute_level] = 300
+        toolbox.pop_size[toolbox.parachute_level] = 200
         if True:
             do_default_cx = False
             n = len(toolbox.current_families_dict)
@@ -153,7 +154,6 @@ def generate_offspring(toolbox, population, nchildren):
 
     expr_mut = lambda pset, type_: gp.genFull(pset=pset, min_=toolbox.mut_min_height, max_=toolbox.mut_max_height, type_=type_)
     retry_count = 0  
-    toolbox.max_raw_error = max([ind.fam.raw_error for ind in population])
     prepare_combinations_families_with_cx_count_zero(toolbox, population)
     while len(offspring) < nchildren:
         op_choice = random.random()
