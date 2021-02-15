@@ -142,7 +142,7 @@ def generate_offspring(toolbox, population, nchildren):
     offspring = []
     toolbox.max_raw_error = max([ind.fam.raw_error for ind in population])
     do_default_cx = True
-    do_200x200 = population[0].fam.family_index <= 4
+    do_200x200 = population[0].fam.raw_error <= toolbox.near_solution_threshold
     if do_200x200:
         toolbox.parents_keep_fraction[toolbox.parachute_level] = 1.0 # 3.0 / 4.0
         toolbox.pop_size[toolbox.parachute_level] = 300
@@ -250,6 +250,7 @@ def ga_search_impl_core(toolbox):
     toolbox.max_observed_stuck_count = 0
     toolbox.count_cx_into_current_pop, toolbox.count_cx = 0, 1 # starting at 1 is easier lateron
     toolbox.population = generate_initial_population(toolbox)
+    toolbox.near_solution_threshold = 5.2
     consistency_check(toolbox, toolbox.population)
     refresh_toolbox_from_population(toolbox, toolbox.population, False)
     while toolbox.parachute_level < len(toolbox.ngen):
@@ -262,7 +263,7 @@ def ga_search_impl_core(toolbox):
             fraction = toolbox.parents_keep_fraction[toolbox.parachute_level]
             if fraction < 1:
                 toolbox.population = random.sample(toolbox.population, k=int(len(toolbox.population)*fraction))
-            trim_families = toolbox.population[0].fam.family_index <= 4
+            trim_families = toolbox.population[0].fam.raw_error <= toolbox.near_solution_threshold
             if trim_families:
                 toolbox.population = []
                 for _, inds in toolbox.current_families_dict.items():

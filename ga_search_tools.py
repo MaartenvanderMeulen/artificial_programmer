@@ -122,7 +122,7 @@ def write_population(file_name, population, functions):
             code_str = interpret.convert_code_to_str(code)
             f.write(f"    {code_str}")
             if ind.fam:
-                f.write(f"# {ind.fam.raw_error:.1f}")
+                f.write(f" # {ind.fam.raw_error:.1f}")
             f.write(f"\n")
         f.write(")\n")
 
@@ -544,19 +544,20 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
                 if is_improvement(toolbox, child, best):
                     best = child
     pp_str = None if best is None else make_pp_str(best) 
-    if toolbox.population[0].fam.family_index == 4:
-        child = copy_individual(toolbox, parent)
-        slice1 = child.searchSubtree(0)
-        child[slice1] = expr
-        if False:
-            pp_str = make_pp_str(child)
-            evaluate_individual(toolbox, child, pp_str, 0)
-        else:
-            child.fam = None
-        if best and best.fam.raw_error < toolbox.population[0].fam.raw_error:
-            toolbox.good_muts.append(child)
-        else:
-            toolbox.bad_muts.append(child)
+    if False:
+        if toolbox.population[0].fam.family_index == 4:
+            child = copy_individual(toolbox, parent)
+            slice1 = child.searchSubtree(0)
+            child[slice1] = expr
+            if False:
+                pp_str = make_pp_str(child)
+                evaluate_individual(toolbox, child, pp_str, 0)
+            else:
+                child.fam = None
+            if best and best.fam.raw_error < toolbox.population[0].fam.raw_error:
+                toolbox.good_muts.append(child)
+            else:
+                toolbox.bad_muts.append(child)
     return best, pp_str
 
 
