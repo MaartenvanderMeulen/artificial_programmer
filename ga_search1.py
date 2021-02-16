@@ -233,7 +233,7 @@ def log_info(toolbox, population):
 
 
 def check_other_stop_criteria(toolbox):
-    if time.time() >= toolbox.t0 + toolbox.max_seconds:
+    if time.time() >= toolbox.t0 + toolbox.max_seconds and toolbox.stuck_count >= 5:
         raise RuntimeWarning("max time reached")
     if toolbox.eval_count >= toolbox.max_evaluations:
         raise RuntimeWarning("max evaluations reached")
@@ -255,14 +255,15 @@ def ga_search_impl_core(toolbox):
     refresh_toolbox_from_population(toolbox, toolbox.population, False)
     while toolbox.parachute_level < len(toolbox.ngen):
         while toolbox.gen < toolbox.ngen[toolbox.parachute_level]:
-            check_other_stop_criteria(toolbox)
             track_stuck(toolbox, toolbox.population)
             if toolbox.f and toolbox.verbose >= 1:
                 log_info(toolbox, toolbox.population)
+            check_other_stop_criteria(toolbox)
             offspring = generate_offspring(toolbox, toolbox.population, toolbox.nchildren[toolbox.parachute_level])
             fraction = toolbox.parents_keep_fraction[toolbox.parachute_level]
             if fraction < 1:
-                toolbox.population = random.sample(toolbox.population, k=int(len(toolbox.population)*fraction))
+                best = toolbox.population[0]
+                toolbox.population = [best] + random.sample(toolbox.population[1:], k=int(len(toolbox.population)*fraction))
             trim_families = toolbox.population[0].fam.raw_error <= toolbox.near_solution_threshold
             if trim_families:
                 toolbox.population = []

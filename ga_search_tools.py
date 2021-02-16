@@ -328,10 +328,10 @@ def load_initial_population_impl(toolbox, old_pops):
     return population
 
 
-def analyse_vastlopers(toolbox):
+def analyse_vastlopers_via_cx_files_and_family_db(toolbox):
     print(f"analysis starts, reading files ...")
     families = dict()
-    count = 0
+    file_count = 0
     with open(f"{toolbox.output_folder}/f4.txt", "w") as g:
         for filename in os.listdir(toolbox.old_populations_folder):
             if filename.startswith("cx"):
@@ -342,20 +342,20 @@ def analyse_vastlopers(toolbox):
                 if family_index == 4:
                     g.write(f"{filename[3:7]}\n")
                 if family_index < len(toolbox.families_list):
-                    count += 1
+                    file_count += 1
                     if family_index not in families:
-                        families[family_index] = 0
-                    families[family_index] += 1
+                        families[family_index] = []
+                    families[family_index].append(int(filename[3:7]))
                 else:
                     print(filename, "skipped")
     families = [(index, aantal) for index, aantal in families.items()]
     families.sort(key=lambda item: -toolbox.families_list[item[0]].raw_error)
     filename = f"{toolbox.output_folder}/analysis.txt"
-    print(f"writing anaysis result of {count} files in {filename} ...")
+    print(f"writing anaysis result of {file_count} files in {filename} ...")
     with open(filename, "w") as f:
         f.write(f"{'error':5} fam_id count  {'last_raw_error':16}\n")
         sum_count = 0
-        for family_index, count in families:
+        for family_index, runs in families:
             raw_error = toolbox.families_list[family_index].raw_error
             m = toolbox.families_list[family_index].raw_error_matrix
             msg = ""
@@ -363,9 +363,62 @@ def analyse_vastlopers(toolbox):
                 msg += "|"
                 for j in range(m.shape[1]):
                     msg += "1" if m[i, j] > 0 else "."
-            f.write(f"{raw_error:5.1f} {family_index:6d} {count:5d}  {msg}\n")
-            sum_count += count
+            f.write(f"{raw_error:5.1f} {family_index:6d} {len(runs):5d}  {msg}\n")
+            sum_count += len(runs)
+            if len(runs) == 1:
+                f.write(f"    run_ids {str(runs)}\n")
         f.write(f"{' ':5} {len(toolbox.families_list):6} {sum_count:5}\n")
+    print(f"anaysis done")
+
+
+def analyse_vastlopers_via_best_files_no_family_db(toolbox):
+    print(f"analysis starts, reading files ...")
+    families = dict()
+    file_count = 0
+    for filename in os.listdir(toolbox.old_populations_folder):
+        if filename.startswith("best"):
+            best_list = interpret.compile(interpret.load(toolbox.old_populations_folder + "/" + filename))
+            if len(best_list) > 0:
+                file_count += 1
+                assert len(best_list) == 1
+                code = best_list[0]
+                deap_str = interpret.convert_code_to_deap_str(code, toolbox)
+                ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)                    
+                pp_str = make_pp_str(ind)
+                evaluate_individual(toolbox, ind, pp_str, 0)
+                family_index = ind.fam.family_index
+                if family_index not in families:
+                    families[family_index] = []
+                seed = int(filename[5:9])
+                families[family_index].append(seed)
+    families = [(index, seeds) for index, seeds in families.items()]
+    families.sort(key=lambda item: -toolbox.families_list[item[0]].raw_error)
+    filename = f"{toolbox.output_folder}/analysis.txt"
+    print(f"writing anaysis result of {file_count} files in {filename} ...")
+    with open(filename, "w") as f:
+        f.write(f"{'error':5} count  {'last_raw_error'}\n")
+        sum_count = 0
+        for family_index, seeds in families:
+            raw_error = toolbox.families_list[family_index].raw_error
+            m = toolbox.families_list[family_index].raw_error_matrix
+            msg = ""
+            for i in range(m.shape[0]):
+                msg += "|"
+                for j in range(m.shape[1]):
+                    msg += "1" if m[i, j] > 0 else "."
+            f.write(f"{raw_error:5.1f} {len(seeds):5d}  {msg}\n")
+            sum_count += len(seeds)
+        f.write(f"{' ':5} {sum_count:5}\n")
+    filename = f"{toolbox.output_folder}/sorted_seeds.txt"
+    print(f"writing sorted seeds in {filename} ...")
+    with open(filename, "w") as f:
+        for family_index, seeds in families:
+            raw_error = toolbox.families_list[family_index].raw_error
+            f.write(f"{raw_error:5.1f} {len(seeds):5d}")
+            seeds.sort()
+            for seed in seeds:
+                f.write(f" {seed}")
+            f.write(f"\n")
     print(f"anaysis done")
 
 
@@ -411,13 +464,16 @@ def update_fams(toolbox, newfams_list):
 
 
 def generate_initial_population(toolbox, old_pops=None):
+    if toolbox.analyse_best:
+        analyse_vastlopers_via_best_files_no_family_db(toolbox)
+        exit()
     read_family_db(toolbox)
     if toolbox.update_fam_db:
         newfams = read_old_populations(toolbox, toolbox.old_populations_folder, "newfam")
         update_fams(toolbox, newfams)
         exit()
-    if toolbox.analyse_best:
-        analyse_vastlopers(toolbox)
+    if toolbox.analyse_cx:
+        analyse_vastlopers_via_cx_files_and_family_db(toolbox)
         exit()
     if toolbox.new_initial_population:
         population = generate_initial_population_impl(toolbox)

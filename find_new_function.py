@@ -179,6 +179,7 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.new_initial_population = params["new_initial_population"]
     toolbox.old_populations_folder = params["old_populations_folder"]
     toolbox.analyse_best = params["analyse_best"]
+    toolbox.analyse_cx = params["analyse_cx"]
     toolbox.old_populations_samplesize = params["old_populations_samplesize"]
     toolbox.optimise_solution_length = params["optimise_solution_length"]
     toolbox.dynamic_weights = params["dynamic_weights"]
