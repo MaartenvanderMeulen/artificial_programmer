@@ -261,9 +261,10 @@ def ga_search_impl_core(toolbox):
             check_other_stop_criteria(toolbox)
             offspring = generate_offspring(toolbox, toolbox.population, toolbox.nchildren[toolbox.parachute_level])
             fraction = toolbox.parents_keep_fraction[toolbox.parachute_level]
+            if toolbox.stuck_count < toolbox.parents_keep_all_duration:
+                fraction = 1
             if fraction < 1:
-                best = toolbox.population[0]
-                toolbox.population = [best] + random.sample(toolbox.population[1:], k=int(len(toolbox.population)*fraction))
+                toolbox.population = random.sample(toolbox.population, k=int(len(toolbox.population)*fraction))
             trim_families = toolbox.population[0].fam.raw_error <= toolbox.near_solution_threshold
             if trim_families:
                 toolbox.population = []

@@ -386,34 +386,31 @@ def analyse_vastlopers_via_best_files_no_family_db(toolbox):
                 ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)                    
                 pp_str = make_pp_str(ind)
                 evaluate_individual(toolbox, ind, pp_str, 0)
-                family_index = ind.fam.family_index
-                if family_index not in families:
-                    families[family_index] = []
+                key = ind.fam.raw_error
+                if key not in families:
+                    families[key] = ([], ind.fam.raw_error, ind.fam.raw_error_matrix)
                 seed = int(filename[5:9])
-                families[family_index].append(seed)
-    families = [(index, seeds) for index, seeds in families.items()]
-    families.sort(key=lambda item: -toolbox.families_list[item[0]].raw_error)
+                families[key][0].append(seed)
+    families = [(raw_error, raw_error_matrix, seeds) for key, (seeds, raw_error, raw_error_matrix) in families.items()]
+    families.sort(key=lambda item: -item[0])
     filename = f"{toolbox.output_folder}/analysis.txt"
     print(f"writing anaysis result of {file_count} files in {filename} ...")
     with open(filename, "w") as f:
         f.write(f"{'error':5} count  {'last_raw_error'}\n")
         sum_count = 0
-        for family_index, seeds in families:
-            raw_error = toolbox.families_list[family_index].raw_error
-            m = toolbox.families_list[family_index].raw_error_matrix
+        for raw_error, raw_error_matrix, seeds in families:
             msg = ""
-            for i in range(m.shape[0]):
+            for i in range(raw_error_matrix.shape[0]):
                 msg += "|"
-                for j in range(m.shape[1]):
-                    msg += "1" if m[i, j] > 0 else "."
+                for j in range(raw_error_matrix.shape[1]):
+                    msg += "1" if raw_error_matrix[i, j] > 0 else "."
             f.write(f"{raw_error:5.1f} {len(seeds):5d}  {msg}\n")
             sum_count += len(seeds)
         f.write(f"{' ':5} {sum_count:5}\n")
     filename = f"{toolbox.output_folder}/sorted_seeds.txt"
     print(f"writing sorted seeds in {filename} ...")
     with open(filename, "w") as f:
-        for family_index, seeds in families:
-            raw_error = toolbox.families_list[family_index].raw_error
+        for raw_error, raw_error_matrix, seeds in families:
             f.write(f"{raw_error:5.1f} {len(seeds):5d}")
             seeds.sort()
             for seed in seeds:

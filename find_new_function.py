@@ -202,6 +202,10 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.parent_selection_weight_p_out_of_pop = params["parent_selection_weight_p_out_of_pop"]
     toolbox.mut_min_height = params["mut_min_height"]
     toolbox.mut_max_height = params["mut_max_height"]
+    toolbox.parents_keep_all_duration = params["parents_keep_all_duration"]
+    toolbox.parents_keep_fraction_per_family = params["parents_keep_fraction_per_family"]
+    toolbox.use_family_representatives_for_mutation = params["use_family_representatives_for_mutation"]
+    toolbox.use_crossover_for_mutations = params["use_crossover_for_mutations"]
 
     # search
     result = basinhopper(toolbox)

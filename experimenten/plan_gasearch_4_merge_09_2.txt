@@ -321,3 +321,15 @@ Verminderen van __str__ calls (in consistency checks en zxo) hielp ook al:
     29268    0.212    0.000    0.946    0.000 ga_search1.py:25(sample_fam_cx_fitness)
                                               dat is nog best veel
 
+========================================== 17 Feb
+
+a0 baseline, op tmp/analyse/f689 (222 seeds)
+    "parents_keep_all_duration": 0,
+    "parents_keep_fraction_per_family": false,
+    "use_family_representatives_for_mutation": false,
+    "use_crossover_for_mutations": false
+a1 
+    "parents_keep_all_duration": 2,
+    "parents_keep_fraction_per_family": false,
+    "use_family_representatives_for_mutation": false,
+    "use_crossover_for_mutations": false
