@@ -7,7 +7,7 @@
     "skip_seeds": [],
     "verbose": 1,
     "optimise_solution_length": false,
-    "max_seconds": 991300,
+    "max_seconds": 879,
     "max_evaluations": 991500000,
     "max_stuck_count": 99844,
     "touch_at_end": false,
@@ -15,6 +15,7 @@
     "old_populations_folder": "tmp/a_cx",
     "old_populations_samplesize": 9999,
     "analyse_best": false,
+    "analyse_cx": false,
     "update_family_db": false,
     "write_cx_graph": true,
     "max_raw_error_for_family_db": 110.671,
@@ -60,5 +61,9 @@
     "parent_selection_weight_cx_count": 0.0,
     "parent_selection_weight_p_out_of_pop": 0.0,
     "mut_min_height": 0,
-    "mut_max_height": 2
+    "mut_max_height": 2,
+    "parents_keep_all_duration": 2,
+    "parents_keep_fraction_per_family": true,
+    "use_family_representatives_for_mutation": false,
+    "use_crossover_for_mutations": false
 }
