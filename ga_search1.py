@@ -226,16 +226,19 @@ def log_info(toolbox, population):
     msg = f"gen {toolbox.real_gen}"
     toolbox.f.write(msg)
     if True:
-        done = set()
-        msg = ""
-        for ind in population:
-            e = round(ind.fam.raw_error)
-            if e not in done:
-                done.add(e)
-                msg += f" {e}"
-        if len(msg) > 150:
-            msg = msg[:(150-3)] + "..."
-        toolbox.f.write(msg)    
+        msg1 = ""
+        msg2 = ""
+        for _, inds in toolbox.current_families_dict.items():
+            e = round(inds[0].fam.raw_error)
+            msg1 += f" {e}"
+            n = len(inds)
+            msg2 += f" {n}"
+        if len(msg1) > 75:
+            msg1 = msg1[:(75-3)] + "..."
+        if len(msg2) > 75:
+            msg2 = msg2[:(75-3)] + "..."
+        toolbox.f.write(" e" + msg1)    
+        toolbox.f.write(" n" + msg2)    
     toolbox.f.write(f"\n")
 
 
