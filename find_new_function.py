@@ -206,6 +206,7 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.parents_keep_fraction_per_family = params["parents_keep_fraction_per_family"]
     toolbox.use_family_representatives_for_mutation = params["use_family_representatives_for_mutation"]
     toolbox.use_crossover_for_mutations = params["use_crossover_for_mutations"]
+    toolbox.mut_local_search = params["mut_local_search"]
 
     # search
     result = basinhopper(toolbox)

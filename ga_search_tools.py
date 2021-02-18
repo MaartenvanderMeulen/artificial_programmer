@@ -585,6 +585,8 @@ def mutUniform(toolbox, parent, expr, pset):
 def replace_subtree_at_best_location(toolbox, parent, expr):
     indexes = [i for i in range(len(parent))]
     random.shuffle(indexes)
+    n = int(toolbox.mut_local_search * len(indexes))
+    indexes = indexes[:n]
     best = None
     for index in indexes:
         child = copy_individual(toolbox, parent)

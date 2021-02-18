@@ -155,7 +155,7 @@ if __name__ == "__main__":
             param = "dynamic_weights_adaptation_speed"
             for value in [1.001, 1.002, 1.005, ]:
                 context.compute_score(param, value)
-    if True:
+    if False:
         n_runs = 3*31
         print("Start calibration with", n_runs, "runs")
         context = Context(n_runs, 0.001, 2.0, 0.001)
@@ -163,6 +163,14 @@ if __name__ == "__main__":
         param = "parent_selection_weight_cx_count"
         # param = "parent_selection_weight_p_out_of_pop"
         for value in [0.0, 0.001, 0.002, 0.0005, ]:
+            context.compute_score(param, value)
+    if True:
+        n_runs = 3*31
+        print("Start calibration with", n_runs, "runs")
+        context = Context(n_runs, 0.001, 1.0, 0.001)
+        params = context.read_params(context.best_params_file)
+        param = "mut_local_search"
+        for value in [1.0, 0.5, 0.75, 0.25, ]:
             context.compute_score(param, value)
         
 
