@@ -165,6 +165,7 @@ def _run(program, variables, functions, debug, depth):
             a = _run(program[1], variables, functions, debug, depth+1) if len(program) > 1 else 0
             b = _run(program[2], variables, functions, debug, depth+1) if len(program) > 2 else 0
             if type(a) != type(1) or type(b) != type(1):
+                # TODO use result = 1 if a == b and program[0] in ["le", "ge"] else 0
                 result = 0
             else:
                 if program[0] == "lt": # example (le 3 2)
@@ -249,15 +250,15 @@ def _run(program, variables, functions, debug, depth):
                     result = value
                 else:
                     result.append(value)
-        elif program[0] == "cons":
-            result = 0
-            values = []
-            for i in range(1, len(program)):
-                values.append(_run(program[i], variables, functions, debug, depth+1)) # NO LAZY EVALUATION!
-            for i, value in enumerate(values):
-                if i == 0:
-                    result = [value]
-                else:
+        elif program[0] == "cons": # (cons 1 (2 3)) == (1 2 3); (car (1 2 3)) == 1; (cdr (1 2 3)) == (2 3)
+            if len(program) < 2:
+                result = 0
+            else:
+                values = []
+                for i in range(1, len(program)):
+                    values.append(_run(program[i], variables, functions, debug, depth+1)) # NO LAZY EVALUATION!
+                result = [values[0]]
+                for i, value in enumerate(values[1:]):
                     if type(value) != type([]):
                         result = 0
                         break
@@ -574,10 +575,10 @@ def add_function(function, functions, write_functions_to_file=None, mode="a"):
             f.write(f"#    (function {fname} {params} {code})\n")
 
 
-def write_functions(functions, mode="w"):
-    with open(write_functions_to_file, mode) as f:
+def write_functions(filename, functions, mode="w"):
+    with open(filename, mode) as f:
         for function in functions:
-            keyword, fname, params, code = function
+            _, fname, params, code = function
             params = convert_code_to_str(params)
             code = convert_code_to_str(code)
             f.write(f"#    (function {fname} {params} {code})\n")

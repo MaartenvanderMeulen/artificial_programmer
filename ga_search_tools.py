@@ -7,6 +7,7 @@ import math
 import time
 import json
 import numpy as np
+from autopep8 import fix_code
 
 import interpret
 import evaluate
@@ -20,6 +21,17 @@ from deap import gp #  gp.PrimitiveSet, gp.genHalfAndHalf, gp.PrimitiveTree, gp.
 def make_pp_str(ind):
     return " ".join([x.name for x in ind])
 
+
+def get_fam_info(fam):
+    return f"<{fam.family_index},{fam.raw_error:.3f}>"
+
+
+def get_ind_info(ind):
+    return f"[{ind.id}]{ind.age}{get_fam_info(ind.fam)}"
+
+
+def myfix_code(ind):
+    return fix_code(str(ind).replace("for", "FOR"))
 
 def test_against_python_interpreter(toolbox, cpp_model_outputs, ind):
     code = interpret.compile_deap(str(ind), toolbox.functions)
@@ -86,6 +98,8 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
         toolbox.families_dict[family_key] = family_index
         ind.fam = Family(family_index, raw_error_matrix_cpp, ind)
         toolbox.families_list.append(ind.fam)
+        if False:
+            toolbox.f.write(f"at gen {toolbox.real_gen}, new fam {get_fam_info(ind.fam)}\n")
         if ind.fam.raw_error <= toolbox.max_raw_error_for_family_db:
             toolbox.new_families_list.append(ind.fam)
         # piggyback test : vergelijk uitkomst cpp met python implementatie
@@ -236,6 +250,8 @@ def generate_initial_population_impl(toolbox):
     retry_count = 0
     while len(population) < toolbox.pop_size[0]:
         ind = gp.PrimitiveTree(gp.genHalfAndHalf(pset=toolbox.pset, min_=2, max_=4))
+        ind.age = 0
+        ind.id = toolbox.get_unique_id()
         pp_str = make_pp_str(ind)
         if pp_str in toolbox.ind_str_set or len(ind) > toolbox.max_individual_size:
             if retry_count < toolbox.child_creation_retries:
@@ -316,6 +332,8 @@ def load_initial_population_impl(toolbox, old_pops):
                     # old_pop is list of lists/ints/strings making 
                     deap_str = interpret.convert_code_to_deap_str(code, toolbox)
                     ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)                    
+                    ind.age = 0
+                    ind.id = toolbox.get_unique_id()
                     assert deap_str == str(ind)
                     pp_str = make_pp_str(ind)
                     assert len(ind) == deap_len_of_code(code)
@@ -384,6 +402,8 @@ def analyse_vastlopers_via_best_files_no_family_db(toolbox):
                 code = best_list[0]
                 deap_str = interpret.convert_code_to_deap_str(code, toolbox)
                 ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)                    
+                ind.age = 0
+                ind.id = toolbox.get_unique_id()
                 pp_str = make_pp_str(ind)
                 evaluate_individual(toolbox, ind, pp_str, 0)
                 key = ind.fam.raw_error
@@ -420,7 +440,7 @@ def analyse_vastlopers_via_best_files_no_family_db(toolbox):
 
 
 def read_family_db(toolbox):
-    toolbox.f.write("reading families db, please have some patience\n")
+    # toolbox.f.write("reading families db, please have some patience\n")
     if toolbox.update_fam_db or toolbox.analyse_best:
         print("reading families db ...")
         t0 = time.time()
@@ -431,6 +451,8 @@ def read_family_db(toolbox):
     for code in families:
         deap_str = interpret.convert_code_to_deap_str(code, toolbox)
         ind = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)                    
+        ind.age = 0
+        ind.id = toolbox.get_unique_id()
         pp_str = make_pp_str(ind)
         evaluate_individual(toolbox, ind, pp_str, 0)
     toolbox.new_families_list = []
@@ -451,6 +473,8 @@ def update_fams(toolbox, newfams_list):
         for representative in newfams:
             deap_str = interpret.convert_code_to_deap_str(representative, toolbox)
             representative = gp.PrimitiveTree.from_string(deap_str, toolbox.pset)
+            representative.age = 0
+            representative.id = toolbox.get_unique_id()
             pp_str = make_pp_str(representative)
             evaluate_individual(toolbox, representative, pp_str, 0)
     all_families = [family.representative for family in toolbox.families_list if family.raw_error <= toolbox.max_raw_error_for_family_db]
@@ -493,6 +517,8 @@ def generate_initial_population(toolbox, old_pops=None):
 def copy_individual(toolbox, ind):
     copy_ind = gp.PrimitiveTree(list(ind[:]))
     copy_ind.fam = ind.fam
+    copy_ind.age = 0
+    copy_ind.id = toolbox.get_unique_id()
     return copy_ind
 
 
@@ -566,6 +592,19 @@ def crossover_with_local_search(toolbox, parent1, parent2):
     else:
         child_dict[-1] += 1
 
+    # escape info
+    if best:
+        best.msg = f"at gen {toolbox.real_gen}, {get_ind_info(best)} = cx({get_ind_info(parent1)},{get_ind_info(parent2)})"
+        if toolbox.stuck_count > 50 and best.fam.raw_error < toolbox.population[0].fam.raw_error:
+            escape_id = toolbox.get_unique_id()
+            toolbox.f.write(f"{parent1.msg} parent1 in escape {escape_id}\n")
+            toolbox.f.write(f"    {str(parent1)} parent1 in escape {escape_id}\n")
+            toolbox.f.write(f"{parent2.msg} parent2 in escape {escape_id}\n")
+            toolbox.f.write(f"    {str(parent2)} parent2 in escape {escape_id}\n")
+            sc = toolbox.stuck_count
+            poperr = toolbox.population[0].fam.raw_error
+            toolbox.f.write(f"{best.msg} escape {escape_id} via crossover, stuck_count {sc}, pop[0].err {poperr:.3f}\n")
+            toolbox.f.write(f"    {str(best)} escape {escape_id}\n")
     return best, best_pp_str
 
 
@@ -599,6 +638,18 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
                 if is_improvement(toolbox, child, best):
                     best = child
     pp_str = None if best is None else make_pp_str(best) 
+    if best:        
+        expr_str = str(expr)
+        best.msg = f"at gen {toolbox.real_gen}, {get_ind_info(best)} = mut({get_ind_info(parent)},{expr_str})"
+        if toolbox.stuck_count > 50 and best.fam.raw_error < toolbox.population[0].fam.raw_error:
+            escape_id = toolbox.get_unique_id()
+            toolbox.f.write(f"{parent.msg} parent in escape {escape_id}\n")
+            toolbox.f.write(f"    {str(parent)} parent in escape {escape_id}\n")
+            toolbox.f.write(f"{expr_str} mutatie in escape {escape_id}\n")
+            sc = toolbox.stuck_count
+            poperr = toolbox.population[0].fam.raw_error
+            toolbox.f.write(f"{best.msg} escape {escape_id} via mutatie, stuck_count {sc} pop[0].err {poperr:.3f}\n")
+            toolbox.f.write(f"    {str(best)} escape {escape_id}\n")
     if False:
         if toolbox.population[0].fam.family_index == 4:
             child = copy_individual(toolbox, parent)
@@ -651,6 +702,8 @@ def consistency_check_ind(toolbox, ind):
     if ind is not None:
         assert hasattr(ind, "fam")
         assert ind.fam is not None
+        assert hasattr(ind, "age")
+        assert ind.age >= 0
 
         assert not hasattr(ind, "deap_str")
         assert not hasattr(ind, "pp_str")

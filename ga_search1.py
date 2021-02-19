@@ -18,7 +18,7 @@ from ga_search_tools import best_of_n, generate_initial_population, generate_ini
 from ga_search_tools import refresh_toolbox_from_population, write_cx_graph
 from ga_search_tools import load_initial_population_impl, evaluate_individual, consistency_check_ind
 from ga_search_tools import crossover_with_local_search, cxOnePoint, mutUniform, replace_subtree_at_best_location
-from ga_search_tools import compute_complementairity, pz, remove_file
+from ga_search_tools import compute_complementairity, pz, remove_file, get_fam_info, get_ind_info
 import dynamic_weights
 
 
@@ -223,23 +223,25 @@ def track_stuck(toolbox, population):
 
 
 def log_info(toolbox, population):
-    msg = f"gen {toolbox.real_gen}"
+    msg = f"gen {toolbox.real_gen} error {population[0].fam.raw_error:.1f}"
     toolbox.f.write(msg)
-    if True:
+    if False:
         msg1 = ""
         msg2 = ""
         for _, inds in toolbox.current_families_dict.items():
-            e = round(inds[0].fam.raw_error)
-            msg1 += f" {e}"
+            i = round(inds[0].fam.family_index)
+            msg1 += f" <{i}>"
             n = len(inds)
             msg2 += f" {n}"
-        if len(msg1) > 75:
-            msg1 = msg1[:(75-3)] + "..."
-        if len(msg2) > 75:
-            msg2 = msg2[:(75-3)] + "..."
-        toolbox.f.write(" e" + msg1)    
-        toolbox.f.write(" n" + msg2)    
+        toolbox.f.write(msg1)    
+        toolbox.f.write(msg2)    
     toolbox.f.write(f"\n")
+    if False:
+        for _, inds in toolbox.current_families_dict.items():
+            toolbox.f.write(f"    current fam {get_fam_info(inds[0].fam)}\n")
+        for ind in population:
+            toolbox.f.write(f"    current pop ind {get_ind_info(ind)}\n")
+
 
 
 def check_other_stop_criteria(toolbox):
@@ -265,6 +267,8 @@ def ga_search_impl_core(toolbox):
     refresh_toolbox_from_population(toolbox, toolbox.population, False)
     while toolbox.parachute_level < len(toolbox.ngen):
         while toolbox.gen < toolbox.ngen[toolbox.parachute_level]:
+            for ind in toolbox.population:
+                ind.age += 1
             track_stuck(toolbox, toolbox.population)
             if toolbox.f and toolbox.verbose >= 1:
                 log_info(toolbox, toolbox.population)

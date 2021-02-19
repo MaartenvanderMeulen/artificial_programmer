@@ -79,6 +79,7 @@ class Toolbox(object):
         self.families_dict = dict() # toolbox.families_dict[raw_error_matrix_tuple] = family_index
         self.cx_count_dict = dict() # toolbox.cx_count_dict[(a_index, b_index)] = number of times a&b have cx'ed
         self.cx_child_dict = dict() # toolbox.cx_child_dict[(a_index, b_index)][c_index] += 1 each time a&b have got a c
+        self.unique_id = 0
         random.seed(self.seed)
 
     def sort_ind_key(self, ind):
@@ -93,6 +94,9 @@ class Toolbox(object):
             return False
         return result == 0.0
 
+    def get_unique_id(self):
+        self.unique_id += 1
+        return self.unique_id
 
 def my_profile(toolbox):
     cProfile.runctx("ga_search1.ga_search_impl(toolbox)", globals(), locals(), filename="tmp/stats.txt")
@@ -113,8 +117,8 @@ def log_outcome(toolbox, best, gen):
             if toolbox.verbose >= 1:
                 error = ga_search_tools.forced_reevaluation_of_individual_for_debugging(toolbox, best, 4)
                 assert error == 0
-            code = interpret.compile_deap(str(best), toolbox.functions)
-            toolbox.f.write(f"{interpret.convert_code_to_str(code)} # {best.fam.raw_error:.3f}\n")
+        code = interpret.compile_deap(str(best), toolbox.functions)
+        toolbox.f.write(f"({interpret.convert_code_to_str(code)}) # {best.fam.raw_error:.3f} best\n")
     toolbox.f.flush()
 
 
@@ -168,11 +172,11 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.hops = params["hops"]
     toolbox.output_folder = params["output_folder"]
     toolbox.final_pop_file = None # params["output_folder"] + "/pop_" + str(params["seed"]) + ".txt" # for "samenvoegen" runs & 'analyse_best'
-    toolbox.best_ind_file = params["output_folder"] + "/best_" + str(params["seed"]) + ".txt" # for 'analyse_best'
-    toolbox.good_muts_file = params["output_folder"] + "/goodmuts_" + str(params["seed"]) + ".txt"
-    toolbox.bad_muts_file = params["output_folder"] + "/badmuts_" + str(params["seed"]) + ".txt"
+    toolbox.best_ind_file = None # params["output_folder"] + "/best_" + str(params["seed"]) + ".txt" # for 'analyse_best'
+    toolbox.good_muts_file = None # params["output_folder"] + "/goodmuts_" + str(params["seed"]) + ".txt"
+    toolbox.bad_muts_file = None # params["output_folder"] + "/badmuts_" + str(params["seed"]) + ".txt"
     toolbox.fam_db_file = params["family_db_file"]
-    toolbox.new_fam_file = params["output_folder"] + "/newfam_" + str(params["seed"]) + ".txt" # is added later to family DB
+    toolbox.new_fam_file = None # params["output_folder"] + "/newfam_" + str(params["seed"]) + ".txt" # is added later to family DB
     toolbox.update_fam_db = params["update_family_db"]
     toolbox.max_raw_error_for_family_db = params["max_raw_error_for_family_db"]
     toolbox.write_cx_graph = params["write_cx_graph"]
