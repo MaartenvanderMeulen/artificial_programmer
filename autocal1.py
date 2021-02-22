@@ -164,13 +164,21 @@ if __name__ == "__main__":
         # param = "parent_selection_weight_p_out_of_pop"
         for value in [0.0, 0.001, 0.002, 0.0005, ]:
             context.compute_score(param, value)
-    if True:
+    if False:
         n_runs = 3*31
         print("Start calibration with", n_runs, "runs")
         context = Context(n_runs, 0.001, 1.0, 0.001)
         params = context.read_params(context.best_params_file)
         param = "mut_local_search"
         for value in [1.0, 0.5, 0.75, 0.25, ]:
+            context.compute_score(param, value)
+    if True:
+        n_runs = 3*31
+        print("Start calibration with", n_runs, "runs")
+        context = Context(n_runs, 0.001, 1.0, 0.001)
+        params = context.read_params(context.best_params_file)
+        param = "max_individual_size"
+        for value in [40, 50, 60, 80, ]:
             context.compute_score(param, value)
         
 

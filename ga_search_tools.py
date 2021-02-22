@@ -23,11 +23,11 @@ def make_pp_str(ind):
 
 
 def get_fam_info(fam):
-    return f"<{fam.family_index},{fam.raw_error:.3f}>"
+    return f"<{fam.family_index}> error {fam.raw_error:.3f}, age {fam.age}, in_pop {fam.age_in_population}"
 
 
 def get_ind_info(ind):
-    return f"[{ind.id}]{ind.age}{get_fam_info(ind.fam)}"
+    return f"[{ind.id}] age {ind.age}, len {len(ind)}, {get_fam_info(ind.fam)}"
 
 
 def myfix_code(ind):
@@ -56,6 +56,8 @@ class Family:
         self.raw_error_matrix = raw_error_matrix
         self.raw_error = evaluate.compute_raw_error(self.raw_error_matrix)
         self.representative = representative
+        self.age = 0
+        self.age_in_population = 0
         self.update_normalised_error()
 
     def update_normalised_error(self):
@@ -64,9 +66,10 @@ class Family:
 
 def forced_reevaluation_of_individual_for_debugging(toolbox, ind, debug_level):
     '''Assigns family index to the individual'''
-    model_outputs = cpp_coupling.run_on_all_inputs(toolbox.cpp_handle, ind)
-    raw_error_matrix = evaluate.compute_raw_error_matrix(toolbox.example_inputs, model_outputs, toolbox.error_function, \
-        toolbox.f, toolbox.verbose, False)
+    cpp_model_outputs = cpp_coupling.run_on_all_inputs(toolbox.cpp_handle, ind)
+    test_against_python_interpreter(toolbox, cpp_model_outputs, ind)
+    raw_error_matrix = evaluate.compute_raw_error_matrix(toolbox.example_inputs, cpp_model_outputs, toolbox.error_function, \
+        toolbox.f, debug_level, False)
     raw_error = evaluate.compute_raw_error(raw_error_matrix)
     return raw_error
 
@@ -236,7 +239,7 @@ def write_cx_info(toolbox):
 
 
 def write_cx_graph(toolbox):
-    filename = f"{toolbox.output_folder}/cx_{toolbox.seed}.txt"
+    filename = f"{toolbox.output_folder}/cx_{toolbox.id_seed}.txt"
     with open(filename, "w") as f:
         for (a, b), childs in toolbox.cx_child_dict.items():
             for c, n in childs.items():
@@ -279,11 +282,11 @@ def read_old_populations(toolbox, old_populations_folder, prefix):
     for filename in os.listdir(old_populations_folder):
         if filename[:len(prefix)] == prefix:
             id = int(filename[len(prefix)+1:len(prefix)+1+4])
-            if id // toolbox.old_populations_samplesize == toolbox.seed // toolbox.old_populations_samplesize:
+            if id // toolbox.old_populations_samplesize == toolbox.id_seed // toolbox.old_populations_samplesize:
                 filenames.append(filename)
     filenames.sort()
     for filename in filenames:
-        if toolbox.old_populations_samplesize != 1 or filename == f"{prefix}_{toolbox.seed}.txt":
+        if toolbox.old_populations_samplesize != 1 or filename == f"{prefix}_{toolbox.id_seed}.txt":
             old_pop = interpret.compile(interpret.load(old_populations_folder + "/" + filename))
             if len(old_pop) > 0:
                 old_pops.append(old_pop)
@@ -409,8 +412,8 @@ def analyse_vastlopers_via_best_files_no_family_db(toolbox):
                 key = ind.fam.raw_error
                 if key not in families:
                     families[key] = ([], ind.fam.raw_error, ind.fam.raw_error_matrix)
-                seed = int(filename[5:9])
-                families[key][0].append(seed)
+                id_seed = int(filename[5:9])
+                families[key][0].append(id_seed)
     families = [(raw_error, raw_error_matrix, seeds) for key, (seeds, raw_error, raw_error_matrix) in families.items()]
     families.sort(key=lambda item: -item[0])
     filename = f"{toolbox.output_folder}/analysis.txt"
@@ -433,8 +436,8 @@ def analyse_vastlopers_via_best_files_no_family_db(toolbox):
         for raw_error, raw_error_matrix, seeds in families:
             f.write(f"{raw_error:5.1f} {len(seeds):5d}")
             seeds.sort()
-            for seed in seeds:
-                f.write(f" {seed}")
+            for id_seed in seeds:
+                f.write(f" {id_seed}")
             f.write(f"\n")
     print(f"anaysis done")
 
@@ -510,7 +513,7 @@ def generate_initial_population(toolbox, old_pops=None):
             old_pops = read_old_populations(toolbox, toolbox.old_populations_folder, "pop")
             # old_pops is list of deap strings
             population = load_initial_population_impl(toolbox, old_pops)
-        random.seed(toolbox.seed) # zorgt voor reproduceerbare state
+        random.seed(toolbox.random_seed) # zorgt voor reproduceerbare state
     return population
 
 
@@ -548,7 +551,10 @@ def is_improvement(toolbox, ind, best):
     return len(best) > len(ind)
 
 
-def crossover_with_local_search(toolbox, parent1, parent2):
+global debug_index1, debug_index2
+debug_index1, debug_index2 = 0, 0
+
+def crossover_with_local_search(toolbox, parent1, parent2, debug=0):
     if len(parent1) < 2 or len(parent2) < 2:
         # No crossover on single node tree
         return None, None
@@ -559,6 +565,8 @@ def crossover_with_local_search(toolbox, parent1, parent2):
     random.shuffle(indexes1)
     random.shuffle(indexes2)
     best, best_pp_str = None, None
+    global debug_index1, debug_index2
+    debug_child_is_improvement = False
     for index2 in indexes2:
         slice2 = parent2.searchSubtree(index2)
         expr2 = parent2[slice2]
@@ -570,8 +578,25 @@ def crossover_with_local_search(toolbox, parent1, parent2):
                 pp_str = make_pp_str(child)
                 if pp_str not in toolbox.ind_str_set:
                     evaluate_individual(toolbox, child, pp_str, 0)
+                    if debug == 2 and index2 == debug_index2 and index1 == debug_index1:
+                        print("debug 2, child_error", child.fam.raw_error)
+                        print("debug 2, parent1 ", parent1.id, "parent2", parent2.id)
+                        print("debug 2, index1 ", debug_index1, "index2", debug_index2)
+                        print("debug 2, child", str(child))
                     if is_improvement(toolbox, child, best):
+                        if debug == 1:
+                            debug_index2, debug_index1 = index2, index1
+                        if debug == 2 and index2 == debug_index2 and index1 == debug_index1:
+                            print("debug 2: debug child is improvement", child.id, child.fam.raw_error, len(child))
+                            debug_child_is_improvement = True
+                        elif debug_child_is_improvement:
+                            print("debug 2: debug child is not best anymore, is overtaken by", child.id, child.fam.raw_error, len(child))
                         best, best_pp_str = child, pp_str
+    if debug == 1:
+        print("debug 1, best_error", best.fam.raw_error, )
+        print("debug 1, parent1 ", parent1.id, "parent2", parent2.id)
+        print("debug 1, index1 ", debug_index1, "index2", debug_index2)
+        print("debug 1, best", str(best))
 
     # cx_count administration
     index_a, index_b = parent1.fam.family_index, parent2.fam.family_index
@@ -596,15 +621,28 @@ def crossover_with_local_search(toolbox, parent1, parent2):
     if best:
         best.msg = f"at gen {toolbox.real_gen}, {get_ind_info(best)} = cx({get_ind_info(parent1)},{get_ind_info(parent2)})"
         if toolbox.stuck_count > 50 and best.fam.raw_error < toolbox.population[0].fam.raw_error:
-            escape_id = toolbox.get_unique_id()
-            toolbox.f.write(f"{parent1.msg} parent1 in escape {escape_id}\n")
-            toolbox.f.write(f"    {str(parent1)} parent1 in escape {escape_id}\n")
-            toolbox.f.write(f"{parent2.msg} parent2 in escape {escape_id}\n")
-            toolbox.f.write(f"    {str(parent2)} parent2 in escape {escape_id}\n")
-            sc = toolbox.stuck_count
-            poperr = toolbox.population[0].fam.raw_error
-            toolbox.f.write(f"{best.msg} escape {escape_id} via crossover, stuck_count {sc}, pop[0].err {poperr:.3f}\n")
-            toolbox.f.write(f"    {str(best)} escape {escape_id}\n")
+            toolbox.escape_counter += 1
+            escape_id = toolbox.escape_counter
+            toolbox.f.write(f"escape {escape_id}\n")
+            toolbox.f.write(f"escape {escape_id} via crossover, stuck_count {toolbox.stuck_count}\n")
+            toolbox.f.write(f"escape {escape_id} pop[0] {get_ind_info(toolbox.population[0])}\n")
+            toolbox.f.write(f"escape {escape_id}\n")
+            toolbox.f.write(f"escape {escape_id} child {best.msg}\n")
+            toolbox.f.write(f"escape {escape_id}\n")
+            toolbox.f.write(f"escape {escape_id} {str(best)}\n")
+            toolbox.f.write(f"escape {escape_id}\n")
+            toolbox.f.write(f"escape {escape_id} parent1 {parent1.msg}\n")
+            toolbox.f.write(f"escape {escape_id}\n")
+            toolbox.f.write(f"escape {escape_id} {str(parent1)}\n")
+            toolbox.f.write(f"escape {escape_id}\n")
+            toolbox.f.write(f"escape {escape_id} parent2 {parent2.msg}\n")
+            toolbox.f.write(f"escape {escape_id}\n")
+            toolbox.f.write(f"escape {escape_id} {str(parent2)}\n")
+            toolbox.f.write(f"escape {escape_id}\n")
+        else:
+            toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = {get_ind_info(best)}\n")
+            toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = cx([{parent1.id}],[{parent2.id}])\n")
+            toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = {str(best)}\n")
     return best, best_pp_str
 
 
@@ -642,14 +680,25 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
         expr_str = str(expr)
         best.msg = f"at gen {toolbox.real_gen}, {get_ind_info(best)} = mut({get_ind_info(parent)},{expr_str})"
         if toolbox.stuck_count > 50 and best.fam.raw_error < toolbox.population[0].fam.raw_error:
-            escape_id = toolbox.get_unique_id()
-            toolbox.f.write(f"{parent.msg} parent in escape {escape_id}\n")
-            toolbox.f.write(f"    {str(parent)} parent in escape {escape_id}\n")
-            toolbox.f.write(f"{expr_str} mutatie in escape {escape_id}\n")
-            sc = toolbox.stuck_count
-            poperr = toolbox.population[0].fam.raw_error
-            toolbox.f.write(f"{best.msg} escape {escape_id} via mutatie, stuck_count {sc} pop[0].err {poperr:.3f}\n")
-            toolbox.f.write(f"    {str(best)} escape {escape_id}\n")
+            toolbox.escape_counter += 1
+            escape_id = toolbox.escape_counter
+            toolbox.f.write(f"escape {escape_id}\n")
+            toolbox.f.write(f"escape {escape_id} via mutatie, stuck_count {toolbox.stuck_count}\n")
+            toolbox.f.write(f"escape {escape_id} pop[0] {get_ind_info(toolbox.population[0])}\n")
+            toolbox.f.write(f"escape {escape_id}\n")
+            toolbox.f.write(f"escape {escape_id} child {best.msg}\n")
+            toolbox.f.write(f"escape {escape_id}\n")
+            toolbox.f.write(f"escape {escape_id} {str(best)}\n")
+            toolbox.f.write(f"escape {escape_id}\n")
+            toolbox.f.write(f"escape {escape_id} parent {parent.msg}\n")
+            toolbox.f.write(f"escape {escape_id}\n")
+            toolbox.f.write(f"escape {escape_id} {str(parent)}\n")
+            toolbox.f.write(f"escape {escape_id}\n")
+        else:
+            toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = {get_ind_info(best)}\n")
+            toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = mut [{parent.id}]\n")
+            toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = mut expr {expr_str}\n")
+            toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = {str(best)}\n")
     if False:
         if toolbox.population[0].fam.family_index == 4:
             child = copy_individual(toolbox, parent)
@@ -678,6 +727,11 @@ def refresh_toolbox_from_population(toolbox, population, population_is_sorted):
         if family_index not in toolbox.current_families_dict:
             toolbox.current_families_dict[family_index] = []
         toolbox.current_families_dict[family_index].append(ind)
+    for fam in toolbox.families_list:
+        if fam.family_index in toolbox.current_families_dict:
+            fam.age_in_population += 1
+        else:
+            fam.age_in_population = 0
     if toolbox.dynamic_weights:
         raw_error_matrix_list = []
         if False:

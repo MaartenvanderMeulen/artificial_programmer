@@ -26,7 +26,7 @@ def f():
 
 
 class Toolbox(object):
-    def __init__(self, problem, functions, seed):
+    def __init__(self, problem, functions, random_seed, id_seed):
         problem_name, formal_params, example_inputs, error_function, hints, _ = problem
         int_hints, var_hints, func_hints, solution_hints = hints
         var_names = formal_params + var_hints
@@ -68,7 +68,8 @@ class Toolbox(object):
             raise RuntimeError(f"Check if function hints '{str(func_hints)}' contain all functions of solution hint '{str(solution_hints)}'")
         expected_outputs = evaluate.get_expected_outputs(error_function, example_inputs)
         self.cpp_handle = cpp_coupling.get_cpp_handle(example_inputs, formal_params, var_hints, expected_outputs)
-        self.seed = seed
+        self.random_seed = random_seed
+        self.id_seed = id_seed
         self.reset()
 
     def reset(self):
@@ -80,7 +81,8 @@ class Toolbox(object):
         self.cx_count_dict = dict() # toolbox.cx_count_dict[(a_index, b_index)] = number of times a&b have cx'ed
         self.cx_child_dict = dict() # toolbox.cx_child_dict[(a_index, b_index)][c_index] += 1 each time a&b have got a c
         self.unique_id = 0
-        random.seed(self.seed)
+        self.escape_counter = 0
+        random.seed(self.random_seed)
 
     def sort_ind_key(self, ind):
         result = ind.fam.normalised_error
@@ -144,12 +146,18 @@ def basinhopper(toolbox):
 def solve_by_new_function(problem, functions, f, params):
     sys.setrecursionlimit(sys.getrecursionlimit() + 500)
 
-    toolbox = Toolbox(problem, functions, params["seed"])
+    if params["use_one_random_seed"]:    
+        random_seed = params["seed"]
+        id_seed = params["seed"]
+    else:
+        random_seed = params["random_seed"]
+        id_seed = params["id_seed"]
+    toolbox = Toolbox(problem, functions, random_seed, id_seed)
     toolbox.problem_name, toolbox.problem_params, _, _, _, _ = problem
     toolbox.monkey_mode = False
     toolbox.child_creation_retries = 99
     toolbox.f = f
-    if params["verbose"] >= 3 and len(toolbox.solution_deap_ind) > 0:
+    if len(toolbox.solution_deap_ind) > 0:
         f.write(f"solution hint length {len(toolbox.solution_deap_ind)}\n")
 
     # tunable params
@@ -163,6 +171,9 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.parents_keep_fraction = params["parents_keep_fraction"]
     toolbox.ngen = params["ngen"]
     toolbox.max_individual_size = params["max_individual_size"]
+    if len(toolbox.solution_deap_ind) > toolbox.max_individual_size:
+        f.write(f"solution hint length {len(toolbox.solution_deap_ind)} longer than max length {toolbox.max_individual_size}\n")
+        exit("max_individual_size to short")
     toolbox.pcrossover = params["pcrossover"]
     toolbox.pmutations = 1.0 - toolbox.pcrossover
     toolbox.best_of_n_mut = params["best_of_n_mut"]
@@ -171,12 +182,12 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.penalise_non_reacting_models = params["penalise_non_reacting_models"]
     toolbox.hops = params["hops"]
     toolbox.output_folder = params["output_folder"]
-    toolbox.final_pop_file = None # params["output_folder"] + "/pop_" + str(params["seed"]) + ".txt" # for "samenvoegen" runs & 'analyse_best'
-    toolbox.best_ind_file = None # params["output_folder"] + "/best_" + str(params["seed"]) + ".txt" # for 'analyse_best'
-    toolbox.good_muts_file = None # params["output_folder"] + "/goodmuts_" + str(params["seed"]) + ".txt"
-    toolbox.bad_muts_file = None # params["output_folder"] + "/badmuts_" + str(params["seed"]) + ".txt"
+    toolbox.final_pop_file = None # params["output_folder"] + "/pop_" + str(id_seed) + ".txt" # for "samenvoegen" runs & 'analyse_best'
+    toolbox.best_ind_file = None # params["output_folder"] + "/best_" + str(id_seed) + ".txt" # for 'analyse_best'
+    toolbox.good_muts_file = None # params["output_folder"] + "/goodmuts_" + str(id_seed) + ".txt"
+    toolbox.bad_muts_file = None # params["output_folder"] + "/badmuts_" + str(id_seed) + ".txt"
     toolbox.fam_db_file = params["family_db_file"]
-    toolbox.new_fam_file = None # params["output_folder"] + "/newfam_" + str(params["seed"]) + ".txt" # is added later to family DB
+    toolbox.new_fam_file = params["output_folder"] + "/newfam_" + str(id_seed) + ".txt" # is added later to family DB
     toolbox.update_fam_db = params["update_family_db"]
     toolbox.max_raw_error_for_family_db = params["max_raw_error_for_family_db"]
     toolbox.write_cx_graph = params["write_cx_graph"]

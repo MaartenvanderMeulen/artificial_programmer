@@ -17,7 +17,7 @@
     "analyse_best": false,
     "analyse_cx": false,
     "update_family_db": false,
-    "write_cx_graph": false,
+    "write_cx_graph": true,
     "max_raw_error_for_family_db": 110.671,
     "pop_size": [
         4000,
@@ -35,7 +35,7 @@
         0.5,
         0.5
     ],
-    "max_individual_size": 40,
+    "max_individual_size": 50,
     "pcrossover": 0.4,
     "best_of_n_mut": 2,
     "best_of_n_cx": 4,

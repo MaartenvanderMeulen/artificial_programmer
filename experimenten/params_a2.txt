@@ -2,12 +2,12 @@
     "do_not_overwrite_logfile": false,
     "problems_file": "experimenten/problems_merge_elem_hard.txt",
     "functions_file": "experimenten/functions_leeg.txt",
-    "family_db_file": "tmp/f4.txt",
+    "family_db_file": "tmp/f_empty.txt",
     "seed_prefix": 0,
     "skip_seeds": [],
     "verbose": 1,
     "optimise_solution_length": false,
-    "max_seconds": 879,
+    "max_seconds": 900,
     "max_evaluations": 991500000,
     "max_stuck_count": 99844,
     "touch_at_end": false,
@@ -63,7 +63,8 @@
     "mut_min_height": 0,
     "mut_max_height": 2,
     "parents_keep_all_duration": 2,
-    "parents_keep_fraction_per_family": true,
+    "parents_keep_fraction_per_family": false,
     "use_family_representatives_for_mutation": false,
-    "use_crossover_for_mutations": false
+    "use_crossover_for_mutations": false,
+    "mut_local_search": 1.0
 }

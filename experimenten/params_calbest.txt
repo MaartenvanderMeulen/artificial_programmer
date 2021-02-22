@@ -10,7 +10,7 @@
     "max_seconds": 879,
     "max_evaluations": 991500000,
     "max_stuck_count": 99844,
-    "touch_at_end": false,
+    "touch_at_end": true,
     "new_initial_population": true,
     "old_populations_folder": "tmp/a_cx",
     "old_populations_samplesize": 9999,

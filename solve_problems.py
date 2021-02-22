@@ -110,7 +110,14 @@ def main(seed, id):
             # write a copy to the output folder
             json.dump(params, f, sort_keys=True, indent=4)
 
-    random.seed(seed)
+    if params["use_one_random_seed"]:
+        random.seed(seed)
+    else:
+        del params["seed"]
+        params["seed2"] = seed
+        params["random_seed"] = params["seed_prefix"]
+        params["id_seed"] = seed
+        random.seed(params["seed_prefix"])
     with open(f"{output_folder}/log_{seed}.txt", "w") as log_file:
         if hasattr(log_file, "reconfigure"):
             log_file.reconfigure(line_buffering=True)
