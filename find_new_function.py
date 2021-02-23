@@ -77,6 +77,7 @@ class Toolbox(object):
         self.pp_str_to_family_index_dict = dict() # toolbox.pp_str_to_family_index_dict[pp_str] = family_index
         self.families_list = []
         self.new_families_list = []
+        self.near_solution_families_set = set()
         self.families_dict = dict() # toolbox.families_dict[raw_error_matrix_tuple] = family_index
         self.cx_count_dict = dict() # toolbox.cx_count_dict[(a_index, b_index)] = number of times a&b have cx'ed
         self.cx_child_dict = dict() # toolbox.cx_child_dict[(a_index, b_index)][c_index] += 1 each time a&b have got a c
@@ -187,7 +188,8 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.good_muts_file = None # params["output_folder"] + "/goodmuts_" + str(id_seed) + ".txt"
     toolbox.bad_muts_file = None # params["output_folder"] + "/badmuts_" + str(id_seed) + ".txt"
     toolbox.fam_db_file = params["family_db_file"]
-    toolbox.new_fam_file = params["output_folder"] + "/newfam_" + str(id_seed) + ".txt" # is added later to family DB
+    toolbox.p_cx_c0_db_file = params["p_cx_c0_db_file"]
+    toolbox.near_solution_families_file = params["output_folder"] + "/newfam_" + str(id_seed) + ".txt" # is added later to family DB
     toolbox.update_fam_db = params["update_family_db"]
     toolbox.max_raw_error_for_family_db = params["max_raw_error_for_family_db"]
     toolbox.write_cx_graph = params["write_cx_graph"]
@@ -195,6 +197,7 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.old_populations_folder = params["old_populations_folder"]
     toolbox.analyse_best = params["analyse_best"]
     toolbox.analyse_cx = params["analyse_cx"]
+    toolbox.compute_p_cx_c0 = params["compute_p_cx_c0"]
     toolbox.old_populations_samplesize = params["old_populations_samplesize"]
     toolbox.optimise_solution_length = params["optimise_solution_length"]
     toolbox.dynamic_weights = params["dynamic_weights"]

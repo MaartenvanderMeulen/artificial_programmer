@@ -190,36 +190,36 @@ def search_for_solution(toolbox, population, cx_children):
     return offspring
 
 
-global in_near_solution_area
-in_near_solution_area = False
-
-
 def generate_offspring(toolbox, population, nchildren):
     offspring = []
     toolbox.max_raw_error = max([ind.fam.raw_error for ind in population])
     toolbox.debug_pp_str = ""
     do_default_cx = True
-    do_200x200 = population[0].fam.raw_error <= toolbox.near_solution_threshold
-    if do_200x200:
-        global in_near_solution_area
-        if not in_near_solution_area:
-            in_near_solution_area = True
+    if population[0].fam.raw_error <= toolbox.near_solution_threshold:
+        if not toolbox.in_near_solution_area:
+            toolbox.in_near_solution_area = True
+            for index, _inds in toolbox.current_families_dict.items():
+                if toolbox.families_list[index].raw_error <= toolbox.max_raw_error_for_family_db:
+                    toolbox.near_solution_families_set.add(index)
+
+            toolbox.parents_keep_fraction[toolbox.parachute_level] = 1.0 # 3.0 / 4.0
+            toolbox.pop_size[toolbox.parachute_level] = 300
+            random.seed(toolbox.params["seed2"])
+
             toolbox.cx_count = dict()
             toolbox.cx_child_count = dict()
-            random.seed(toolbox.params["seed2"])
-            toolbox.pp_str_to_family_index_dict = dict()
-            toolbox.family_list = []
-            toolbox.new_families_list = []
-            new_dict = dict()
-            for new_index, (_old_index, inds) in enumerate(toolbox.current_families_dict.items()):
-                fam = inds[0].fam
-                toolbox.family_list.append(fam)
-                toolbox.new_families_list.append(fam)
-                fam.family_index = new_index
-                new_dict[new_index] = inds
-            toolbox.current_families_dict = new_dict
-        toolbox.parents_keep_fraction[toolbox.parachute_level] = 1.0 # 3.0 / 4.0
-        toolbox.pop_size[toolbox.parachute_level] = 300
+            if False:
+                toolbox.pp_str_to_family_index_dict = dict()
+                toolbox.family_list = []
+                toolbox.new_families_list = []
+                new_dict = dict()
+                for new_index, (_old_index, inds) in enumerate(toolbox.current_families_dict.items()):
+                    fam = inds[0].fam
+                    toolbox.family_list.append(fam)
+                    toolbox.new_families_list.append(fam)
+                    fam.family_index = new_index
+                    new_dict[new_index] = inds
+                toolbox.current_families_dict = new_dict
         # toolbox.pcrossover = 0.3
         if True:
             do_default_cx = False
@@ -309,6 +309,14 @@ def log_info(toolbox, population):
             msg2 += f" {n}"
         toolbox.f.write(msg1)    
         toolbox.f.write(msg2)    
+    if True:
+        p_cx_c0 = 0.0
+        for p1, _ in toolbox.current_families_dict.items():
+            for p2, _ in toolbox.current_families_dict.items():
+                if (p1, p2) in toolbox.p_cx_c0_db:
+                    if p_cx_c0 < toolbox.p_cx_c0_db[(p1, p2)]:
+                        p_cx_c0 = toolbox.p_cx_c0_db[(p1, p2)]
+        toolbox.f.write(f" p_cx_c0 {p_cx_c0:.2f}")
     toolbox.f.write(f"\n")
     if False:
         for _, inds in toolbox.current_families_dict.items():
@@ -335,6 +343,7 @@ def ga_search_impl_core(toolbox):
     toolbox.parachute_level = 0
     toolbox.max_observed_stuck_count = 0
     toolbox.count_cx_into_current_pop, toolbox.count_cx = 0, 1 # starting at 1 is easier lateron
+    toolbox.in_near_solution_area = False
     toolbox.population = generate_initial_population(toolbox)
     toolbox.near_solution_threshold = 5.2
     consistency_check(toolbox, toolbox.population)
@@ -380,8 +389,8 @@ def ga_search_impl_core(toolbox):
 def ga_search_impl(toolbox):
     if toolbox.final_pop_file: # clear the file to avoid confusion with older output
         remove_file(toolbox.final_pop_file)
-    if toolbox.new_fam_file: # clear the file to avoid confusion with older output
-        remove_file(toolbox.new_fam_file)
+    if toolbox.near_solution_families_file: # clear the file to avoid confusion with older output
+        remove_file(toolbox.near_solution_families_file)
     if toolbox.good_muts_file: # clear the file to avoid confusion with older output
         remove_file(toolbox.good_muts_file)
     if toolbox.bad_muts_file: # clear the file to avoid confusion with older output
@@ -397,9 +406,9 @@ def ga_search_impl(toolbox):
         toolbox.f.write("RuntimeWarning: " + str(e) + "\n")
     if toolbox.final_pop_file: # write the input files for "samenvoegen"
         write_population(toolbox.final_pop_file, toolbox.population, toolbox.functions)
-    new_families = [family.representative for family in toolbox.new_families_list]
-    if toolbox.new_fam_file and len(new_families) > 0: # write the new families
-        write_population(toolbox.new_fam_file, new_families, toolbox.functions)
+    near_solution_families = [toolbox.families_list[index].representative for index in toolbox.near_solution_families_set]
+    if toolbox.near_solution_families_file and len(near_solution_families) > 0: # write the near_solution_families families
+        write_population(toolbox.near_solution_families_file, near_solution_families, toolbox.functions)
     if toolbox.write_cx_graph:
         write_cx_graph(toolbox)
     if toolbox.good_muts_file:

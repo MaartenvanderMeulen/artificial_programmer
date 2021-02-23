@@ -442,13 +442,46 @@ def analyse_vastlopers_via_best_files_no_family_db(toolbox):
     print(f"anaysis done")
 
 
+def compute_p_cx_c0_db(toolbox):
+    print(f"p(cx-->c0) starts, reading files ...")
+    p_cx_c0_db = dict()
+    for filename in os.listdir(toolbox.old_populations_folder):
+        if filename.startswith("cx"):
+            with open(toolbox.old_populations_folder + "/" + filename, "r") as f:
+                for line in f:
+                    parts = line.strip().lower().split(" ")
+                    p1, p2, c, n = int(parts[0][1:]), int(parts[2][1:]), int(parts[3][1:]), int(parts[4])
+                    if p1 < len(toolbox.families_list) and p2 < len(toolbox.families_list):
+                        if (p1, p2) not in p_cx_c0_db:
+                            p_cx_c0_db[(p1, p2)] = [0, 0]
+                        if c > 1:
+                            c = 1
+                        p_cx_c0_db[(p1, p2)][c] += n
+    filename = f"{toolbox.output_folder}/p_cx_c0_db.txt"
+    with open(filename, "w") as f:
+        for (p1, p2), counts in p_cx_c0_db.items():
+            p_cx_c0 = counts[0] / (counts[0] + counts[1])
+            if p_cx_c0 > 0:
+                f.write(f"{p1} {p2} {p_cx_c0}\n")
+    print(f"p(cx-->c0) done, DB written in {filename}")
+
+
+def read_p_cx_c0_db(toolbox):
+    toolbox.p_cx_c0_db = dict()
+    with open(toolbox.p_cx_c0_db_file, "r") as f:
+        for line in f:
+            parts = line.strip().lower().split(" ")
+            p1, p2, p_cx_c0 = int(parts[0]), int(parts[1]), float(parts[2])
+            toolbox.p_cx_c0_db[(p1, p2)] = p_cx_c0
+
+
 def read_family_db(toolbox):
     # toolbox.f.write("reading families db, please have some patience\n")
-    if toolbox.update_fam_db or toolbox.analyse_best:
-        print("reading families db ...")
+    if toolbox.update_fam_db or toolbox.analyse_best or toolbox.compute_p_cx_c0:
+        print(f"reading families db in {toolbox.fam_db_file} ...")
         t0 = time.time()
     families = interpret.compile(interpret.load(toolbox.fam_db_file))
-    if toolbox.update_fam_db or toolbox.analyse_best:
+    if toolbox.update_fam_db or toolbox.analyse_best or toolbox.compute_p_cx_c0:
         print(f"    {round(time.time() - t0)} seconds for reading {len(families)} families")
         t0 = time.time()
     for code in families:
@@ -459,9 +492,10 @@ def read_family_db(toolbox):
         pp_str = make_pp_str(ind)
         evaluate_individual(toolbox, ind, pp_str, 0)
     toolbox.new_families_list = []
-    if toolbox.update_fam_db or toolbox.analyse_best:
+    if toolbox.update_fam_db or toolbox.analyse_best or toolbox.compute_p_cx_c0:
         elapsed = round(time.time() - t0)
-        print(f"    {elapsed} seconds for processing, {round(len(toolbox.families_list)/elapsed)} families/sec")
+        if elapsed > 0:
+            print(f"    {elapsed} seconds for processing, {round(len(toolbox.families_list)/elapsed)} families/sec")
     toolbox.t0 = time.time() # discard time lost by reading in the family db
 
 
@@ -499,6 +533,10 @@ def generate_initial_population(toolbox, old_pops=None):
     if toolbox.analyse_cx:
         analyse_vastlopers_via_cx_files_and_family_db(toolbox)
         exit()
+    if toolbox.compute_p_cx_c0:
+        compute_p_cx_c0_db(toolbox)
+        exit()
+    read_p_cx_c0_db(toolbox)
     if toolbox.new_initial_population:
         population = generate_initial_population_impl(toolbox)
     else:
@@ -616,6 +654,10 @@ def crossover_with_local_search(toolbox, parent1, parent2, debug=0):
         toolbox.count_cx += 1
     else:
         child_dict[-1] += 1
+
+    # near solution debugging
+    if best and toolbox.in_near_solution_area and best.fam.raw_error <= toolbox.max_raw_error_for_family_db:
+        toolbox.near_solution_families_set.add(best.fam.family_index)
 
     # escape info
     if best:
