@@ -23,7 +23,7 @@ def make_pp_str(ind):
 
 
 def get_fam_info(fam):
-    return f"<{fam.family_index}> error {fam.raw_error:.3f}, age {fam.age}, in_pop {fam.age_in_population}"
+    return f"<{fam.family_index}> error {fam.raw_error:.3f}, age_in_pop {fam.age_in_population}"
 
 
 def get_ind_info(ind):
@@ -95,14 +95,16 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
         family_index = toolbox.families_dict[family_key]
         ind.fam = toolbox.families_list[family_index]
         if len(ind.fam.representative) > len(ind):
+            #if ind.fam.raw_error <= toolbox.max_raw_error_for_family_db:
+            #    toolbox.f.write(f"at gen {toolbox.real_gen}, found shorter representative of {get_fam_info(ind.fam)}\n")
             ind.fam.representative = ind # keep shortest representative
     else:
         family_index = len(toolbox.families_list)
         toolbox.families_dict[family_key] = family_index
         ind.fam = Family(family_index, raw_error_matrix_cpp, ind)
         toolbox.families_list.append(ind.fam)
-        if False:
-            toolbox.f.write(f"at gen {toolbox.real_gen}, new fam {get_fam_info(ind.fam)}\n")
+        #if ind.fam.raw_error <= toolbox.max_raw_error_for_family_db:
+        #    toolbox.f.write(f"at gen {toolbox.real_gen}, new fam {get_fam_info(ind.fam)}\n")
         if ind.fam.raw_error <= toolbox.max_raw_error_for_family_db:
             toolbox.new_families_list.append(ind.fam)
         # piggyback test : vergelijk uitkomst cpp met python implementatie
@@ -460,19 +462,23 @@ def compute_p_cx_c0_db(toolbox):
     filename = f"{toolbox.output_folder}/p_cx_c0_db.txt"
     with open(filename, "w") as f:
         for (p1, p2), counts in p_cx_c0_db.items():
-            p_cx_c0 = counts[0] / (counts[0] + counts[1])
-            if p_cx_c0 > 0:
-                f.write(f"{p1} {p2} {p_cx_c0}\n")
+            if counts[0] > 0:
+                f.write(f"{p1} {p2} {counts[0]} {counts[0] + counts[1]}\n")
     print(f"p(cx-->c0) done, DB written in {filename}")
 
 
 def read_p_cx_c0_db(toolbox):
     toolbox.p_cx_c0_db = dict()
+    toolbox.p_family_in_cx_c0_db = dict()
     with open(toolbox.p_cx_c0_db_file, "r") as f:
         for line in f:
             parts = line.strip().lower().split(" ")
-            p1, p2, p_cx_c0 = int(parts[0]), int(parts[1]), float(parts[2])
-            toolbox.p_cx_c0_db[(p1, p2)] = p_cx_c0
+            index1, index2, p_cx_c0 = int(parts[0]), int(parts[1]), float(parts[2])
+            toolbox.p_cx_c0_db[(index1, index2)] = p_cx_c0
+            for index in [index1, index2]:
+                if index not in toolbox.p_family_in_cx_c0_db:
+                    toolbox.p_family_in_cx_c0_db[index] = 0.0
+                toolbox.p_family_in_cx_c0_db[index] = max(toolbox.p_family_in_cx_c0_db[index], p_cx_c0)
 
 
 def read_family_db(toolbox):
@@ -592,7 +598,7 @@ def is_improvement(toolbox, ind, best):
 global debug_index1, debug_index2
 debug_index1, debug_index2 = 0, 0
 
-def crossover_with_local_search(toolbox, parent1, parent2, debug=0):
+def crossover_with_local_search(toolbox, parent1, parent2, do_shuffle=True, debug=0):
     if len(parent1) < 2 or len(parent2) < 2:
         # No crossover on single node tree
         return None, None
@@ -600,11 +606,10 @@ def crossover_with_local_search(toolbox, parent1, parent2, debug=0):
     # local sesarch
     indexes1 = [i for i in range(len(parent1))]
     indexes2 = [i for i in range(len(parent2))]
-    random.shuffle(indexes1)
-    random.shuffle(indexes2)
+    if do_shuffle:
+        random.shuffle(indexes1)
+        random.shuffle(indexes2)
     best, best_pp_str = None, None
-    global debug_index1, debug_index2
-    debug_child_is_improvement = False
     for index2 in indexes2:
         slice2 = parent2.searchSubtree(index2)
         expr2 = parent2[slice2]
@@ -616,25 +621,9 @@ def crossover_with_local_search(toolbox, parent1, parent2, debug=0):
                 pp_str = make_pp_str(child)
                 if pp_str not in toolbox.ind_str_set:
                     evaluate_individual(toolbox, child, pp_str, 0)
-                    if debug == 2 and index2 == debug_index2 and index1 == debug_index1:
-                        print("debug 2, child_error", child.fam.raw_error)
-                        print("debug 2, parent1 ", parent1.id, "parent2", parent2.id)
-                        print("debug 2, index1 ", debug_index1, "index2", debug_index2)
-                        print("debug 2, child", str(child))
-                    if is_improvement(toolbox, child, best):
-                        if debug == 1:
-                            debug_index2, debug_index1 = index2, index1
-                        if debug == 2 and index2 == debug_index2 and index1 == debug_index1:
-                            print("debug 2: debug child is improvement", child.id, child.fam.raw_error, len(child))
-                            debug_child_is_improvement = True
-                        elif debug_child_is_improvement:
-                            print("debug 2: debug child is not best anymore, is overtaken by", child.id, child.fam.raw_error, len(child))
-                        best, best_pp_str = child, pp_str
-    if debug == 1:
-        print("debug 1, best_error", best.fam.raw_error, )
-        print("debug 1, parent1 ", parent1.id, "parent2", parent2.id)
-        print("debug 1, index1 ", debug_index1, "index2", debug_index2)
-        print("debug 1, best", str(best))
+                    if not toolbox.in_near_solution_area or child.fam.family_index not in toolbox.current_families_dict:
+                        if is_improvement(toolbox, child, best):
+                            best, best_pp_str = child, pp_str
 
     # cx_count administration
     index_a, index_b = parent1.fam.family_index, parent2.fam.family_index
@@ -654,6 +643,12 @@ def crossover_with_local_search(toolbox, parent1, parent2, debug=0):
         toolbox.count_cx += 1
     else:
         child_dict[-1] += 1
+
+    if best and toolbox.in_near_solution_area:
+        repr = best.fam.representative
+        slice_best = best.searchSubtree(0)
+        slice_repr = repr.searchSubtree(0)
+        best[slice_best] = repr[slice_repr]
 
     # near solution debugging
     if best and toolbox.in_near_solution_area and best.fam.raw_error <= toolbox.max_raw_error_for_family_db:
@@ -682,8 +677,8 @@ def crossover_with_local_search(toolbox, parent1, parent2, debug=0):
             toolbox.f.write(f"escape {escape_id} {str(parent2)}\n")
             toolbox.f.write(f"escape {escape_id}\n")
         else:
-            toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = {get_ind_info(best)}\n")
-            toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = cx([{parent1.id}],[{parent2.id}])\n")
+            f1, f2 = parent1.fam.family_index, parent2.fam.family_index
+            toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = {get_ind_info(best)} = cx [{parent1.id}]<{f1}> [{parent2.id}]<{f2}>\n")
             toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = {str(best)}\n")
     return best, best_pp_str
 
@@ -715,8 +710,15 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
             pp_str = make_pp_str(child)
             if pp_str not in toolbox.ind_str_set:
                 evaluate_individual(toolbox, child, pp_str, 0)
-                if is_improvement(toolbox, child, best):
-                    best = child
+                if not toolbox.in_near_solution_area or child.fam.family_index not in toolbox.current_families_dict:                    
+                    if is_improvement(toolbox, child, best):                        
+                        best = child
+    if best and toolbox.in_near_solution_area:
+        repr = best.fam.representative
+        slice_best = best.searchSubtree(0)
+        slice_repr = repr.searchSubtree(0)
+        best[slice_best] = repr[slice_repr]
+
     pp_str = None if best is None else make_pp_str(best) 
     if best:        
         expr_str = str(expr)
@@ -737,8 +739,8 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
             toolbox.f.write(f"escape {escape_id} {str(parent)}\n")
             toolbox.f.write(f"escape {escape_id}\n")
         else:
-            toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = {get_ind_info(best)}\n")
-            toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = mut [{parent.id}]\n")
+            f1 = parent.fam.family_index
+            toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = {get_ind_info(best)} = mut [{parent.id}]<{f1}>\n")
             toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = mut expr {expr_str}\n")
             toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = {str(best)}\n")
     if False:

@@ -125,68 +125,43 @@ def search_for_solution(toolbox, population, cx_children):
     offspring = []
     count = 0
     cx_candidates = []
-    for _, parents1 in toolbox.current_families_dict.items():
-        for _, parents2 in toolbox.current_families_dict.items():
-            key = (parents1[0].fam.family_index, parents2[0].fam.family_index)
-            if key not in toolbox.cx_count_dict:
-                if False:
-                    if parents1[-1].id == 5607804:
-                        i5607804 = parents1[-1]
-                    if parents1[-1].id == 5756632:
-                        i5756632 = parents1[-1]
-                    if parents2[-1].id == 5707508:
-                        i5707508 = parents2[-1]
-                    if parents2[-1].id == 5292746:
-                        i5292746 = parents2[-1]
-                    if parents1[-1].id in [5607804, 5756632] and parents2[-1].id in [5707508, 5292746]:
-                        print("generation", toolbox.real_gen, parents1[-1].id, parents2[-1].id, "candidate 200x200 cx")
+    if False:
+        for _, parents1 in toolbox.current_families_dict.items():
+            for _, parents2 in toolbox.current_families_dict.items():
+                key = (parents1[0].fam.family_index, parents2[0].fam.family_index)
                 parent1, parent2 = parents1[-1], parents2[-1]
-                p = sample_fam_cx_fitness(toolbox, [parent1], [parent2])[0]
-                cx_candidates.append((parent1, parent2, p))
+                f1, f2 = parent1.fam.family_index, parent2.fam.family_index
+                if (f1, f2) in toolbox.p_cx_c0_db:
+                    if toolbox.p_cx_c0_db[(f1, f2)] == 1.0:
+                        if False:
+                            cx_candidates.append((parent1, parent2, toolbox.p_cx_c0_db[(f1, f2)]))
+                        toolbox.f.write(f"detected potential escape (p_cx_c0==1) via : <{f1}> x <{f2}>\n")
+                        child, _child_pp_str = crossover_with_local_search(toolbox, parent1, parent2, do_shuffle=False, debug=3)
+                        toolbox.f.write(f"but crossover <{f1}> x <{f2}> has resulting error {child.fam.raw_error}\n")
+                        exit()
+        if len(cx_candidates) > 0:
+            sum_p = sum([p for _, _, p in cx_candidates])
+            toolbox.f.write(f"nxn finds {len(cx_candidates)} cx candidates mentioned in p_cx_c0_db.  Sum of p is {sum_p:.2f}\n")
+        if len(cx_candidates) == 0:
+            # TODO add cx omdat de parents betrokken zijn in p_cx_c0_db
+            pass
+
+    if len(cx_candidates) == 0:
+        for _, parents1 in toolbox.current_families_dict.items():
+            for _, parents2 in toolbox.current_families_dict.items():
+                key = (parents1[0].fam.family_index, parents2[0].fam.family_index)
+                if key not in toolbox.cx_count_dict:
+                    parent1, parent2 = parents1[-1], parents2[-1]
+                    p = sample_fam_cx_fitness(toolbox, [parent1], [parent2])[0]
+                    cx_candidates.append((parent1, parent2, p))
     cx_candidates.sort(key=lambda item: -item[2])
     for parent1, parent2, _ in cx_candidates:
         count += 1
-        if False:
-            debug = 0
-            if toolbox.real_gen == 240:
-                if parent1.id in [5607804, 5756632] and parent2.id in [5707508, 5292746]:
-                    debug = 1
         child, _child_pp_str = crossover_with_local_search(toolbox, parent1, parent2)
         if child: #  and child.fam.raw_error < threshold:
-            if False:
-                if toolbox.real_gen == 240:
-                    if parent1.id in [5607804, 5756632] and parent2.id in [5707508, 5292746]:
-                        print("A generation", toolbox.real_gen, parent1.id, parent2.id, "cx resulted in child", child.id, child.fam.raw_error)
-                        debug_raw_error = forced_reevaluation_of_individual_for_debugging(toolbox, child, 1)
-                        print("debug_raw_error", debug_raw_error)
-                        toolbox.debug_pp_str = _child_pp_str
-                        print("solution length", len(child))
-
             offspring.append(child)
             if len(offspring) >= cx_children:
                 break
-    if False:
-        if toolbox.real_gen == 240:
-            toolbox.max_individual_size = 100
-
-            child, _child_pp_str = crossover_with_local_search(toolbox, i5607804, i5707508)
-            debug_raw_error = forced_reevaluation_of_individual_for_debugging(toolbox, child, 1)
-            print("    i5607804 x i5707508 child", child.id, "would have value", child.fam.raw_error, debug_raw_error)
-
-            child, _child_pp_str = crossover_with_local_search(toolbox, i5607804, i5292746)
-            debug_raw_error = forced_reevaluation_of_individual_for_debugging(toolbox, child, 1)
-            print("    i5607804 x i5292746 child", child.id, "would have value", child.fam.raw_error, debug_raw_error)
-
-            child, _child_pp_str = crossover_with_local_search(toolbox, i5756632, i5707508)
-            debug_raw_error = forced_reevaluation_of_individual_for_debugging(toolbox, child, 1)
-            print("    i5756632 x i5707508 child", child.id, "would have value", child.fam.raw_error, debug_raw_error)
-
-            child, _child_pp_str = crossover_with_local_search(toolbox, i5756632, i5292746)
-            debug_raw_error = forced_reevaluation_of_individual_for_debugging(toolbox, child, 1)
-            print("    i5756632 x i5292746 child", child.id, "would have value", child.fam.raw_error, debug_raw_error)
-
-            exit()
-
     return offspring
 
 
@@ -204,6 +179,7 @@ def generate_offspring(toolbox, population, nchildren):
 
             toolbox.parents_keep_fraction[toolbox.parachute_level] = 1.0 # 3.0 / 4.0
             toolbox.pop_size[toolbox.parachute_level] = 300
+            toolbox.max_individual_size = 80
             random.seed(toolbox.params["seed2"])
 
             toolbox.cx_count = dict()
@@ -221,7 +197,7 @@ def generate_offspring(toolbox, population, nchildren):
                     new_dict[new_index] = inds
                 toolbox.current_families_dict = new_dict
         # toolbox.pcrossover = 0.3
-        if True:
+        if False:
             do_default_cx = False
             n = len(toolbox.current_families_dict)
             toolbox.f.write(f"Start {n}x{n} search\n")
@@ -299,16 +275,6 @@ def track_stuck(toolbox, population):
 def log_info(toolbox, population):
     msg = f"gen {toolbox.real_gen} error {population[0].fam.raw_error:.1f}"
     toolbox.f.write(msg)
-    if False:
-        msg1 = ""
-        msg2 = ""
-        for _, inds in toolbox.current_families_dict.items():
-            i = round(inds[0].fam.family_index)
-            msg1 += f" <{i}>"
-            n = len(inds)
-            msg2 += f" {n}"
-        toolbox.f.write(msg1)    
-        toolbox.f.write(msg2)    
     if True:
         p_cx_c0 = 0.0
         for p1, _ in toolbox.current_families_dict.items():
@@ -317,13 +283,28 @@ def log_info(toolbox, population):
                     if p_cx_c0 < toolbox.p_cx_c0_db[(p1, p2)]:
                         p_cx_c0 = toolbox.p_cx_c0_db[(p1, p2)]
         toolbox.f.write(f" p_cx_c0 {p_cx_c0:.2f}")
+    if True:
+        avg_ind_len = sum([len(ind) for ind in toolbox.population]) / len(toolbox.population)
+        toolbox.f.write(f" avg_ind_len {avg_ind_len:.1f}")
+    if False:
+        msg = ""
+        for _, inds in toolbox.current_families_dict.items():
+            i = round(inds[0].fam.family_index)
+            n = len(inds)
+            msg += f" {n}"
+        toolbox.f.write(msg)    
     toolbox.f.write(f"\n")
     if False:
         for _, inds in toolbox.current_families_dict.items():
             toolbox.f.write(f"    current fam {get_fam_info(inds[0].fam)}\n")
         for ind in population:
             toolbox.f.write(f"    current pop ind {get_ind_info(ind)}\n")
-
+    if True:
+        msg = f"atgen {toolbox.real_gen} families"
+        for _, inds in toolbox.current_families_dict.items():
+            i = round(inds[0].fam.family_index)
+            msg += f" {i}"
+        toolbox.f.write(msg + "\n")    
 
 
 def check_other_stop_criteria(toolbox):
@@ -369,11 +350,19 @@ def ga_search_impl_core(toolbox):
                         toolbox.population.extend(random.sample(inds, k=max(1,round(len(inds)*fraction))))
                 else:
                     toolbox.population = random.sample(toolbox.population, k=int(len(toolbox.population)*fraction))
-            trim_families = toolbox.population[0].fam.raw_error <= toolbox.near_solution_threshold
-            if trim_families:
+            if toolbox.in_near_solution_area:
+                # trim families
                 toolbox.population = []
-                for _, inds in toolbox.current_families_dict.items():
-                    toolbox.population.append(inds[-1])
+                for index, inds in toolbox.current_families_dict.items():
+                    if True:
+                        ind = inds[-1]
+                        rep = toolbox.families_list[index].representative
+                        slice_ind = ind.searchSubtree(0)
+                        slice_rep = rep.searchSubtree(0)
+                        ind[slice_ind] = rep[slice_rep]
+                        toolbox.population.append(ind)
+                    else:
+                        toolbox.population.append(inds[-1])
             toolbox.population += offspring
             toolbox.population.sort(key=toolbox.sort_ind_key)
             toolbox.population[:] = toolbox.population[:toolbox.pop_size[toolbox.parachute_level]]
