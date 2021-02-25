@@ -30,6 +30,10 @@ def get_ind_info(ind):
     return f"[{ind.id}] age {ind.age}, len {len(ind)}, {get_fam_info(ind.fam)}"
 
 
+def get_ind_node_id(ind):
+    return f"<{ind.fam.family_index}>"
+
+
 def myfix_code(ind):
     return fix_code(str(ind).replace("for", "FOR"))
 
@@ -657,6 +661,7 @@ def crossover_with_local_search(toolbox, parent1, parent2, do_shuffle=True, debu
     # escape info
     if best:
         best.msg = f"at gen {toolbox.real_gen}, {get_ind_info(best)} = cx({get_ind_info(parent1)},{get_ind_info(parent2)})"
+        toolbox.graph.add_cx(get_ind_node_id(parent1), get_ind_node_id(parent2), get_ind_node_id(best), toolbox.real_gen)
         if toolbox.stuck_count > 50 and best.fam.raw_error < toolbox.population[0].fam.raw_error:
             toolbox.escape_counter += 1
             escape_id = toolbox.escape_counter
@@ -676,6 +681,7 @@ def crossover_with_local_search(toolbox, parent1, parent2, do_shuffle=True, debu
             toolbox.f.write(f"escape {escape_id}\n")
             toolbox.f.write(f"escape {escape_id} {str(parent2)}\n")
             toolbox.f.write(f"escape {escape_id}\n")
+            toolbox.graph.write_tree_to_dst(toolbox.f, get_ind_node_id(best), f"escape{escape_id}", toolbox.real_gen)
         else:
             f1, f2 = parent1.fam.family_index, parent2.fam.family_index
             toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = {get_ind_info(best)} = cx [{parent1.id}]<{f1}> [{parent2.id}]<{f2}>\n")
@@ -723,6 +729,7 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
     if best:        
         expr_str = str(expr)
         best.msg = f"at gen {toolbox.real_gen}, {get_ind_info(best)} = mut({get_ind_info(parent)},{expr_str})"
+        toolbox.graph.add_mut(get_ind_node_id(parent), expr_str, get_ind_node_id(best), toolbox.real_gen)
         if toolbox.stuck_count > 50 and best.fam.raw_error < toolbox.population[0].fam.raw_error:
             toolbox.escape_counter += 1
             escape_id = toolbox.escape_counter
@@ -738,6 +745,7 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
             toolbox.f.write(f"escape {escape_id}\n")
             toolbox.f.write(f"escape {escape_id} {str(parent)}\n")
             toolbox.f.write(f"escape {escape_id}\n")
+            toolbox.graph.write_tree_to_dst(toolbox.f, get_ind_node_id(best), f"escape{escape_id}", toolbox.real_gen)
         else:
             f1 = parent.fam.family_index
             toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = {get_ind_info(best)} = mut [{parent.id}]<{f1}>\n")

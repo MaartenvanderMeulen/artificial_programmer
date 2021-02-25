@@ -18,6 +18,7 @@ from evaluate import recursive_tuple
 import ga_search1
 import ga_search_tools
 import cpp_coupling
+import graph
 
 
 def f():
@@ -83,6 +84,7 @@ class Toolbox(object):
         self.cx_child_dict = dict() # toolbox.cx_child_dict[(a_index, b_index)][c_index] += 1 each time a&b have got a c
         self.unique_id = 0
         self.escape_counter = 0
+        self.graph = graph.Graph()
         random.seed(self.random_seed)
 
     def sort_ind_key(self, ind):
@@ -226,6 +228,8 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.use_crossover_for_mutations = params["use_crossover_for_mutations"]
     toolbox.mut_local_search = params["mut_local_search"]
     toolbox.near_solution_threshold = params["near_solution_threshold"]
+    toolbox.near_solution_pop_size = params["near_solution_pop_size"]
+    toolbox.near_solution_max_individual_size = params["near_solution_max_individual_size"]
 
 
     # search

@@ -178,8 +178,8 @@ def generate_offspring(toolbox, population, nchildren):
                     toolbox.near_solution_families_set.add(index)
 
             toolbox.parents_keep_fraction[toolbox.parachute_level] = 1.0 # 3.0 / 4.0
-            toolbox.pop_size[toolbox.parachute_level] = 300
-            toolbox.max_individual_size = 80
+            toolbox.pop_size[toolbox.parachute_level] = toolbox.near_solution_pop_size
+            toolbox.max_individual_size = toolbox.near_solution_max_individual_size
             if not toolbox.params["use_one_random_seed"]:
                 random.seed(toolbox.params["seed2"])
 
@@ -269,6 +269,7 @@ def track_stuck(toolbox, population):
     else:
         toolbox.stuck_count = 0
         toolbox.count_opschudding = 0
+        toolbox.graph.clear()
         # verandering t.o.v. vorige iteratie
     toolbox.prev_family_index.add(population[0].fam.family_index)
 
