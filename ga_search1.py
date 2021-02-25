@@ -180,7 +180,8 @@ def generate_offspring(toolbox, population, nchildren):
             toolbox.parents_keep_fraction[toolbox.parachute_level] = 1.0 # 3.0 / 4.0
             toolbox.pop_size[toolbox.parachute_level] = 300
             toolbox.max_individual_size = 80
-            random.seed(toolbox.params["seed2"])
+            if not toolbox.params["use_one_random_seed"]:
+                random.seed(toolbox.params["seed2"])
 
             toolbox.cx_count = dict()
             toolbox.cx_child_count = dict()
@@ -326,7 +327,6 @@ def ga_search_impl_core(toolbox):
     toolbox.count_cx_into_current_pop, toolbox.count_cx = 0, 1 # starting at 1 is easier lateron
     toolbox.in_near_solution_area = False
     toolbox.population = generate_initial_population(toolbox)
-    toolbox.near_solution_threshold = 5.2
     consistency_check(toolbox, toolbox.population)
     refresh_toolbox_from_population(toolbox, toolbox.population, False)
     while toolbox.parachute_level < len(toolbox.ngen):

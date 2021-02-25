@@ -75,7 +75,7 @@ class Context(object):
         self.scores_cache[lookup_value] = score
         if self.best_score is not None and self.best_score < score:
             print(self.param_name, "value", value, "score", score, "(new best score)")
-            self.write_params(params, self.best_params_file)
+            # self.write_params(params, self.best_params_file)
         else:
             print(self.param_name, "value", value, "score", score)
         return score
@@ -172,13 +172,21 @@ if __name__ == "__main__":
         param = "mut_local_search"
         for value in [1.0, 0.5, 0.75, 0.25, ]:
             context.compute_score(param, value)
-    if True:
+    if False:
         n_runs = 3*31
         print("Start calibration with", n_runs, "runs")
         context = Context(n_runs, 0.001, 1.0, 0.001)
         params = context.read_params(context.best_params_file)
         param = "max_individual_size"
         for value in [40, 50, 60, 80, ]:
+            context.compute_score(param, value)
+    if True:
+        n_runs = 3*31
+        print("Start calibration with", n_runs, "runs")
+        context = Context(n_runs, 0.001, 1.0, 0.001)
+        params = context.read_params(context.best_params_file)
+        param = "near_solution_threshold"
+        for value in [25.3, 45.8]:
             context.compute_score(param, value)
         
 

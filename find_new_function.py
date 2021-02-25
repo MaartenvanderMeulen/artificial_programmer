@@ -225,6 +225,8 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.use_family_representatives_for_mutation = params["use_family_representatives_for_mutation"]
     toolbox.use_crossover_for_mutations = params["use_crossover_for_mutations"]
     toolbox.mut_local_search = params["mut_local_search"]
+    toolbox.near_solution_threshold = params["near_solution_threshold"]
+
 
     # search
     result = basinhopper(toolbox)

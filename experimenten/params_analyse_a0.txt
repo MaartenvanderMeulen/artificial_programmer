@@ -2,7 +2,8 @@
     "do_not_overwrite_logfile": false,
     "problems_file": "experimenten/problems_merge_elem_hard.txt",
     "functions_file": "experimenten/functions_leeg.txt",
-    "family_db_file": "tmp/fam_problems_merge_elem_hard.txt",
+    "family_db_file": "tmp/f_empty.txt",
+    "p_cx_c0_db_file": "tmp/p_cx_c0_db_empty.txt",
     "seed_prefix": 0,
     "skip_seeds": [],
     "verbose": 1,
@@ -12,10 +13,11 @@
     "max_stuck_count": 99844,
     "touch_at_end": false,
     "new_initial_population": true,
-    "old_populations_folder": "tmp/a1",
+    "old_populations_folder": "tmp/a0",
     "old_populations_samplesize": 9999,
     "analyse_best": true,
     "analyse_cx": false,
+    "compute_p_cx_c0": false,
     "update_family_db": false,
     "write_cx_graph": true,
     "max_raw_error_for_family_db": 110.671,
@@ -65,5 +67,8 @@
     "parents_keep_all_duration": 2,
     "parents_keep_fraction_per_family": false,
     "use_family_representatives_for_mutation": false,
-    "use_crossover_for_mutations": false
+    "use_crossover_for_mutations": false,
+    "mut_local_search": 1.0,
+    "use_one_random_seed": true,
+    "near_solution_threshold": 5.2
 }
