@@ -625,7 +625,7 @@ def crossover_with_local_search(toolbox, parent1, parent2, do_shuffle=True, debu
                 pp_str = make_pp_str(child)
                 if pp_str not in toolbox.ind_str_set:
                     evaluate_individual(toolbox, child, pp_str, 0)
-                    if not toolbox.in_near_solution_area or child.fam.family_index not in toolbox.current_families_dict:
+                    if not toolbox.in_near_solution_area or child.fam.family_index not in toolbox.offspring_families_set:
                         if is_improvement(toolbox, child, best):
                             best, best_pp_str = child, pp_str
 
@@ -716,7 +716,7 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
             pp_str = make_pp_str(child)
             if pp_str not in toolbox.ind_str_set:
                 evaluate_individual(toolbox, child, pp_str, 0)
-                if not toolbox.in_near_solution_area or child.fam.family_index not in toolbox.current_families_dict:                    
+                if not toolbox.in_near_solution_area or child.fam.family_index not in toolbox.offspring_families_set:                    
                     if is_improvement(toolbox, child, best):                        
                         best = child
     if best and toolbox.in_near_solution_area:

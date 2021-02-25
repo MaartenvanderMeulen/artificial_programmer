@@ -169,6 +169,9 @@ def generate_offspring(toolbox, population, nchildren):
     offspring = []
     toolbox.max_raw_error = max([ind.fam.raw_error for ind in population])
     toolbox.debug_pp_str = ""
+    toolbox.offspring_families_set = set()
+    for index, _inds in toolbox.current_families_dict.items():
+        toolbox.offspring_families_set.add(index)
     do_default_cx = True
     if population[0].fam.raw_error <= toolbox.near_solution_threshold:
         if not toolbox.in_near_solution_area:
@@ -241,6 +244,7 @@ def generate_offspring(toolbox, population, nchildren):
         retry_count = 0
         assert child.fam is not None
         toolbox.ind_str_set.add(pp_str)
+        toolbox.offspring_families_set.add(child.fam.family_index)
         offspring.append(child)
     return offspring
 

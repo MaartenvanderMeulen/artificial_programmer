@@ -8,7 +8,7 @@
     "skip_seeds": [],
     "verbose": 1,
     "optimise_solution_length": false,
-    "max_seconds": 900,
+    "max_seconds": 600,
     "max_evaluations": 991500000,
     "max_stuck_count": 99844,
     "touch_at_end": true,
@@ -70,7 +70,7 @@
     "use_crossover_for_mutations": false,
     "mut_local_search": 1.0,
     "use_one_random_seed": true,
-    "near_solution_threshold": 87.7,
+    "near_solution_threshold": 5.2,
     "near_solution_pop_size": 300,
     "near_solution_max_individual_size": 80
 }
