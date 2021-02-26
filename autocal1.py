@@ -63,11 +63,34 @@ class Context(object):
 
 
 if __name__ == "__main__":
-    n_runs = 3*31
-    print("Start calibration with", n_runs, "runs")
+    S = 20
+    os.system(f"tsp -S {S}")
+    n = 3
+    n_runs = n*S
+    print(f"Start calibration with {n}x{S}={n_runs} runs")
     context = Context(n_runs)
-    param = "mut_max_height"
-    for value in [2, 1, 0]:
+    #param = "mut_max_height"
+    #for value in [3,]:
+    #    context.compute_score(param, value)
+    # 3 : 11
+    # 2 : 10
+    # 1 : 2
+    # 0 : 0
+    param = "near_solution_pop_size"
+    for value in [325, 275]:
         context.compute_score(param, value)
+    # 400 : 4
+    # 325 : 8
+    # 300 : 10
+    # 275 : 6
+    # 200 : 5
+    param = "nchildren"
+    for value in [[4000,150], ]:
+        context.compute_score(param, value)
+    # 150 : 11
+    # 125 : 12
+    # 100 : 10
+    # 75 : 10
+
         
 

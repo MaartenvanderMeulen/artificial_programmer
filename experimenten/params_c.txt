@@ -22,7 +22,7 @@
     "mut_min_height": 0,
     "nchildren": [
         4000,
-        100
+        150
     ],
     "near_solution_max_individual_size": 80,
     "near_solution_pop_size": 300,

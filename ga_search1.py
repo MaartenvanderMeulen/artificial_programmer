@@ -314,7 +314,7 @@ def log_info(toolbox, population):
 
 
 def check_other_stop_criteria(toolbox):
-    if time.time() >= toolbox.t0 + toolbox.max_seconds and toolbox.stuck_count >= 5:
+    if time.time() >= toolbox.t0 + toolbox.max_seconds: # and toolbox.stuck_count >= 5:
         raise RuntimeWarning("max time reached")
     if toolbox.eval_count >= toolbox.max_evaluations:
         raise RuntimeWarning("max evaluations reached")
