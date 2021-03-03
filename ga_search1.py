@@ -227,6 +227,7 @@ def generate_offspring(toolbox, population, nchildren):
                 if toolbox.use_family_representatives_for_mutation:
                     family = random.choice(toolbox.families_list)
                     mutation = family.representative
+                    raise RuntimeError(f"DEBUG 228 : option use_family_representatives_for_mutation may not be used") # can be removed when debugging is done
                 else:
                     mutation = gp.genFull(pset=toolbox.pset, min_=toolbox.mut_min_height, max_=toolbox.mut_max_height)                
                     mutation = gp.PrimitiveTree(mutation)                    
@@ -362,10 +363,11 @@ def ga_search_impl_core(toolbox):
                     if True:
                         ind = inds[-1]
                         rep = toolbox.families_list[index].representative
-                        slice_ind = ind.searchSubtree(0)
-                        slice_rep = rep.searchSubtree(0)
-                        ind[slice_ind] = rep[slice_rep]
-                        toolbox.population.append(ind)
+                        if rep is not None:
+                            slice_ind = ind.searchSubtree(0)
+                            slice_rep = rep.searchSubtree(0)
+                            ind[slice_ind] = rep[slice_rep]
+                            toolbox.population.append(ind)
                     else:
                         toolbox.population.append(inds[-1])
             toolbox.population += offspring
@@ -400,9 +402,13 @@ def ga_search_impl(toolbox):
         toolbox.f.write("RuntimeWarning: " + str(e) + "\n")
     if toolbox.final_pop_file: # write the input files for "samenvoegen"
         write_population(toolbox.final_pop_file, toolbox.population, toolbox.functions)
-    near_solution_families = [toolbox.families_list[index].representative for index in toolbox.near_solution_families_set]
-    if toolbox.near_solution_families_file and len(near_solution_families) > 0: # write the near_solution_families families
-        write_population(toolbox.near_solution_families_file, near_solution_families, toolbox.functions)
+    if False:
+        # TODO simplify this, I don't remember what the 'near_solution_families_set' is
+        # and the concept is flawed anyway since "1-individual-per-family" is used outside teh 'near-solution' context.
+        # With the new "analyse_logfiles.py" writing newfam files and merging them into a DB is not needed anymore.
+        near_solution_families = [toolbox.families_list[index].representative for index in toolbox.near_solution_families_set]
+        if toolbox.near_solution_families_file and len(near_solution_families) > 0: # write the near_solution_families families
+            write_population(toolbox.near_solution_families_file, near_solution_families, toolbox.functions)
     if toolbox.write_cx_graph:
         write_cx_graph(toolbox)
     if toolbox.good_muts_file:

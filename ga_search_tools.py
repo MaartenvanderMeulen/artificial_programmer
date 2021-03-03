@@ -98,7 +98,7 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
     if family_key in toolbox.families_dict:
         family_index = toolbox.families_dict[family_key]
         ind.fam = toolbox.families_list[family_index]
-        if len(ind.fam.representative) > len(ind):
+        if ind.fam.representative is None or len(ind.fam.representative) > len(ind):
             #if ind.fam.raw_error <= toolbox.max_raw_error_for_family_db:
             #    toolbox.f.write(f"at gen {toolbox.real_gen}, found shorter representative of {get_fam_info(ind.fam)}\n")
             ind.fam.representative = ind # keep shortest representative
@@ -501,6 +501,9 @@ def read_family_db(toolbox):
         ind.id = toolbox.get_unique_id()
         pp_str = make_pp_str(ind)
         evaluate_individual(toolbox, ind, pp_str, 0)
+        if toolbox.clear_representatives_after_reading_family_db:
+            # Prevent that the extra short DB snippets will influence the search : remove the code
+            ind.fam.representative = None # only the family NUMBER may be used
     toolbox.new_families_list = []
     if toolbox.update_fam_db or toolbox.analyse_best or toolbox.compute_p_cx_c0:
         elapsed = round(time.time() - t0)
@@ -650,9 +653,10 @@ def crossover_with_local_search(toolbox, parent1, parent2, do_shuffle=True, debu
 
     if best and toolbox.in_near_solution_area:
         repr = best.fam.representative
-        slice_best = best.searchSubtree(0)
-        slice_repr = repr.searchSubtree(0)
-        best[slice_best] = repr[slice_repr]
+        if repr is not None:
+            slice_best = best.searchSubtree(0)
+            slice_repr = repr.searchSubtree(0)
+            best[slice_best] = repr[slice_repr]
 
     # near solution debugging
     if best and toolbox.in_near_solution_area and best.fam.raw_error <= toolbox.max_raw_error_for_family_db:
@@ -721,9 +725,10 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
                         best = child
     if best and toolbox.in_near_solution_area:
         repr = best.fam.representative
-        slice_best = best.searchSubtree(0)
-        slice_repr = repr.searchSubtree(0)
-        best[slice_best] = repr[slice_repr]
+        if repr is not None:
+            slice_best = best.searchSubtree(0)
+            slice_repr = repr.searchSubtree(0)
+            best[slice_best] = repr[slice_repr]
 
     pp_str = None if best is None else make_pp_str(best) 
     if best:        

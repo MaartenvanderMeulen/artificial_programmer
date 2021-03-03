@@ -230,6 +230,7 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.near_solution_threshold = params["near_solution_threshold"]
     toolbox.near_solution_pop_size = params["near_solution_pop_size"]
     toolbox.near_solution_max_individual_size = params["near_solution_max_individual_size"]
+    toolbox.clear_representatives_after_reading_family_db = params["clear_representatives_after_reading_family_db"]
 
 
     # search
