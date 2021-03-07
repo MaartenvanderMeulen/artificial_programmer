@@ -252,7 +252,7 @@ def run_on_all_inputs(cpp_handle, deap_code, get_item_value=None, debug=0):
     return result
 
 
-def compute_error_matrix(cpp_handle, deap_code, penalise_non_reacting_models, families_dict):
+def compute_error_matrix(cpp_handle, deap_code, penalise_non_reacting_models, families_dict, family_key_is_error_matrix=False):
     assert type(penalise_non_reacting_models) == type(True)
     get_item_value = None
     debug = 0
@@ -273,11 +273,12 @@ def compute_error_matrix(cpp_handle, deap_code, penalise_non_reacting_models, fa
         act_output_sizes.append(n_output)
         domain_output_set.add(model_output_str)
         model_output_cpp.append(model_output_str)
-    family_key = tuple(model_output_cpp)
-    if family_key in families_dict:
-        return None, family_key
-    
-    # A new family, evaluate the output
+    if not family_key_is_error_matrix:
+        family_key = tuple(model_output_cpp)
+        if family_key in families_dict:
+            return None, family_key    
+        # A new family, evaluate the output
+
     expected_output_sizes, expected_outputs = c_expected_outputs
     for row, (exp_output_size, c_exp_output, c_act_output_size, c_act_output) in enumerate(zip(expected_output_sizes, expected_outputs, act_output_sizes, output_bufs)):
         call_cpp_evaluator(lib, exp_output_size, c_exp_output, c_act_output_size, c_act_output, 8, c_error_vector, debug)
@@ -286,6 +287,11 @@ def compute_error_matrix(cpp_handle, deap_code, penalise_non_reacting_models, fa
         if len(domain_output_set) == 1:
             worst_raw_error_vector = evaluate.find_worst_raw_error_vector(raw_error_matrix)
             raw_error_matrix[:] = worst_raw_error_vector
+    if family_key_is_error_matrix:
+        family_key = tuple(raw_error_matrix.flatten())
+        if family_key in families_dict:
+            return None, family_key    
+
     return raw_error_matrix, family_key
 
 
