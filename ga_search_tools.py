@@ -92,7 +92,8 @@ def check_error_matrices(raw_error_matrix_py, raw_error_matrix_cpp):
 
 def evaluate_individual_impl(toolbox, ind, debug=0):
     # cpp implementatie
-    raw_error_matrix_cpp, family_key = cpp_coupling.compute_error_matrix(toolbox.cpp_handle, ind, toolbox.penalise_non_reacting_models, toolbox.families_dict)
+    raw_error_matrix_cpp, family_key = cpp_coupling.compute_error_matrix(toolbox.cpp_handle, ind, \
+        toolbox.penalise_non_reacting_models, toolbox.families_dict, toolbox.family_key_is_error_matrix)
 
     # bepaling family
     if family_key in toolbox.families_dict:
