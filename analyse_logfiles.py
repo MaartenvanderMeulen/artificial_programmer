@@ -32,6 +32,7 @@ class Context(object):
         self.all_relevant_global_ids_set = set()
         self.usage_count = dict()
         self.sum_written = 0
+        self.graph = dict()
     
     def add_cx(self, fam_dict, code, fam_id, generation, parent1_fam_id, parent2_fam_id):
         if fam_id not in fam_dict:
@@ -41,9 +42,9 @@ class Context(object):
             fam = fam_dict[fam_id]
             fam.parents_set.add(parent1_fam_id)
             fam.parents_set.add(parent2_fam_id)
-            if parent1_fam_id in fam_dict: # is False families made during the parachuting
+            if parent1_fam_id in fam_dict: # is False for families made during the parachuting
                 fam_dict[parent1_fam_id].childs_set.add(fam_id)
-            if parent2_fam_id in fam_dict: # is False families made during the parachuting
+            if parent2_fam_id in fam_dict: # is False for families made during the parachuting
                 fam_dict[parent2_fam_id].childs_set.add(fam_id)
 
     def add_mut(self, fam_dict, code, fam_id, generation, parent1_fam_id):
@@ -55,6 +56,36 @@ class Context(object):
             fam.parents_set.add(parent1_fam_id)
             if parent1_fam_id in fam_dict: # is False families made during the parachuting
                 fam_dict[parent1_fam_id].childs_set.add(fam_id)
+
+    def add_cx_to_total_graph(self, fam_dict, code, fam_id, generation, parent1_fam_id, parent2_fam_id):
+        if fam_id not in fam_dict:
+            global_fam_id = get_global_id(self.toolbox, code)
+            fam_dict[fam_id] = Family(global_fam_id, generation)
+            if global_fam_id not in self.graph:
+                self.graph[global_fam_id] = []
+            self.graph[global_fam_id].append(fam_dict[fam_id])
+        fam = fam_dict[fam_id]
+        if parent1_fam_id in fam_dict: # is False for families made during the parachuting or in initial population
+            p1_fam = fam_dict[parent1_fam_id]
+            fam.parents_set.add(p1_fam.global_fam_id)
+            p1_fam.childs_set.add(fam.global_fam_id)
+        if parent2_fam_id in fam_dict: # is False for families made during the parachuting or in initial population
+            p2_fam = fam_dict[parent2_fam_id]
+            fam.parents_set.add(p2_fam.global_fam_id)
+            p2_fam.childs_set.add(fam.global_fam_id)
+
+    def add_mut_to_total_graph(self, fam_dict, code, fam_id, generation, parent1_fam_id):
+        if fam_id not in fam_dict:
+            global_fam_id = get_global_id(self.toolbox, code)
+            fam_dict[fam_id] = Family(global_fam_id, generation)
+            if global_fam_id not in self.graph:
+                self.graph[global_fam_id] = []
+            self.graph[global_fam_id].append(fam_dict[fam_id])
+        fam = fam_dict[fam_id]
+        if parent1_fam_id in fam_dict: # is False for families made during the parachuting or in initial population
+            p1_fam = fam_dict[parent1_fam_id]
+            fam.parents_set.add(p1_fam.global_fam_id)
+            p1_fam.childs_set.add(fam.global_fam_id)
 
     def inc_usage(self, global_id):
         if global_id not in self.usage_count:
@@ -70,7 +101,7 @@ class Context(object):
         self.inc_usage(fam.global_fam_id)
         self.extract_relevant_global_ids_impl(fam_dict, fam)
         self.all_relevant_global_ids_set.update(self.relevant_ids_for_this_run)
-        print(len(self.relevant_ids_for_this_run), "families relevant for this run", self.count, "count", len(self.all_relevant_global_ids_set), "all")
+        #print(len(self.relevant_ids_for_this_run), "families relevant for this run", self.count, "count", len(self.all_relevant_global_ids_set), "all")
         return self.relevant_ids_for_this_run # relevant global ids
 
     def extract_relevant_global_ids_impl(self, fam_dict, fam):
@@ -151,7 +182,7 @@ class Context(object):
                         gen = fam.generation
                         cnt = self.usage_count[fam.global_fam_id]
                         stuck = self.get_stuck_count(fam_dict, fam, relevant_ids_for_this_run)
-                        f.write(f"{indent}{global_ordered_dst} ({parents_str}) [{childs_str}] <err {err:.0f}, gen {gen}, {stuck}shared {cnt}>\n")
+                        f.write(f"{indent}{global_ordered_dst} ({parents_str}) [{childs_str}] <err {err:.3f}, gen {gen}, {stuck}shared {cnt}>\n")
                         self.sum_written += 1
                         for parent in fam.parents_set:
                             self.write_tree_impl(f, fam_dict, parent, depth+1, fam.generation-1, relevant_ids_for_this_run)
@@ -220,16 +251,19 @@ def read_tree(context, filename):
 def analyse_paths(toolbox):
     folder = toolbox.old_populations_folder
     context = Context(toolbox)
+    filenames = []
     for filename in os.listdir(folder):
-        #filename = "log_1766.txt"
         if filename.startswith("log_"):
             if contains_solution(folder + "/" + filename):
-                fam_dict, solution_id = read_tree(context, folder + "/" + filename)
-                if fam_dict is not None:
-                    relevant_ids_for_this_run = context.extract_relevant_global_ids(fam_dict, solution_id)
-                    context.fam_dicts.append((fam_dict, solution_id, filename, relevant_ids_for_this_run))
-                    #if len(context.fam_dicts) >= 3:
-                    #    break
+                filenames.append(filename)
+    filenames.sort()
+    for filename in filenames:
+        fam_dict, solution_id = read_tree(context, folder + "/" + filename)
+        if fam_dict is not None:
+            relevant_ids_for_this_run = context.extract_relevant_global_ids(fam_dict, solution_id)
+            context.fam_dicts.append((fam_dict, solution_id, filename, relevant_ids_for_this_run))
+            #if len(context.fam_dicts) >= 3:
+            #    break
     context.assign_sorted_global_ids()
     for fam_dict, solution_id, filename, relevant_ids_for_this_run in context.fam_dicts:
         context.write_tree(folder + "/path_" + filename[4:], fam_dict, solution_id, relevant_ids_for_this_run)
@@ -237,97 +271,103 @@ def analyse_paths(toolbox):
     print(context.sum_written, "sum of nodes written in path files")
 
 
-def initalise_toolbox(problem, functions, f, params):
-    sys.setrecursionlimit(sys.getrecursionlimit() + 500)
-
-    if params["use_one_random_seed"]:    
-        random_seed = params["seed"]
-        id_seed = params["seed"]
-    else:
-        random_seed = params["random_seed"]
-        id_seed = params["id_seed"]
-    toolbox = find_new_function.Toolbox(problem, functions, random_seed, id_seed)
-    toolbox.problem_name, toolbox.problem_params, _, _, _, _ = problem
-    toolbox.monkey_mode = False
-    toolbox.child_creation_retries = 99
-    toolbox.f = f
-    if len(toolbox.solution_deap_ind) > 0:
-        f.write(f"solution hint length {len(toolbox.solution_deap_ind)}\n")
-
-    # tunable params
-    toolbox.params = params
-    toolbox.verbose = params["verbose"]
-    toolbox.max_seconds = params["max_seconds"]
-    toolbox.max_evaluations = params["max_evaluations"]
-    toolbox.max_stuck_count = params["max_stuck_count"]
-    toolbox.pop_size = params["pop_size"]
-    toolbox.nchildren = params["nchildren"]
-    toolbox.parents_keep_fraction = params["parents_keep_fraction"]
-    toolbox.ngen = params["ngen"]
-    toolbox.max_individual_size = params["max_individual_size"]
-    if len(toolbox.solution_deap_ind) > toolbox.max_individual_size:
-        f.write(f"solution hint length {len(toolbox.solution_deap_ind)} longer than max length {toolbox.max_individual_size}\n")
-        exit("max_individual_size to short")
-    toolbox.pcrossover = params["pcrossover"]
-    toolbox.pmutations = 1.0 - toolbox.pcrossover
-    toolbox.best_of_n_mut = params["best_of_n_mut"]
-    toolbox.best_of_n_cx = params["best_of_n_cx"]
-    toolbox.parent_selection_strategy = params["parent_selection_strategy"]
-    toolbox.penalise_non_reacting_models = params["penalise_non_reacting_models"]
-    toolbox.hops = params["hops"]
-    toolbox.output_folder = params["output_folder"]
-    toolbox.final_pop_file = None # params["output_folder"] + "/pop_" + str(id_seed) + ".txt" # for "samenvoegen" runs & 'analyse_best'
-    toolbox.best_ind_file = None # params["output_folder"] + "/best_" + str(id_seed) + ".txt" # for 'analyse_best'
-    toolbox.good_muts_file = None # params["output_folder"] + "/goodmuts_" + str(id_seed) + ".txt"
-    toolbox.bad_muts_file = None # params["output_folder"] + "/badmuts_" + str(id_seed) + ".txt"
-    toolbox.fam_db_file = params["family_db_file"]
-    toolbox.p_cx_c0_db_file = params["p_cx_c0_db_file"]
-    toolbox.near_solution_families_file = params["output_folder"] + "/newfam_" + str(id_seed) + ".txt" # is added later to family DB
-    toolbox.update_fam_db = params["update_family_db"]
-    toolbox.max_raw_error_for_family_db = params["max_raw_error_for_family_db"]
-    toolbox.write_cx_graph = params["write_cx_graph"]
-    toolbox.new_initial_population = params["new_initial_population"]
-    toolbox.old_populations_folder = params["old_populations_folder"]
-    toolbox.analyse_best = params["analyse_best"]
-    toolbox.analyse_cx = params["analyse_cx"]
-    toolbox.compute_p_cx_c0 = params["compute_p_cx_c0"]
-    toolbox.old_populations_samplesize = params["old_populations_samplesize"]
-    toolbox.optimise_solution_length = params["optimise_solution_length"]
-    toolbox.dynamic_weights = params["dynamic_weights"]
-    toolbox.dynamic_weights_adaptation_speed = params["dynamic_weights_adaptation_speed"]
-    toolbox.use_cprofile = params["use_cprofile"]
-    evaluate.g_w1 = params["w1"]
-    evaluate.g_w2a = params["w2a"]
-    evaluate.g_w2b = params["w2b"]
-    evaluate.g_w3 = params["w3"]
-    evaluate.g_w4 = params["w4"]
-    evaluate.g_w5 = params["w5"]
-    evaluate.g_w6 = params["w6"]
-    evaluate.g_w7 = params["w7"]
-    evaluate.g_w8 = params["w8"]
-    toolbox.stuck_count_for_opschudding = params["stuck_count_for_opschudding"]
-    toolbox.max_reenter_parachuting_phase = params["max_reenter_parachuting_phase"]
-    toolbox.family_key_is_error_matrix = params["family_key_is_error_matrix"]
-    toolbox.parent_selection_weight_complementairity = params["parent_selection_weight_complementairity"]
-    toolbox.parent_selection_weight_cx_count = params["parent_selection_weight_cx_count"]
-    toolbox.parent_selection_weight_p_out_of_pop = params["parent_selection_weight_p_out_of_pop"]
-    toolbox.mut_min_height = params["mut_min_height"]
-    toolbox.mut_max_height = params["mut_max_height"]
-    toolbox.parents_keep_all_duration = params["parents_keep_all_duration"]
-    toolbox.parents_keep_fraction_per_family = params["parents_keep_fraction_per_family"]
-    toolbox.use_family_representatives_for_mutation = params["use_family_representatives_for_mutation"]
-    toolbox.use_crossover_for_mutations = params["use_crossover_for_mutations"]
-    toolbox.mut_local_search = params["mut_local_search"]
-    toolbox.near_solution_threshold = params["near_solution_threshold"]
-    toolbox.near_solution_pop_size = params["near_solution_pop_size"]
-    toolbox.near_solution_max_individual_size = params["near_solution_max_individual_size"]
-    toolbox.eval_count = 0
-
-    return toolbox
+def read_tree_to_total_graph(context, filename):
+    print("reading", filename)
+    fam_dict = dict()   
+    with open(filename, "r") as f:
+        for line in f:
+            if is_cx_line(line):
+                line2 = f.readline()
+                code, fam_id, _error, generation, parent1_fam_id, parent2_fam_id = parse_cx(line.rstrip(), line2.rstrip())
+                context.add_cx_to_total_graph(fam_dict, code, fam_id, generation, parent1_fam_id, parent2_fam_id)
+            elif is_mut_line(line):
+                line2 = f.readline()
+                line3 = f.readline()
+                code, fam_id, _error, generation, parent1_fam_id = parse_mut(line.rstrip(), line2.rstrip(), line3.rstrip())
+                context.add_mut_to_total_graph(fam_dict, code, fam_id, generation, parent1_fam_id)
 
 
-def main():
-    id = "path_a2"
+def get_best_next_gfam(context, current_gfam):
+    counts = dict()
+    for lfam in context.graph[current_gfam.family_index]:
+        # bepaal alle kinderen van lfam : met lagere error
+        for child_gid in lfam.childs_set:
+            child_gfam = context.toolbox.families_list[child_gid]
+            if child_gfam.raw_error < current_gfam.raw_error:
+                if child_gid not in counts:
+                    counts[child_gid] = 0
+                counts[child_gid] += 1
+    counts = [(gid, count) for gid, count in counts.items()]
+    counts.sort(key=lambda item: -item[1])
+    if len(counts) > 0:
+        print("volgende stuk in hoofdvariant heeft count", counts[0][1])
+    best_next_gfam = context.toolbox.families_list[counts[0][0]] if len(counts) > 0 else None
+    return best_next_gfam
+
+
+def count_paths_next_gfam(context, current_gfam, next_gfam):
+    count = 0
+    for lfam in context.graph[current_gfam.family_index]:
+        # bepaal alle kinderen van lfam : met lagere error
+        for child_gid in lfam.childs_set:
+            child_gfam = context.toolbox.families_list[child_gid]
+            if child_gfam is next_gfam:
+                count += 1
+    return count
+
+
+def write_main_line(context):
+    print("write_main_line")
+    mainline_codes = []
+
+    code = "append(sorted_data, elem)"
+    mainline_codes.append(code)
+
+    for_str = f"for(i, sorted_data, assign(elem, i))"
+    code = f"append({for_str}, elem)"
+    mainline_codes.append(code)
+
+    if_then_else_str = f"if_then_else(le(elem, i), assign(elem, i), i)"
+    for_str = f"for(i, sorted_data, {if_then_else_str})"
+    code = f"append({for_str}, elem)"
+    mainline_codes.append(code)
+
+    swap_str = "last3(assign(k, elem), assign(elem, i), k)"
+    if_then_else_str = f"if_then_else(le(elem, i), {swap_str}, i)"
+    for_str = f"for(i, sorted_data, {if_then_else_str})"
+    code = f"append({for_str}, elem)"
+    mainline_codes.append(code)
+
+    mainline_gids = [get_global_id(context.toolbox, code) for code in mainline_codes]
+    mainline_gfams = [context.toolbox.families_list[gid] for gid in mainline_gids]
+
+    for i in range(len(mainline_gfams) - 1):
+        current_gfam = mainline_gfams[i]
+        next_gfam = mainline_gfams[i+1]
+        count = count_paths_next_gfam(context, current_gfam, next_gfam)
+        print(str(current_gfam.representative), f"# error {current_gfam.raw_error:.3f}, mainlines {count}")
+    print(str(next_gfam.representative), "# error", next_gfam.raw_error)
+
+
+def extract_main_line(toolbox):
+    folder = toolbox.old_populations_folder
+    print(f"extract main line from log files in {folder}")
+    context = Context(toolbox)
+    filenames = []
+    for filename in os.listdir(folder):
+        if filename.startswith("log_"):
+            if contains_solution(folder + "/" + filename):
+                filenames.append(filename)
+                #if len(filenames) >= 5:
+                #    break
+    filenames.sort()
+    for filename in filenames:
+        read_tree_to_total_graph(context, folder + "/" + filename)
+    write_main_line(context)
+
+
+def main(folder_with_logfiles):
+    id = "mainline"
     seed = 1000
     param_file = f"experimenten/params_{id}.txt" 
     if not os.path.exists(param_file):
@@ -338,25 +378,26 @@ def main():
     with open(param_file, "r") as f:
         params = json.load(f)
     seed += params["seed_prefix"]
-    log_file = f"{output_folder}/log_{seed}.txt" 
-    if params.get("do_not_overwrite_logfile", False):
-        if os.path.exists(log_file):
-            exit(0)
+
     params["param_file"] = param_file
     params["id"] = id
     params["output_folder"] = output_folder
     params["seed"] = seed
+    params["old_populations_folder"] = folder_with_logfiles
 
-    with open(f"{output_folder}/log_{seed}.txt", "w") as log_file:
-        if hasattr(log_file, "reconfigure"):
-            log_file.reconfigure(line_buffering=True)
-        functions_file_name = params["functions_file"]
-        problems_file_name = params["problems_file"]
-        functions = interpret.get_functions(functions_file_name)
-        problems = interpret.compile(interpret.load(problems_file_name))        
-        toolbox = initalise_toolbox(problems[0], functions, log_file, params)
+    functions_file_name = params["functions_file"]
+    problems_file_name = params["problems_file"]
+    functions = interpret.get_functions(functions_file_name)
+    problems = interpret.compile(interpret.load(problems_file_name))        
+    toolbox = find_new_function.initialise_toolbox(problems[0], functions, sys.stdout, params)
+    if False:
         analyse_paths(toolbox)
+    extract_main_line(toolbox)
+    
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) != 2:
+        exit(f"usage {sys.argv[0]} folder_with_logfiles")
+    folder_with_logfiles = sys.argv[1]
+    main(folder_with_logfiles)

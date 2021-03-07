@@ -333,3 +333,86 @@ a1
     "parents_keep_fraction_per_family": false,
     "use_family_representatives_for_mutation": false,
     "use_crossover_for_mutations": false
+
+============================================ 5 Maart
+
+hoofdlijn a2
+current gfam id 3 error 110.67016411012818 append(sorted_data, elem)
+volgende stuk in hoofdvariant heeft count 507
+current gfam id 26 error 108.02343874618622 append(for(sorted_data, sorted_data, assign(elem, sorted_data)), elem)
+volgende stuk in hoofdvariant heeft count 176
+current gfam id 35 error 87.6048317099097 append(for(k, sorted_data, if_then_else(le(elem, k), assign(elem, k), k)), elem)
+volgende stuk in hoofdvariant heeft count 53
+current gfam id 789 error 85.58075911285353 append(sorted_data, if_then_else(for(i, sorted_data, assign(sorted_data, if_then_else(le(sorted_data, i), i, elem))), sorted_data, elem))
+volgende stuk in hoofdvariant heeft count 74
+current gfam id 1118 error 85.07293982976316 append(append(sorted_data, if_then_else(for(i, sorted_data, assign(sorted_data, if_then_else(le(sorted_data, i), i, elem))), sorted_data, elem)), elem)
+volgende stuk in hoofdvariant heeft count 23
+current gfam id 205 error 79.7210270670104 append(append(for(sorted_data, sorted_data, assign(i, sorted_data)), if_then_else(i, i, elem)), elem)
+volgende stuk in hoofdvariant heeft count 94
+current gfam id 710 error 78.7210270670104 append(if_then_else(for(sorted_data, sorted_data, assign(i, sorted_data)), append(sorted_data, i), sorted_data), elem)
+volgende stuk in hoofdvariant heeft count 27
+current gfam id 339 error 72.89259994226421 append(if_then_else(for(sorted_data, sorted_data, assign(i, sorted_data)), append(sorted_data, if_then_else(le(elem, i), i, elem)), sorted_data), elem)
+volgende stuk in hoofdvariant heeft count 21
+current gfam id 1292 error 57.41813989756334 append(if_then_else(sorted_data, append(for(k, sorted_data, if_then_else(le(assign(i, k), elem), k, elem)), if_then_else(le(elem, i), i, elem)), sorted_data), elem)
+volgende stuk in hoofdvariant heeft count 16
+current gfam id 1039 error 44.41813989756334 append(for(k, sorted_data, if_then_else(le(assign(i, k), elem), i, elem)), if_then_else(le(elem, i), i, elem))
+volgende stuk in hoofdvariant heeft count 10
+current gfam id 1220 error 44.34636643502705 append(for(k, for(elem, sorted_data, assign(i, elem)), if_then_else(le(le(i, assign(i, k)), le(i, elem)), k, elem)), if_then_else(le(elem, i), i, elem))
+volgende stuk in hoofdvariant heeft count 23
+current gfam id 1663 error 44.31716929414391 append(for(k, for(elem, sorted_data, assign(i, elem)), if_then_else(le(le(i, k), le(i, elem)), k, elem)), if_then_else(le(elem, i), i, elem))
+volgende stuk in hoofdvariant heeft count 7
+current gfam id 18379 error 36.1320585727818 append(for(sorted_data, for(sorted_data, sorted_data, assign(i, sorted_data)), if_then_else(le(if_then_else(k, i, elem), sorted_data), assign(k, elem), sorted_data)), if_then_else(k, i, elem))
+volgende stuk in hoofdvariant heeft count 5
+current gfam id 1999 error 28.792359225002578 append(for(k, sorted_data, if_then_else(le(elem, k), if_then_else(assign(k, elem), if_then_else(for(k, sorted_data, assign(elem, assign(sorted_data, k))), k, sorted_data), k), k)), elem)
+volgende stuk in hoofdvariant heeft count 7
+current gfam id 38779 error 28.161843268516677 for(sorted_data, append(sorted_data, for(sorted_data, sorted_data, for(sorted_data, if_then_else(le(elem, i), sorted_data, last3(assign(i, sorted_data), sorted_data, k)), assign(i, sorted_data)))), if_then_else(le(sorted_data, elem), sorted_data, if_then_else(k, i, assign(k, elem))))
+volgende stuk in hoofdvariant heeft count 1
+current gfam id 38817 error 24.83989206885686 for(sorted_data, append(for(k, sorted_data, if_then_else(le(elem, k), assign(i, if_then_else(i, k, elem)), k)), last3(for(k, sorted_data, if_then_else(le(elem, k), assign(elem, if_then_else(le(elem, i), k, assign(i, elem))), assign(i, elem))), elem, elem)), if_then_else(le(last3(sorted_data, for(sorted_data, sorted_data, assign(k, if_then_else(le(k, elem), sorted_data, k))), sorted_data), elem), sorted_data, assign(elem, k)))
+end solution not connected to start
+
+hoofdlijn a3
+write_main_line
+    start gfam id 3
+    start representative append(sorted_data, elem)
+    start raw_error 110.67016411012818
+    end gfam id 2446
+    end representative append(for(i, sorted_data, if_then_else(le(elem, i), last3(assign(k, elem), assign(elem, i), k), i)), elem)
+    end raw_error 0.0
+current gfam id 3 error 110.67016411012818 append(sorted_data, elem)
+volgende stuk in hoofdvariant heeft count 142
+current gfam id 26 error 108.02343874618622 append(for(sorted_data, sorted_data, assign(elem, sorted_data)), elem)
+volgende stuk in hoofdvariant heeft count 67
+current gfam id 35 error 87.6048317099097 append(for(i, sorted_data, if_then_else(le(elem, i), assign(elem, i), i)), elem)
+volgende stuk in hoofdvariant heeft count 24
+current gfam id 785 error 85.58075911285353 append(for(k, sorted_data, if_then_else(i, if_then_else(le(k, elem), k, assign(elem, k)), assign(i, k))), elem)
+volgende stuk in hoofdvariant heeft count 4
+current gfam id 4635 error 82.7377754877858 append(for(sorted_data, sorted_data, if_then_else(k, if_then_else(le(sorted_data, elem), sorted_data, if_then_else(for(sorted_data, sorted_data, assign(elem, sorted_data)), elem, i)), assign(k, sorted_data))), elem)
+volgende stuk in hoofdvariant heeft count 3
+current gfam id 6629 error 80.17225333879993 append(for(i, sorted_data, if_then_else(le(sorted_data, if_then_else(le(elem, assign(sorted_data, i)), last3(for(i, sorted_data, assign(elem, i)), sorted_data, elem), k)), elem, sorted_data)), last3(for(i, sorted_data, assign(elem, sorted_data)), i, elem))
+volgende stuk in hoofdvariant heeft count 2
+current gfam id 3790 error 59.753646302523414 append(for(sorted_data, sorted_data, last3(for(i, i, for(i, if_then_else(le(elem, sorted_data), assign(elem, sorted_data), k), assign(sorted_data, i))), last3(assign(i, if_then_else(le(elem, sorted_data), assign(elem, sorted_data), elem)), le(i, k), sorted_data), sorted_data)), elem)
+volgende stuk in hoofdvariant heeft count 2
+current gfam id 1769 error 52.65767798402059 append(for(sorted_data, sorted_data, last3(for(i, if_then_else(le(elem, sorted_data), assign(elem, sorted_data), for(i, k, elem)), assign(sorted_data, i)), elem, sorted_data)), elem)
+volgende stuk in hoofdvariant heeft count 11
+current gfam id 1877 error 44.41813989756334 append(
+  for(sorted_data, sorted_data,
+    if_then_else(le(assign(k, sorted_data), elem), if_then_else(assign(k, elem), sorted_data, i), elem)),
+  if_then_else(sorted_data, k, elem))
+volgende stuk in hoofdvariant heeft count 5
+end gfam id 2446 error 0.0 append(
+  for(i, sorted_data,
+    if_then_else(le(elem, i), last3(assign(k, elem), assign(elem, i), k), i)),
+  elem)
+
+a3 mainline (nw, 221/1024):
+write_main_line
+append(sorted_data, elem) # error 110.670, mainlines 142
+append(for(i, sorted_data, assign(elem, i)), elem) # error 108.023, mainlines 67
+append(for(i, sorted_data, if_then_else(le(elem, i), assign(elem, i), i)), elem) # error 87.605, mainlines 1
+append(for(i, sorted_data, if_then_else(le(elem, i), last3(assign(k, elem), assign(elem, i), k), i)), elem) # error 0.0
+
+aa mainline (oud, 335/1000):
+append(sorted_data, elem) # error 110.670, mainlines 333
+append(for(i, sorted_data, assign(elem, i)), elem) # error 108.023, mainlines 312
+append(for(i, sorted_data, if_then_else(le(i, elem), i, assign(elem, i))), elem) # error 87.605, mainlines 18
+append(for(i, sorted_data, if_then_else(for(sorted_data, le(assign(sorted_data, elem), i), assign(elem, i)), sorted_data, i)), elem) # error 0.0
