@@ -71,6 +71,7 @@ class Toolbox(object):
         self.cpp_handle = cpp_coupling.get_cpp_handle(example_inputs, formal_params, var_hints, expected_outputs)
         self.random_seed = random_seed
         self.id_seed = id_seed
+        self.eval_count = 0
         self.reset()
 
     def reset(self):
@@ -146,7 +147,7 @@ def basinhopper(toolbox):
     return None
 
     
-def solve_by_new_function(problem, functions, f, params):
+def initialise_toolbox(problem, functions, f, params):
     sys.setrecursionlimit(sys.getrecursionlimit() + 500)
 
     if params["use_one_random_seed"]:    
@@ -231,34 +232,10 @@ def solve_by_new_function(problem, functions, f, params):
     toolbox.near_solution_pop_size = params["near_solution_pop_size"]
     toolbox.near_solution_max_individual_size = params["near_solution_max_individual_size"]
     toolbox.clear_representatives_after_reading_family_db = params["clear_representatives_after_reading_family_db"]
+    return toolbox
 
 
-    # search
+def solve_by_new_function(problem, functions, f, params):
+    toolbox = initialise_toolbox(problem, functions, f, params)
     result = basinhopper(toolbox)
-
-    if False:
-        os.system("echo A ; ps aux | grep solve_")
-        print("number of families is", len(toolbox.families_list), len(toolbox.families_dict))
-        sum_getsizeof = sys.getsizeof(toolbox.families_dict)
-        for key, _value in toolbox.families_dict.items():
-            sum_getsizeof += sys.getsizeof(key)
-            sum_getsizeof += sys.getsizeof(_value)
-            for item in key:
-                sum_getsizeof += sys.getsizeof(item)
-        print("sum_getsizeof of toolbox.families_dict is: ", sum_getsizeof)
-        sum_getsizeof = sys.getsizeof(toolbox.families_list)
-        for fam in toolbox.families_list:
-            sum_getsizeof += sys.getsizeof(fam.family_index)
-            sum_getsizeof += sys.getsizeof(fam.raw_error_matrix)
-            sum_getsizeof += sys.getsizeof(fam.raw_error)
-            sum_getsizeof += sys.getsizeof(fam.representative)
-            sum_getsizeof += sys.getsizeof(fam.age)
-            sum_getsizeof += sys.getsizeof(fam.age_in_population)
-            sum_getsizeof += sys.getsizeof(fam.normalised_error)
-        print("sum_getsizeof of toolbox.families_list is: ", sum_getsizeof)
-        os.system("echo B ; ps aux | grep solve_")
-        del toolbox
-        time.sleep(3)
-        os.system("echo C ; ps aux | grep solve_")
-
     return result
