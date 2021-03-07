@@ -316,37 +316,61 @@ def count_paths_next_gfam(context, current_gfam, next_gfam):
     return count
 
 
+global best_path, minimum_width
+best_path = []
+minimum_width = 0
+
+
+def get_all_next_gids(context, current_gfam):
+    counts = dict()
+    for lfam in context.graph[current_gfam.family_index]:
+        for child_gid in lfam.childs_set:
+            child_gfam = context.toolbox.families_list[child_gid]
+            if child_gfam.raw_error < current_gfam.raw_error:
+                if child_gid not in counts:
+                    counts[child_gid] = 0
+                counts[child_gid] += 1
+    global minimum_width
+    next_gids = [(gid, count) for gid, count in counts.items() if count > minimum_width]
+    next_gids.sort(key=lambda item: -item[1])
+    return next_gids
+
+
+def depth_first_search(context, path, src_gfam, dst_gfam):
+    global best_path, minimum_width
+    next_gids = get_all_next_gids(context, src_gfam)
+    for gid, width in next_gids:
+        if width > minimum_width:
+            next_gfam = context.toolbox.families_list[gid]
+            if next_gfam is dst_gfam:
+                best_path = path + [(gid, width)]
+                minimum_width = min([w for gid, w in best_path])
+                print("minimum_width", minimum_width, "best_path", best_path)
+            else:
+                depth_first_search(context, path + [(gid, width)], next_gfam, dst_gfam)                
+                if len(path) > 0 and min([w for gid, w in path]) <= minimum_width:
+                    return
+        else:
+            return  
+
+
 def write_main_line(context):
     print("write_main_line")
-    mainline_codes = []
-
-    code = "append(sorted_data, elem)"
-    mainline_codes.append(code)
-
-    for_str = f"for(i, sorted_data, assign(elem, i))"
-    code = f"append({for_str}, elem)"
-    mainline_codes.append(code)
-
-    if_then_else_str = f"if_then_else(le(elem, i), assign(elem, i), i)"
-    for_str = f"for(i, sorted_data, {if_then_else_str})"
-    code = f"append({for_str}, elem)"
-    mainline_codes.append(code)
-
+    src_code = "append(sorted_data, elem)"
+    src_gid = get_global_id(context.toolbox, src_code)
+    src_gfam = context.toolbox.families_list[src_gid]
     swap_str = "last3(assign(k, elem), assign(elem, i), k)"
     if_then_else_str = f"if_then_else(le(elem, i), {swap_str}, i)"
     for_str = f"for(i, sorted_data, {if_then_else_str})"
-    code = f"append({for_str}, elem)"
-    mainline_codes.append(code)
-
-    mainline_gids = [get_global_id(context.toolbox, code) for code in mainline_codes]
-    mainline_gfams = [context.toolbox.families_list[gid] for gid in mainline_gids]
-
-    for i in range(len(mainline_gfams) - 1):
-        current_gfam = mainline_gfams[i]
-        next_gfam = mainline_gfams[i+1]
-        count = count_paths_next_gfam(context, current_gfam, next_gfam)
-        print(str(current_gfam.representative), f"# error {current_gfam.raw_error:.3f}, mainlines {count}")
-    print(str(next_gfam.representative), "# error", next_gfam.raw_error)
+    dst_code = f"append({for_str}, elem)"
+    dst_gid = get_global_id(context.toolbox, dst_code)
+    dst_gfam = context.toolbox.families_list[dst_gid]
+    depth_first_search(context, [(src_gid, 1000)], src_gfam, dst_gfam)
+    global best_path, minimum_width
+    print("final minimum_width", minimum_width, "final best_path", best_path)
+    for gid, _width in best_path:
+        fam = context.toolbox.families_list[gid]
+        print("    gid ", gid, "error", f"{fam.raw_error:.3f}", "code", str(fam.representative))
 
 
 def extract_main_line(toolbox):
@@ -358,7 +382,7 @@ def extract_main_line(toolbox):
         if filename.startswith("log_"):
             if contains_solution(folder + "/" + filename):
                 filenames.append(filename)
-                #if len(filenames) >= 5:
+                #if len(filenames) >= 33:
                 #    break
     filenames.sort()
     for filename in filenames:
