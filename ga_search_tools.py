@@ -272,6 +272,9 @@ def generate_initial_population_impl(toolbox):
         retry_count = 0
         toolbox.ind_str_set.add(pp_str)
         evaluate_individual(toolbox, ind, pp_str, 0)
+        if ind:
+            toolbox.f.write(f"at gen {toolbox.real_gen}, [{ind.id}] = {get_ind_info(ind)} = init\n")
+            toolbox.f.write(f"at gen {toolbox.real_gen}, [{ind.id}] = {str(ind)}\n")
         population.append(ind)
     return population
 
@@ -426,7 +429,7 @@ def analyse_vastlopers_via_best_files_no_family_db(toolbox):
     filename = f"{toolbox.output_folder}/analysis.txt"
     print(f"writing anaysis result of {file_count} files in {filename} ...")
     with open(filename, "w") as f:
-        f.write(f"{'error':5} count  {'last_raw_error'}\n")
+        f.write(f"{'error':7} count  {'last_raw_error'}\n")
         sum_count = 0
         for raw_error, raw_error_matrix, seeds in families:
             msg = ""
@@ -434,14 +437,14 @@ def analyse_vastlopers_via_best_files_no_family_db(toolbox):
                 msg += "|"
                 for j in range(raw_error_matrix.shape[1]):
                     msg += "1" if raw_error_matrix[i, j] > 0 else "."
-            f.write(f"{raw_error:5.1f} {len(seeds):5d}  {msg}\n")
+            f.write(f"{raw_error:7.3f} {len(seeds):5d}  {msg}\n")
             sum_count += len(seeds)
-        f.write(f"{' ':5} {sum_count:5}\n")
+        f.write(f"{' ':7} {sum_count:5}\n")
     filename = f"{toolbox.output_folder}/sorted_seeds.txt"
     print(f"writing sorted seeds in {filename} ...")
     with open(filename, "w") as f:
         for raw_error, raw_error_matrix, seeds in families:
-            f.write(f"{raw_error:5.1f} {len(seeds):5d}")
+            f.write(f"{raw_error:7.3f} {len(seeds):5d}")
             seeds.sort()
             for id_seed in seeds:
                 f.write(f" {id_seed}")
@@ -591,6 +594,10 @@ def cxOnePoint(toolbox, parent1, parent2):
     if pp_str in toolbox.ind_str_set or len(child) > toolbox.max_individual_size:
         return None, None
     evaluate_individual(toolbox, child, pp_str, 0)
+    if child:
+        f1, f2 = parent1.fam.family_index, parent2.fam.family_index
+        toolbox.f.write(f"at gen {toolbox.real_gen}, [{child.id}] = {get_ind_info(child)} = cx [{parent1.id}]<{f1}> [{parent2.id}]<{f2}>\n")
+        toolbox.f.write(f"at gen {toolbox.real_gen}, [{child.id}] = {str(child)}\n")
     return child, pp_str
 
 
@@ -665,7 +672,9 @@ def crossover_with_local_search(toolbox, parent1, parent2, do_shuffle=True, debu
 
     # escape info
     if best:
-        best.msg = f"at gen {toolbox.real_gen}, {get_ind_info(best)} = cx({get_ind_info(parent1)},{get_ind_info(parent2)})"
+        f1, f2 = parent1.fam.family_index, parent2.fam.family_index
+        toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = {get_ind_info(best)} = cx [{parent1.id}]<{f1}> [{parent2.id}]<{f2}>\n")
+        toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = {str(best)}\n")
         toolbox.graph.add_cx(get_ind_node_id(parent1), get_ind_node_id(parent2), get_ind_node_id(best), toolbox.real_gen)
         if toolbox.stuck_count > 50 and best.fam.raw_error < toolbox.population[0].fam.raw_error:
             toolbox.escape_counter += 1
@@ -674,23 +683,19 @@ def crossover_with_local_search(toolbox, parent1, parent2, do_shuffle=True, debu
             toolbox.f.write(f"escape {escape_id} via crossover, stuck_count {toolbox.stuck_count}\n")
             toolbox.f.write(f"escape {escape_id} pop[0] {get_ind_info(toolbox.population[0])}\n")
             toolbox.f.write(f"escape {escape_id}\n")
-            toolbox.f.write(f"escape {escape_id} child {best.msg}\n")
+            toolbox.f.write(f"escape {escape_id} child {get_ind_info(best)}\n")
             toolbox.f.write(f"escape {escape_id}\n")
             toolbox.f.write(f"escape {escape_id} {str(best)}\n")
             toolbox.f.write(f"escape {escape_id}\n")
-            toolbox.f.write(f"escape {escape_id} parent1 {parent1.msg}\n")
+            toolbox.f.write(f"escape {escape_id} parent1 {get_ind_info(parent1)}\n")
             toolbox.f.write(f"escape {escape_id}\n")
             toolbox.f.write(f"escape {escape_id} {str(parent1)}\n")
             toolbox.f.write(f"escape {escape_id}\n")
-            toolbox.f.write(f"escape {escape_id} parent2 {parent2.msg}\n")
+            toolbox.f.write(f"escape {escape_id} parent2 {get_ind_info(parent2)}\n")
             toolbox.f.write(f"escape {escape_id}\n")
             toolbox.f.write(f"escape {escape_id} {str(parent2)}\n")
             toolbox.f.write(f"escape {escape_id}\n")
             toolbox.graph.write_tree_to_dst(toolbox.f, get_ind_node_id(best), f"escape{escape_id}", toolbox.real_gen)
-        else:
-            f1, f2 = parent1.fam.family_index, parent2.fam.family_index
-            toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = {get_ind_info(best)} = cx [{parent1.id}]<{f1}> [{parent2.id}]<{f2}>\n")
-            toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = {str(best)}\n")
     return best, best_pp_str
 
 
@@ -699,11 +704,19 @@ def mutUniform(toolbox, parent, expr, pset):
     index = random.randrange(0, len(child))
     slice_ = child.searchSubtree(index)
     type_ = child[index].ret
-    child[slice_] = expr(pset=pset, type_=type_)
+    mutation = expr(pset=pset, type_=type_)
+    child[slice_] = mutation
     pp_str = make_pp_str(child)
     if pp_str in toolbox.ind_str_set or len(child) > toolbox.max_individual_size:
         return None, None
     evaluate_individual(toolbox, child, pp_str, 0)
+    if child:
+        mutation =  gp.PrimitiveTree(mutation)                    
+        expr_str = str(mutation)
+        f1 = parent.fam.family_index
+        toolbox.f.write(f"at gen {toolbox.real_gen}, [{child.id}] = {get_ind_info(child)} = mut [{parent.id}]<{f1}>\n")
+        toolbox.f.write(f"at gen {toolbox.real_gen}, [{child.id}] = mut expr {expr_str}\n")
+        toolbox.f.write(f"at gen {toolbox.real_gen}, [{child.id}] = {str(child)}\n")
     return child, pp_str
 
 
@@ -734,7 +747,10 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
     pp_str = None if best is None else make_pp_str(best) 
     if best:        
         expr_str = str(expr)
-        best.msg = f"at gen {toolbox.real_gen}, {get_ind_info(best)} = mut({get_ind_info(parent)},{expr_str})"
+        f1 = parent.fam.family_index
+        toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = {get_ind_info(best)} = mut [{parent.id}]<{f1}>\n")
+        toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = mut expr {expr_str}\n")
+        toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = {str(best)}\n")
         toolbox.graph.add_mut(get_ind_node_id(parent), expr_str, get_ind_node_id(best), toolbox.real_gen)
         if toolbox.stuck_count > 50 and best.fam.raw_error < toolbox.population[0].fam.raw_error:
             toolbox.escape_counter += 1
@@ -743,20 +759,15 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
             toolbox.f.write(f"escape {escape_id} via mutatie, stuck_count {toolbox.stuck_count}\n")
             toolbox.f.write(f"escape {escape_id} pop[0] {get_ind_info(toolbox.population[0])}\n")
             toolbox.f.write(f"escape {escape_id}\n")
-            toolbox.f.write(f"escape {escape_id} child {best.msg}\n")
+            toolbox.f.write(f"escape {escape_id} child {get_ind_info(best)}\n")
             toolbox.f.write(f"escape {escape_id}\n")
             toolbox.f.write(f"escape {escape_id} {str(best)}\n")
             toolbox.f.write(f"escape {escape_id}\n")
-            toolbox.f.write(f"escape {escape_id} parent {parent.msg}\n")
+            toolbox.f.write(f"escape {escape_id} parent {get_ind_info(parent)}\n")
             toolbox.f.write(f"escape {escape_id}\n")
             toolbox.f.write(f"escape {escape_id} {str(parent)}\n")
             toolbox.f.write(f"escape {escape_id}\n")
             toolbox.graph.write_tree_to_dst(toolbox.f, get_ind_node_id(best), f"escape{escape_id}", toolbox.real_gen)
-        else:
-            f1 = parent.fam.family_index
-            toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = {get_ind_info(best)} = mut [{parent.id}]<{f1}>\n")
-            toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = mut expr {expr_str}\n")
-            toolbox.f.write(f"at gen {toolbox.real_gen}, [{best.id}] = {str(best)}\n")
     if False:
         if toolbox.population[0].fam.family_index == 4:
             child = copy_individual(toolbox, parent)

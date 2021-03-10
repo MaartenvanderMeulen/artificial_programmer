@@ -289,6 +289,8 @@ def compute_error_matrix(cpp_handle, deap_code, penalise_non_reacting_models, fa
             raw_error_matrix[:] = worst_raw_error_vector
     if family_key_is_error_matrix:
         family_key = tuple(raw_error_matrix.flatten())
+        if family_key_is_error_matrix == 2:
+            family_key = np.sum(family_key)
         if family_key in families_dict:
             return None, family_key    
 

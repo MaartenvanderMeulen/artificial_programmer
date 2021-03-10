@@ -9,7 +9,7 @@
     "verbose": 1,
     "optimise_solution_length": false,
     "max_seconds": 99900,
-    "max_evaluations": 1820000,
+    "max_evaluations": 4000000,
     "max_stuck_count": 99844,
     "touch_at_end": false,
     "new_initial_population": true,

@@ -218,6 +218,7 @@ def initialise_toolbox(problem, functions, f, params):
     toolbox.stuck_count_for_opschudding = params["stuck_count_for_opschudding"]
     toolbox.max_reenter_parachuting_phase = params["max_reenter_parachuting_phase"]
     toolbox.family_key_is_error_matrix = params["family_key_is_error_matrix"]
+    # print("toolbox.family_key_is_error_matrix", toolbox.family_key_is_error_matrix)
     toolbox.parent_selection_weight_complementairity = params["parent_selection_weight_complementairity"]
     toolbox.parent_selection_weight_cx_count = params["parent_selection_weight_cx_count"]
     toolbox.parent_selection_weight_p_out_of_pop = params["parent_selection_weight_p_out_of_pop"]
