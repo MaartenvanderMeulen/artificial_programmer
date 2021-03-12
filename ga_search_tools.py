@@ -637,8 +637,9 @@ def crossover_with_local_search(toolbox, parent1, parent2, do_shuffle=True, debu
                 if pp_str not in toolbox.ind_str_set:
                     evaluate_individual(toolbox, child, pp_str, 0)
                     if not toolbox.in_near_solution_area or child.fam.family_index not in toolbox.offspring_families_set:
-                        if is_improvement(toolbox, child, best):
-                            best, best_pp_str = child, pp_str
+                        if not toolbox.child_must_be_different or child.fam.family_index != parent1.fam.family_index:
+                            if is_improvement(toolbox, child, best):
+                                best, best_pp_str = child, pp_str
 
     # cx_count administration
     index_a, index_b = parent1.fam.family_index, parent2.fam.family_index
@@ -735,8 +736,9 @@ def replace_subtree_at_best_location(toolbox, parent, expr):
             if pp_str not in toolbox.ind_str_set:
                 evaluate_individual(toolbox, child, pp_str, 0)
                 if not toolbox.in_near_solution_area or child.fam.family_index not in toolbox.offspring_families_set:                    
-                    if is_improvement(toolbox, child, best):                        
-                        best = child
+                    if not toolbox.child_must_be_different or child.fam.family_index != parent.fam.family_index:
+                        if is_improvement(toolbox, child, best):                        
+                            best = child
     if best and toolbox.in_near_solution_area:
         repr = best.fam.representative
         if repr is not None:

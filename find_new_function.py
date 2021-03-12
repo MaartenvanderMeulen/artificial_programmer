@@ -233,6 +233,7 @@ def initialise_toolbox(problem, functions, f, params):
     toolbox.near_solution_pop_size = params["near_solution_pop_size"]
     toolbox.near_solution_max_individual_size = params["near_solution_max_individual_size"]
     toolbox.clear_representatives_after_reading_family_db = params["clear_representatives_after_reading_family_db"]
+    toolbox.child_must_be_different = params["child_must_be_different"]
     return toolbox
 
 

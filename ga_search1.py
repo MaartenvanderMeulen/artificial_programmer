@@ -280,9 +280,9 @@ def track_stuck(toolbox, population):
 
 
 def log_info(toolbox, population):
-    msg = f"gen {toolbox.real_gen} error {population[0].fam.raw_error:.1f}"
+    msg = f"gen {toolbox.real_gen} error {population[0].fam.raw_error:.3f}"
     toolbox.f.write(msg)
-    if True:
+    if False:
         p_cx_c0 = 0.0
         for p1, _ in toolbox.current_families_dict.items():
             for p2, _ in toolbox.current_families_dict.items():
@@ -290,7 +290,7 @@ def log_info(toolbox, population):
                     if p_cx_c0 < toolbox.p_cx_c0_db[(p1, p2)]:
                         p_cx_c0 = toolbox.p_cx_c0_db[(p1, p2)]
         toolbox.f.write(f" p_cx_c0 {p_cx_c0:.2f}")
-    if True:
+    if False:
         avg_ind_len = sum([len(ind) for ind in toolbox.population]) / len(toolbox.population)
         toolbox.f.write(f" avg_ind_len {avg_ind_len:.1f}")
     if False:
@@ -300,7 +300,9 @@ def log_info(toolbox, population):
             n = len(inds)
             msg += f" {n}"
         toolbox.f.write(msg)    
+
     toolbox.f.write(f"\n")
+
     if False:
         for _, inds in toolbox.current_families_dict.items():
             toolbox.f.write(f"    current fam {get_fam_info(inds[0].fam)}\n")
@@ -309,8 +311,9 @@ def log_info(toolbox, population):
     if True:
         msg = f"atgen {toolbox.real_gen} families"
         for _, inds in toolbox.current_families_dict.items():
-            i = round(inds[0].fam.family_index)
-            msg += f" {i}"
+            i = inds[0].fam.family_index
+            n = len(inds)
+            msg += f" {i}x{n}"
         toolbox.f.write(msg + "\n")    
 
 
