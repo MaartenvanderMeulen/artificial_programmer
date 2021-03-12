@@ -419,31 +419,42 @@ def analyse_vastlopers_via_best_files_no_family_db(toolbox):
                 ind.id = toolbox.get_unique_id()
                 pp_str = make_pp_str(ind)
                 evaluate_individual(toolbox, ind, pp_str, 0)
+                ind.model_outputs = cpp_coupling.run_on_all_inputs(toolbox.cpp_handle, ind)
                 key = ind.fam.raw_error
                 if key not in families:
-                    families[key] = ([], ind.fam.raw_error, ind.fam.raw_error_matrix)
+                    families[key] = ([], ind.fam.raw_error, ind.fam.raw_error_matrix, ind.model_outputs)
                 id_seed = int(filename[5:9])
                 families[key][0].append(id_seed)
-    families = [(raw_error, raw_error_matrix, seeds) for key, (seeds, raw_error, raw_error_matrix) in families.items()]
+    families = [(raw_error, raw_error_matrix, seeds, outputs) for key, (seeds, raw_error, raw_error_matrix, outputs) in families.items()]
     families.sort(key=lambda item: -item[0])
     filename = f"{toolbox.output_folder}/analysis.txt"
     print(f"writing anaysis result of {file_count} files in {filename} ...")
     with open(filename, "w") as f:
-        f.write(f"{'error':7} count  {'last_raw_error'}\n")
+        elem = toolbox.example_inputs[-1][0]
+        data = toolbox.example_inputs[-1][1]
+        f.write(f"{'error':7} count  {'error_matrix':127} example:merge({data},{elem})\n")
         sum_count = 0
-        for raw_error, raw_error_matrix, seeds in families:
+        for raw_error, raw_error_matrix, seeds, model_outputs in families:
             msg = ""
             for i in range(raw_error_matrix.shape[0]):
                 msg += "|"
                 for j in range(raw_error_matrix.shape[1]):
-                    msg += "1" if raw_error_matrix[i, j] > 0 else "."
-            f.write(f"{raw_error:7.3f} {len(seeds):5d}  {msg}\n")
+                    x = round(raw_error_matrix[i, j])
+                    if x == 0:
+                        msg += "."
+                    elif x-10 > 25:
+                        msg += "*"
+                    elif x >= 10:
+                        msg += "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[x-10]
+                    else:
+                        msg += str(x)
+            f.write(f"{raw_error:7.3f} {len(seeds):5d}  {msg}| {str(model_outputs[-1])}\n")
             sum_count += len(seeds)
         f.write(f"{' ':7} {sum_count:5}\n")
     filename = f"{toolbox.output_folder}/sorted_seeds.txt"
     print(f"writing sorted seeds in {filename} ...")
     with open(filename, "w") as f:
-        for raw_error, raw_error_matrix, seeds in families:
+        for raw_error, raw_error_matrix, seeds, _outputs in families:
             f.write(f"{raw_error:7.3f} {len(seeds):5d}")
             seeds.sort()
             for id_seed in seeds:

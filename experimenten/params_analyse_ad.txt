@@ -73,5 +73,6 @@
     "near_solution_threshold": 5.2,
     "near_solution_pop_size": 300,
     "near_solution_max_individual_size": 80,
-    "clear_representatives_after_reading_family_db": true
+    "clear_representatives_after_reading_family_db": true,
+    "child_must_be_different": false
 }
