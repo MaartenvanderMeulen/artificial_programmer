@@ -108,18 +108,25 @@ def compile_inputs(inputs):
 
 
 def compile_expected_outputs(expected_outputs):
-    # ASSUMES output is a list of int's!!!
     sizes, c_outputs = [], []
     for data in expected_outputs:        
-        assert type(data) == type([])
-        for x in data:
-            assert type(x) == type(1)
-        n = len(data)
-        c_data = (ctypes.c_int * n)()
-        for i in range(n):
-            c_data[i] = data[i]
-        sizes.append(n)
-        c_outputs.append(c_data)
+        if type(data) == type([]):
+            for x in data:
+                assert type(x) == type(1)
+            n = len(data)
+            c_data = (ctypes.c_int * n)()
+            for i in range(n):
+                c_data[i] = data[i]
+            sizes.append(n)
+            c_outputs.append(c_data)
+        elif type(data) == type(1):
+            n = 1
+            c_data = (ctypes.c_int * n)()
+            c_data[0] = data
+            sizes.append(n)
+            c_outputs.append(c_data)
+        else:
+            raise RuntimeError("compile_expected_outputs: TODO : make it work for other datatypes")
     return sizes, c_outputs
 
 

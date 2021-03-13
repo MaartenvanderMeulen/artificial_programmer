@@ -67,12 +67,13 @@ class Toolbox(object):
             print("deap_str1", deap_str)
             print("deap_str2", str(self.solution_deap_ind))
             raise RuntimeError(f"Check if function hints '{str(func_hints)}' contain all functions of solution hint '{str(solution_hints)}'")
-        expected_outputs = evaluate.get_expected_outputs(error_function, example_inputs)
-        self.cpp_handle = cpp_coupling.get_cpp_handle(example_inputs, formal_params, var_hints, expected_outputs)
+        self.expected_outputs = evaluate.get_expected_outputs(error_function, example_inputs)
+        self.cpp_handle = cpp_coupling.get_cpp_handle(example_inputs, formal_params, var_hints, self.expected_outputs)
         self.random_seed = random_seed
         self.id_seed = id_seed
         self.eval_count = 0
         self.reset()
+ 
 
     def reset(self):
         self.prev_best_raw_error_matrix = None
@@ -234,6 +235,12 @@ def initialise_toolbox(problem, functions, f, params):
     toolbox.near_solution_max_individual_size = params["near_solution_max_individual_size"]
     toolbox.clear_representatives_after_reading_family_db = params["clear_representatives_after_reading_family_db"]
     toolbox.child_must_be_different = params["child_must_be_different"]
+
+    if True:
+        toolbox.f.write(f"expected_outputs {str(toolbox.expected_outputs)}\n")
+        error = ga_search_tools.forced_reevaluation_of_individual_for_debugging(toolbox, toolbox.solution_deap_ind, 4)
+        assert error == 0        
+
     return toolbox
 
 

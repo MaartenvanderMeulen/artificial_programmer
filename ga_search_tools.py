@@ -91,9 +91,27 @@ def check_error_matrices(raw_error_matrix_py, raw_error_matrix_cpp):
 
 
 def evaluate_individual_impl(toolbox, ind, debug=0):
-    # cpp implementatie
-    raw_error_matrix_cpp, family_key = cpp_coupling.compute_error_matrix(toolbox.cpp_handle, ind, \
-        toolbox.penalise_non_reacting_models, toolbox.families_dict, toolbox.family_key_is_error_matrix)
+    if False:
+        # cpp interpretatie en evaluatie
+        raw_error_matrix, family_key = cpp_coupling.compute_error_matrix(toolbox.cpp_handle, ind, \
+            toolbox.penalise_non_reacting_models, toolbox.families_dict, toolbox.family_key_is_error_matrix)
+    else:
+        if False:
+            # cpp interpretatie
+            model_outputs = cpp_coupling.run_on_all_inputs(toolbox.cpp_handle, ind)
+        else:
+            # python interpretatie
+            code = interpret.compile_deap(str(ind), toolbox.functions)
+            toolbox.functions[toolbox.problem_name] = [toolbox.formal_params, code]
+            model_outputs = []
+            for input in toolbox.example_inputs:
+                model_output = interpret.run([toolbox.problem_name] + input, dict(), toolbox.functions, debug=toolbox.verbose >= 5)
+                model_outputs.append(model_output)        
+        family_key = evaluate.recursive_tuple(model_outputs)
+        # python evaluatie
+        if family_key not in toolbox.families_dict:
+            raw_error_matrix = evaluate.compute_raw_error_matrix(toolbox.example_inputs, model_outputs, toolbox.error_function, \
+                toolbox.f,toolbox.verbose, toolbox.penalise_non_reacting_models)
 
     # bepaling family
     if family_key in toolbox.families_dict:
@@ -106,7 +124,7 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
     else:
         family_index = len(toolbox.families_list)
         toolbox.families_dict[family_key] = family_index
-        ind.fam = Family(family_index, raw_error_matrix_cpp, ind)
+        ind.fam = Family(family_index, raw_error_matrix, ind)
         toolbox.families_list.append(ind.fam)
         #if ind.fam.raw_error <= toolbox.max_raw_error_for_family_db:
         #    toolbox.f.write(f"at gen {toolbox.real_gen}, new fam {get_fam_info(ind.fam)}\n")
@@ -117,7 +135,7 @@ def evaluate_individual_impl(toolbox, ind, debug=0):
             model_outputs_py = cpp_coupling.run_on_all_inputs(toolbox.cpp_handle, ind)
             raw_error_matrix_py = evaluate.compute_raw_error_matrix(toolbox.example_inputs, model_outputs_py, toolbox.error_function, \
                 toolbox.f, debug, toolbox.penalise_non_reacting_models)
-            check_error_matrices(raw_error_matrix_py, raw_error_matrix_cpp)
+            check_error_matrices(raw_error_matrix_py, raw_error_matrix)
 
 
 

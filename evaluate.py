@@ -34,7 +34,7 @@ def recursive_tuple(value, depth=0):
 def extract_numbers_list(values):
     if type(values) == type([]):
         if len(values) == 0:
-            result = [0]
+            result = []
         else:
             result = []
             for item in values:
@@ -52,12 +52,18 @@ def extract_numbers_set(values):
     return set(extract_numbers_list(values))
 
 
-def count_empty_sublists(actual):
+def count_empty_sublists_impl(actual):
     if type(actual) == type(1):
         return 0
     if len(actual) == 0:
         return 1
-    return sum([count_empty_sublists(v) for v in actual])
+    return sum([count_empty_sublists_impl(v) for v in actual])
+
+
+def count_empty_sublists(actual):
+    if type(actual) == type(1):
+        return 0
+    return sum([count_empty_sublists_impl(v) for v in actual])
 
 
 def _distance_with_closest_numbers(x, values):
@@ -149,11 +155,11 @@ def compute_error_list_of_ints(actual, expect, debug=False):
         #print("debug line 147", error)
     errors.append(error)
     k = len(expect)
-    assert k > 0 # TODO: check if code works ok for case were expect output is empty
     # error2 : aantal outputs
     actual_list = extract_numbers_list(actual)
     n = g_w2a if len(actual_list) < len(expect) else g_w2b
-    errors.append(abs(len(actual_list) - len(expect)) ** n)
+    error = abs(len(actual_list) - len(expect)) ** n
+    errors.append(error)
     #print("debug python line 158", "len(actual_list)", len(actual_list), "len(expect)", len(expect), "actual_list", actual_list, "expect", expect)
     #print("    ", abs(len(actual_list) - len(expect)) ** n)
     # error3 : hoever zitten de expect getallen van de model getallen af
@@ -427,7 +433,30 @@ def compute_error_is_sorted(input, actual, extra_function_params, log_file, verb
     return error,
 
 
-def compute_error_merge_elem(input, actual, extra_function_params, log_file, verbose):
+def compute_error_merge_elema(input, actual, extra_function_params, log_file, verbose):
+    elem = input[0]
+    data = input[1]
+    for i in range(1, len(data)):
+        assert data[i-1] <= data[i]
+    expect = data + [elem] 
+    expect.sort()
+    expect = expect[:-1]
+
+    return compute_error_list_of_ints(actual, expect)
+
+
+def compute_error_merge_elemb(input, actual, extra_function_params, log_file, verbose):
+    elem = input[0]
+    data = input[1]
+    for i in range(1, len(data)):
+        assert data[i-1] <= data[i]
+    expect = data + [elem] 
+    expect.sort()
+    expect = expect[-1]
+    return compute_error_list_of_ints([actual], [expect])
+
+
+def compute_error_merge_elemc(input, actual, extra_function_params, log_file, verbose):
     elem = input[0]
     data = input[1]
     for i in range(1, len(data)):
@@ -435,6 +464,20 @@ def compute_error_merge_elem(input, actual, extra_function_params, log_file, ver
     expect = data + [elem] 
     expect.sort()
     return compute_error_list_of_ints(actual, expect)
+
+
+def compute_error_merge_elem(input, actual, extra_function_params, log_file, verbose):
+    data = input[1]
+    if len(data) > 0:
+        actuala = actual[:len(data)] if type(actual) == type([]) and len(actual) > 0 else actual
+        actualb = actual[-1] if type(actual) == type([]) and len(actual) > 0 else actual
+        a = compute_error_merge_elema(input, actuala, extra_function_params, log_file, verbose)
+        b = compute_error_merge_elemb(input, actualb, extra_function_params, log_file, verbose)
+    else:
+        a = compute_error_merge_elemc(input, actual, extra_function_params, log_file, verbose)
+        b = a
+    c = abs(len(actual) - (len(data) + 1)) ** 1.1 if type(actual) == type([]) else b[1]
+    return a + b + [c]
 
 
 def compute_error_sort(input, actual, extra_function_params, log_file, verbose):
@@ -537,7 +580,18 @@ def compute_raw_error_matrix(example_inputs, actual_outputs, raw_error_function,
         raw_error_vector = raw_error_function(example_input, actual_output, extra_function_params, log_file, verbose)
         raw_error_vector = np.array(raw_error_vector).astype(float)
         if verbose >= 4:
-            log_file.write(f"    {raw_error_vector} = error(input={example_input}, output={actual_output})\n")
+            msg = ""
+            for x in raw_error_vector:
+                x = round(x)
+                if x < 1:
+                    msg += "."
+                elif x <= 9:
+                    msg += str(x)
+                elif x-9 < 26:
+                    msg += "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[x-9]
+                else:
+                    msg += "*"
+            log_file.write(f"    {msg} = error(input={example_input}, output={actual_output})\n")
         if i == 0:
             raw_error_matrix = np.empty((len(example_inputs), raw_error_vector.shape[0]))
         raw_error_matrix[i, :] = raw_error_vector
@@ -556,12 +610,15 @@ def compute_raw_error(raw_error_matrix):
 
 
 def get_expected_outputs(raw_error_function, example_inputs):
-    # works only for compute_error_merge_elem.  TODO : make more generic 
-    assert raw_error_function[0] == "compute_error_merge_elem"
+    assert raw_error_function[0] in ["compute_error_merge_elem", "compute_error_merge_elema", "compute_error_merge_elemb"] # TODO : make more generic 
     expected_outputs = []
     for elem, data in example_inputs:
         expect = data + [elem] 
         expect.sort()
+        if raw_error_function[0] == "compute_error_merge_elema":
+            expect = expect[:-1]
+        elif raw_error_function[0] == "compute_error_merge_elemb":
+            expect = expect[-1]
         expected_outputs.append(expect)
     return expected_outputs
 
