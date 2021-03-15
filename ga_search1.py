@@ -280,7 +280,8 @@ def track_stuck(toolbox, population):
 
 
 def log_info(toolbox, population):
-    msg = f"gen {toolbox.real_gen} error {population[0].fam.raw_error:.3f}"
+    median_error = population[len(population)//2].fam.raw_error
+    msg = f"gen {toolbox.real_gen} pop0_error {population[0].fam.raw_error:.3f} median_error {median_error:.3f}"
     toolbox.f.write(msg)
     if False:
         p_cx_c0 = 0.0

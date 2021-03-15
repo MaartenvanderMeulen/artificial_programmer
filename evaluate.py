@@ -456,7 +456,7 @@ def compute_error_merge_elemb(input, actual, extra_function_params, log_file, ve
     return compute_error_list_of_ints([actual], [expect])
 
 
-def compute_error_merge_elemc(input, actual, extra_function_params, log_file, verbose):
+def compute_error_merge_elem(input, actual, extra_function_params, log_file, verbose):
     elem = input[0]
     data = input[1]
     for i in range(1, len(data)):
@@ -466,7 +466,7 @@ def compute_error_merge_elemc(input, actual, extra_function_params, log_file, ve
     return compute_error_list_of_ints(actual, expect)
 
 
-def compute_error_merge_elem(input, actual, extra_function_params, log_file, verbose):
+def compute_error_merge_elemd(input, actual, extra_function_params, log_file, verbose):
     data = input[1]
     if len(data) > 0:
         actuala = actual[:len(data)] if type(actual) == type([]) and len(actual) > 0 else actual
