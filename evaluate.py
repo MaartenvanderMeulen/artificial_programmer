@@ -34,7 +34,11 @@ def recursive_tuple(value, depth=0):
 def extract_numbers_list(values):
     if type(values) == type([]):
         if len(values) == 0:
-            result = []
+            if True:
+                # original behaviour, as implemented in C++ also, which is not always what we want...
+                result = [0]
+            else:
+                result = []
         else:
             result = []
             for item in values:
@@ -63,6 +67,10 @@ def count_empty_sublists_impl(actual):
 def count_empty_sublists(actual):
     if type(actual) == type(1):
         return 0
+    if True:
+        # original behaviour, as implemented in C++ also, which is not always what we want...
+        if len(actual) == 0:
+            return 1
     return sum([count_empty_sublists_impl(v) for v in actual])
 
 

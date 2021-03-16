@@ -3,11 +3,12 @@ import os
 
 
 class Individual(object):
-    def __init__(self, raw_error, generation, parent_id, pop0_error, code, cx_mut_init):
+    def __init__(self, raw_error, generation, parent_id, pop0_error, median_error, code, cx_mut_init):
         self.raw_error = raw_error
         self.generation = generation
         self.parent_id = parent_id
         self.pop0_error = pop0_error
+        self.median_error = median_error
         self.code = code
         self.cx_mut_init = cx_mut_init
 
@@ -18,15 +19,15 @@ class Context(object):
     
     def add_init_to_total_graph(self, id_dict, raw_error, code, id, generation):
         assert id not in id_dict
-        id_dict[id] = Individual(raw_error, generation, None, None, code, "init")
+        id_dict[id] = Individual(raw_error, generation, None, None, None, code, "init")
 
-    def add_cx_to_total_graph(self, id_dict, raw_error, code, id, generation, parent1_id, pop0_error):
+    def add_cx_to_total_graph(self, id_dict, raw_error, code, id, generation, parent1_id, pop0_error, median_error):
         assert id not in id_dict
-        id_dict[id] = Individual(raw_error, generation, parent1_id, pop0_error, code, "cx")
+        id_dict[id] = Individual(raw_error, generation, parent1_id, pop0_error, median_error, code, "cx")
 
-    def add_mut_to_total_graph(self, id_dict, raw_error, code, id, generation, parent1_id, pop0_error):
+    def add_mut_to_total_graph(self, id_dict, raw_error, code, id, generation, parent1_id, pop0_error, median_error):
         assert id not in id_dict
-        id_dict[id] = Individual(raw_error, generation, parent1_id, pop0_error, code, "mut")
+        id_dict[id] = Individual(raw_error, generation, parent1_id, pop0_error, median_error, code, "mut")
 
 
 def is_init_line(line):
@@ -73,26 +74,27 @@ def parse_mut(line1, line2, line3):
 
 def parse_gen(line1):
     pop0_error = line1.split(" ")[3]
-    return pop0_error
+    median_error = line1.split(" ")[5]
+    return pop0_error, median_error
 
 
 def read_path(context, filename, target_error):
     print("reading", filename)
     id_dict = dict()   
-    pop0_error = None
+    pop0_error, median_error = None, None
     with open(filename, "r") as f:
         for line in f:
             if is_cx_line(line):
                 line2 = f.readline()
                 code, id, error, generation, parent1_id = parse_cx(line.rstrip(), line2.rstrip())
-                context.add_cx_to_total_graph(id_dict, error, code, id, generation, parent1_id, pop0_error)
+                context.add_cx_to_total_graph(id_dict, error, code, id, generation, parent1_id, pop0_error, median_error)
                 if error == target_error:
                     return id_dict, id
             elif is_mut_line(line):
                 line2 = f.readline()
                 line3 = f.readline()
                 code, id, error, generation, parent1_id = parse_mut(line.rstrip(), line2.rstrip(), line3.rstrip())
-                context.add_mut_to_total_graph(id_dict, error, code, id, generation, parent1_id, pop0_error)
+                context.add_mut_to_total_graph(id_dict, error, code, id, generation, parent1_id, pop0_error, median_error)
                 if error == target_error:
                     return id_dict, id
             elif is_init_line(line):
@@ -102,7 +104,7 @@ def read_path(context, filename, target_error):
                 if error == target_error:
                     return id_dict, id
             elif is_gen_summary_line(line):
-                pop0_error = parse_gen(line.rstrip())
+                pop0_error, median_error = parse_gen(line.rstrip())
     return None, None
 
 
@@ -110,7 +112,9 @@ def write_path(id_dict, id, filename):
     with open(filename, "w") as f:
         while id:            
             ind = id_dict[id]
-            f.write(f"{ind.raw_error}\t{ind.cx_mut_init}\t{ind.pop0_error}\t{ind.generation}\t{ind.code}\n")
+            code_str = str(ind.code)
+            code_str = code_str.replace(" ", "")
+            f.write(f"{ind.generation}\t{ind.raw_error}\t{ind.pop0_error}\t{ind.median_error}\t{ind.cx_mut_init}\t{id}\t{code_str}\n")
             id = ind.parent_id
 
 
