@@ -145,7 +145,8 @@ def evaluate_individual(toolbox, individual, pp_str, debug):
         family_index = toolbox.pp_str_to_family_index_dict[pp_str]
         individual.fam = toolbox.families_list[family_index]
     else:
-        toolbox.eval_count += 1
+        if len(child) <= toolbox.max_individual_size:
+            toolbox.eval_count += 1
         evaluate_individual_impl(toolbox, individual, debug)
         toolbox.pp_str_to_family_index_dict[pp_str] = individual.fam.family_index
 
@@ -669,6 +670,15 @@ def crossover_with_local_search(toolbox, parent1, parent2, do_shuffle=True, debu
                         if not toolbox.child_must_be_different or child.fam.family_index != parent1.fam.family_index:
                             if is_improvement(toolbox, child, best):
                                 best, best_pp_str = child, pp_str
+            else:
+                pp_str = make_pp_str(child)
+                if pp_str not in toolbox.ind_str_set:
+                    evaluate_individual(toolbox, child, pp_str, 0)
+                    if child.fam.raw_error < toolbox.population[0].fam.raw_error:
+                        toolbox.count_escape_missed_because_of_max_size += 1
+                    else:
+                        toolbox.count_no_escape_missed_because_of_max_size += 1
+
 
     # cx_count administration
     index_a, index_b = parent1.fam.family_index, parent2.fam.family_index

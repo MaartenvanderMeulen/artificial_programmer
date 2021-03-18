@@ -105,6 +105,9 @@ def read_path(context, filename, target_error):
                     return id_dict, id
             elif is_gen_summary_line(line):
                 pop0_error, median_error = parse_gen(line.rstrip())
+                skip_gen = False
+            elif is_skip_gen_line(line):
+                skip_gen = True
     return None, None
 
 

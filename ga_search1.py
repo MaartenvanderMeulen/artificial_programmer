@@ -19,7 +19,7 @@ from ga_search_tools import refresh_toolbox_from_population, write_cx_graph
 from ga_search_tools import load_initial_population_impl, evaluate_individual, consistency_check_ind
 from ga_search_tools import crossover_with_local_search, cxOnePoint, mutUniform, replace_subtree_at_best_location
 from ga_search_tools import compute_complementairity, pz, remove_file, get_fam_info, get_ind_info
-from ga_search_tools import forced_reevaluation_of_individual_for_debugging
+from ga_search_tools import forced_reevaluation_of_individual_for_debugging, copy_individual
 import dynamic_weights
 
 
@@ -279,9 +279,19 @@ def track_stuck(toolbox, population):
     toolbox.prev_family_index.add(population[0].fam.family_index)
 
 
+def compute_generation_metric(population):
+    assert len(population) > 0
+    if True:
+        n90 = round(len(population) * 0.9)
+        return sum([ind.fam.raw_error for ind in population[:n90]]) / n90
+    return population[len(population) * 2 // 4].fam.raw_error
+
+
+
 def log_info(toolbox, population):
-    median_error = population[len(population)*3//4].fam.raw_error
-    msg = f"gen {toolbox.real_gen} pop0_error {population[0].fam.raw_error:.3f} q34_error {median_error:.3f}"
+    gen_metric = compute_generation_metric(population)
+    msg = f"gen {toolbox.real_gen} pop0_error {population[0].fam.raw_error:.3f} gen_metric {gen_metric:.3f}"
+    msg += f" cx40 count1 {toolbox.count_escape_missed_because_of_max_size} count2 {toolbox.count_no_escape_missed_because_of_max_size}"
     toolbox.f.write(msg)
     if False:
         p_cx_c0 = 0.0
@@ -327,6 +337,12 @@ def check_other_stop_criteria(toolbox):
         raise RuntimeWarning("max stuck count reached")
 
 
+def does_generation_degrade(old_population, new_population):
+    old_metric = compute_generation_metric(old_population)
+    new_metrix = compute_generation_metric(new_population)
+    return new_metrix > old_metric
+
+
 def ga_search_impl_core(toolbox):
     toolbox.gen = 0
     toolbox.real_gen = 0
@@ -351,32 +367,31 @@ def ga_search_impl_core(toolbox):
             check_other_stop_criteria(toolbox)
             offspring = generate_offspring(toolbox, toolbox.population, toolbox.nchildren[toolbox.parachute_level])
             fraction = toolbox.parents_keep_fraction[toolbox.parachute_level]
+
             if toolbox.stuck_count < toolbox.parents_keep_all_duration:
                 fraction = 1
             if fraction < 1:
-                if toolbox.parents_keep_fraction_per_family:
-                    toolbox.population = []
-                    for _, inds in toolbox.current_families_dict.items():
-                        toolbox.population.extend(random.sample(inds, k=max(1,round(len(inds)*fraction))))
-                else:
-                    toolbox.population = random.sample(toolbox.population, k=int(len(toolbox.population)*fraction))
+                new_population = random.sample(toolbox.population, k=int(len(toolbox.population)*fraction))
+            else:
+                new_population = [ind for ind in toolbox.population]
             if toolbox.in_near_solution_area:
                 # trim families
-                toolbox.population = []
+                new_population = []
                 for index, inds in toolbox.current_families_dict.items():
-                    if True:
-                        ind = inds[-1]
-                        rep = toolbox.families_list[index].representative
-                        if rep is not None:
-                            slice_ind = ind.searchSubtree(0)
-                            slice_rep = rep.searchSubtree(0)
-                            ind[slice_ind] = rep[slice_rep]
-                            toolbox.population.append(ind)
-                    else:
-                        toolbox.population.append(inds[-1])
-            toolbox.population += offspring
-            toolbox.population.sort(key=toolbox.sort_ind_key)
-            toolbox.population[:] = toolbox.population[:toolbox.pop_size[toolbox.parachute_level]]
+                    ind = copy_individual(toolbox, inds[-1])
+                    rep = toolbox.families_list[index].representative
+                    if rep is not None:
+                        slice_ind = ind.searchSubtree(0)
+                        slice_rep = rep.searchSubtree(0)
+                        ind[slice_ind] = rep[slice_rep]
+                        new_population.append(ind)
+            new_population += offspring
+            new_population.sort(key=toolbox.sort_ind_key)
+            new_population[:] = new_population[:toolbox.pop_size[toolbox.parachute_level]]
+            if toolbox.generation_may_degrade or not does_generation_degrade(toolbox.population, new_population):
+                toolbox.population = new_population
+            else:
+                toolbox.f.write(f"skipped gen {toolbox.real_gen}\n")
             consistency_check(toolbox, toolbox.population)
             refresh_toolbox_from_population(toolbox, toolbox.population, True)
             if toolbox.is_solution(toolbox.population[0]): # do this after refresh, for debugging refresh

@@ -72,6 +72,9 @@ class Toolbox(object):
         self.random_seed = random_seed
         self.id_seed = id_seed
         self.eval_count = 0
+        self.count_escape_missed_because_of_max_size = 0
+        self.count_no_escape_missed_because_of_max_size = 0
+
         self.reset()
  
 
@@ -235,6 +238,7 @@ def initialise_toolbox(problem, functions, f, params):
     toolbox.near_solution_max_individual_size = params["near_solution_max_individual_size"]
     toolbox.clear_representatives_after_reading_family_db = params["clear_representatives_after_reading_family_db"]
     toolbox.child_must_be_different = params["child_must_be_different"]
+    toolbox.generation_may_degrade = params.get("generation_may_degrade", True)
 
     if True:
         toolbox.f.write(f"expected_outputs {str(toolbox.expected_outputs)}\n")
