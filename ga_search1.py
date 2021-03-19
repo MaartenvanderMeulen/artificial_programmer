@@ -365,6 +365,8 @@ def ga_search_impl_core(toolbox):
             if toolbox.f and toolbox.verbose >= 1:
                 log_info(toolbox, toolbox.population)
             check_other_stop_criteria(toolbox)
+            toolbox.count_escape_missed_because_of_max_size = 0
+            toolbox.count_no_escape_missed_because_of_max_size = 0
             offspring = generate_offspring(toolbox, toolbox.population, toolbox.nchildren[toolbox.parachute_level])
             fraction = toolbox.parents_keep_fraction[toolbox.parachute_level]
 
@@ -389,6 +391,9 @@ def ga_search_impl_core(toolbox):
             new_population.sort(key=toolbox.sort_ind_key)
             new_population[:] = new_population[:toolbox.pop_size[toolbox.parachute_level]]
             if toolbox.generation_may_degrade or not does_generation_degrade(toolbox.population, new_population):
+                if toolbox.population[0].fam.raw_error > new_population[0].fam.raw_error:
+                    toolbox.count_escape_missed_because_of_max_size = 0
+                    toolbox.count_no_escape_missed_because_of_max_size = 0
                 toolbox.population = new_population
             else:
                 toolbox.f.write(f"skipped gen {toolbox.real_gen}\n")

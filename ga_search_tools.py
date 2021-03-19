@@ -145,7 +145,7 @@ def evaluate_individual(toolbox, individual, pp_str, debug):
         family_index = toolbox.pp_str_to_family_index_dict[pp_str]
         individual.fam = toolbox.families_list[family_index]
     else:
-        if len(child) <= toolbox.max_individual_size:
+        if len(individual) <= toolbox.max_individual_size:
             toolbox.eval_count += 1
         evaluate_individual_impl(toolbox, individual, debug)
         toolbox.pp_str_to_family_index_dict[pp_str] = individual.fam.family_index
